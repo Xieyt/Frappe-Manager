@@ -48,4 +48,5 @@ jobs:
         with:
           context: Docker/${{ matrix.service_name }}/.
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ env.image_name }}
