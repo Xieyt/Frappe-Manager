@@ -9,7 +9,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     name: Build and push frappe image
-    stratergy:
+    strategy:
       matrix:
         service_name: ['frappe']
     steps:
@@ -36,10 +36,6 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: print tag
-        id: latest-tag
-        run: echo "${{ github.repository_owner }}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
