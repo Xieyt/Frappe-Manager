@@ -10,12 +10,12 @@ jobs:
     name: Build and push frappe image
     strategy:
       matrix:
-        os: [macos-14]
+        os: [ubuntu-latest]
         platform: [linux/amd64,linux/arm64]
         service_name: [frappe]
         exclude:
           - os: ubuntu-latest
-            platform: linux/arm64
+            platform: linux/amd64
           - os: macos-14
             platform: linux/amd64
 
@@ -35,14 +35,6 @@ jobs:
           git checkout "$tag"
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
-      - name: Setup docker (missing on MacOS)
-        if: runner.os == 'macos'
-        run: |
-            brew install docker
-            brew install colima
-            colima start
-
-            sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
