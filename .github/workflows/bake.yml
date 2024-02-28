@@ -14,12 +14,16 @@ jobs:
         service_name: ['frappe']
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
-          fetch-tags: true
+          filter-depth: 0
 
-      - name: Get latest tag
-        run: echo "tag=$(git describe --abbrev=0 --tags)" >> $GITHUB_ENV
+      - name: Get latest tag and checkout
+        id: latest-tag
+        run: |
+          tag=$(git describe --abbrev=0 --tags)
+          echo "tag=${tag}" >> $GITHUB_ENV
+          git checkout "$tag"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -37,7 +41,7 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
-          
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
