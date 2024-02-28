@@ -48,4 +48,4 @@ jobs:
         with:
           context: Docker/${{ matrix.service_name }}/.
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/frappe-manager-${{ matrix.service_name }}:${{ env.latest-tag }}
+          tags: ghcr.io/${{ github.repository_owner }}/frappe-manager-${{ matrix.service_name }}:${{ env.tag }}
