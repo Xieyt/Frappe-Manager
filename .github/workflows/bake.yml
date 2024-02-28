@@ -16,8 +16,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          filter-depth: 0
-          filter-tags: true
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Get latest tag and checkout
         id: latest-tag
