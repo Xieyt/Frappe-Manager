@@ -10,13 +10,13 @@ jobs:
     name: Build and push frappe image
     strategy:
       matrix:
-        os: [macos-14-xlarge]
+        os: [macos-14]
         platform: [linux/amd64,linux/arm64]
         service_name: [frappe]
         exclude:
           - os: ubuntu-latest
             platform: linux/arm64
-          - os: macos-latest
+          - os: macos-14
             platform: linux/amd64
 
     runs-on: ${{ matrix.os }}
