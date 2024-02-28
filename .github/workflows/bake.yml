@@ -31,7 +31,7 @@ jobs:
         run: |
           image=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
           tag=$(git describe --abbrev=0 --tags)
-          echo "image_name=${image@L}:${tag}" >> $GITHUB_ENV
+          echo "image_name=${image}" >> $GITHUB_ENV
           git checkout "$tag"
 
       - name: Set up QEMU
