@@ -18,6 +18,7 @@ jobs:
             platform: linux/arm64
           - os: macos-latest
             platform: linux/amd64
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -28,7 +29,7 @@ jobs:
       - name: Get latest tag and checkout
         id: latest-tag
         run: |
-          image='${{ github.repository_owner }}'
+          image=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
           tag=$(git describe --abbrev=0 --tags)
           echo "image_name=${image@L}:${tag}" >> $GITHUB_ENV
           git checkout "$tag"
