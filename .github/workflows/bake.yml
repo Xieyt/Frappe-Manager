@@ -38,6 +38,7 @@ jobs:
         if: runner.os == 'macos'
         run: |
             brew install docker
+            brew install colima
             colima start
 
             sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
