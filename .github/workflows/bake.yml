@@ -24,7 +24,7 @@ jobs:
           image='${{ github.repository_owner }}'
           tag=$(git describe --abbrev=0 --tags)
           echo "image_name=${image@L}:${tag}" >> $GITHUB_ENV
-          git switch "$tag"
+          git checkout "$tag"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
