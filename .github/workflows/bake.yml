@@ -3,7 +3,9 @@ name: Publish frappe image
 on:
   schedule:
     - cron: '0 2 * * *'
-  workflow_dispatch:
+  push:
+    tags:
+      - v*
 
 jobs:
   build-and-push:
@@ -29,6 +31,7 @@ jobs:
       - name: Set up tag
         id: set-tag
         run: |
+          echo "tag=${GITHUB_REF/refs\/tags\//}"
           owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
           latest_tag=$(git describe --abbrev=0 --tags)
           git checkout "$latest_tag"
