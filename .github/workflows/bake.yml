@@ -32,10 +32,11 @@ jobs:
       - name: Set up tag
         id: set-tag
         run: |
-          echo "${{ github.ref == 'refs/tags/v*' }}"
-          echo "tag=${GITHUB_REF/refs\/tags\//}"
-          owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
           latest_tag=$(git describe --abbrev=0 --tags)
+          if [[ "${{ github.ref == 'refs/tags/v*' }}" == 'true' ]]; then
+              latest-tag=${GITHUB_REF/refs\/tags\//}
+          fi
+          owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
           git checkout "$latest_tag"
           tag=$( cat "$GITHUB_WORKSPACE/Docker/images-tag.info" | jq -rc .${{ matrix.service_name }})
           echo "image_name=ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}:${tag}" >> $GITHUB_ENV
