@@ -29,9 +29,9 @@ jobs:
       - name: Get latest tag and checkout
         id: latest-tag
         run: |
-          image=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
           tag=$(git describe --abbrev=0 --tags)
-          echo "image_name=${image}" >> $GITHUB_ENV
+          echo "image_name=ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}:${tag}" >> $GITHUB_ENV
           git checkout "$tag"
 
       - name: Set up Docker Buildx
