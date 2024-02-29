@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [self-hosted]
         platform: [linux/amd64, linux/arm64]
-        service_name: [frappe]
+        service_name: [frappe, mailhog, nginx]
         exclude:
           - os: ubuntu-latest
             platform: linux/arm64
@@ -29,8 +29,8 @@ jobs:
       - name: Get latest tag and checkout
         id: latest-tag
         run: |
-          owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          tag=$(git describe --abbrev=0 --tags)
+          owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
+          tag=$( jq -rc .${{ matrix.service_name }} <<./Docker/images-tag.info )
           echo "image_name=ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}:${tag}" >> $GITHUB_ENV
           git checkout "$tag"
 
