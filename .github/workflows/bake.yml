@@ -53,3 +53,6 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           tags: ${{ env.image_name }}
+
+      - name: Cleanup
+        run: docker system prune -af --volume
