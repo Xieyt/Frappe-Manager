@@ -10,7 +10,7 @@ jobs:
     name: Build and push frappe image
     strategy:
       matrix:
-        os: [ubuntu-latest, arm64-24]
+        os: [arm64-24]
         platform: [linux/amd64, linux/arm64]
         service_name: [frappe]
         exclude:
