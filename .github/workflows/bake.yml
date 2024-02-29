@@ -32,6 +32,7 @@ jobs:
       - name: Set up tag
         id: set-tag
         run: |
+          echo "${{ github.ref == 'refs/tags/v*' }}"
           echo "tag=${GITHUB_REF/refs\/tags\//}"
           owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
           latest_tag=$(git describe --abbrev=0 --tags)
