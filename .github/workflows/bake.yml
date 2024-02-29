@@ -26,9 +26,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get latest tag and checkout
-        id: latest-tag
+      - name: Set up tag
+        id: set-tag
         run: |
+          set-x
           owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
           tag=$( jq -rc .${{ matrix.service_name }} <<./Docker/images-tag.info )
           echo "image_name=ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}:${tag}" >> $GITHUB_ENV
