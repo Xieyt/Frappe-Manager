@@ -328,45 +328,9 @@ cmd_test() {
     info "Running: fm migrate $FM_MIGRATE_FLAGS"
     echo ""
 
-    # Run migration in background to avoid SSH timeout
-    local log_file="$FM_DIR/logs/migrate-test.log"
-    ssh_cmd "mkdir -p \"$FM_DIR/logs\" && cd \"$FM_DIR\" && FRAPPE_MANAGER_HOME=\"$FM_DIR\" \"$FM_HOME/fm-active/bin/fm\" migrate $FM_MIGRATE_FLAGS > \"$log_file\" 2>&1 &"
-
-    # Poll for completion (max 15 minutes)
-    info "Migration running in background..."
-    local max_wait=900
-    local waited=0
-    local last_line_count=0
-    while ssh_cmd "test -f \"$log_file\"" 2>/dev/null; do
-        # Check if migration process is still running
-        if ! ssh_cmd "pgrep -f 'fm migrate' >/dev/null 2>&1" 2>/dev/null; then
-            break
-        fi
-        sleep 10
-        waited=$((waited + 10))
-        if [ $waited -ge $max_wait ]; then
-            warn "Migration timeout after ${max_wait}s"
-            break
-        fi
-        # Show new lines since last check
-        local line_count
-        line_count=$(ssh_cmd "wc -l < \"$log_file\" 2>/dev/null" || echo "0")
-        if [ "$line_count" -gt "$last_line_count" ]; then
-            ssh_cmd "tail -n +$((last_line_count + 1)) \"$log_file\" 2>/dev/null" | sed 's/^/    /'
-            last_line_count=$line_count
-        fi
-    done
-    echo ""
-
-    # Brief pause to ensure log file is fully flushed
-    sleep 2
-
-    # Show any remaining output
-    local line_count
-    line_count=$(ssh_cmd "wc -l < \"$log_file\" 2>/dev/null" || echo "0")
-    if [ "$line_count" -gt "$last_line_count" ]; then
-        ssh_cmd "tail -n +$((last_line_count + 1)) \"$log_file\" 2>/dev/null" | sed 's/^/    /'
-    fi
+    # Run migration in foreground with live output streaming
+    ssh_cmd "cd \"$FM_DIR\" && FRAPPE_MANAGER_HOME=\"$FM_DIR\" \"$FM_HOME/fm-active/bin/fm\" migrate $FM_MIGRATE_FLAGS 2>&1" \
+        || warn "Migration exited with code $?"
     echo ""
 
     # ── Results ─────────────────────────────────────────────────────────
