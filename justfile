@@ -84,3 +84,55 @@ docs-build: css docs-gen
     #!/usr/bin/env bash
     version=$(python -c "from frappe_manager.__about__ import __version__; print(__version__)")
     mike deploy dev --title "$version" -F zensical.toml
+
+# ── Migration Testing ──────────────────────────────────────────────────────────
+
+export FM_SERVER         := env("FM_SERVER", "frappe@alok.rt.gw")
+export FM_BENCH          := env("FM_BENCH", "alok.rt.gw")
+export FM_HOME           := env("FM_HOME", "/home/frappe")
+export FM_UV             := env("FM_UV", "/home/frappe/.local/bin/uv")
+export FM_PREVIOUS_PYTHON := env("FM_PREVIOUS_PYTHON", "3.12")
+export FM_PYTHON         := env("FM_PYTHON", "3.13")
+export FM_MIGRATE_FLAGS  := env("FM_MIGRATE_FLAGS", "--all-benches --auto-proceed --skip-all-backup")
+export FM_PREVIOUS_REPO  := env("FM_PREVIOUS_REPO", "git+https://github.com/rtcamp/frappe-manager@fix/install-deps")
+export FM_REPO           := env("FM_REPO", "git+https://github.com/Xieyt/Frappe-Manager@fix-migrations")
+
+_check-server:
+    #!/usr/bin/env bash
+    if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "$FM_SERVER" "echo ok" 2>/dev/null; then
+        echo "  ✗ Server unreachable: $FM_SERVER"
+        exit 1
+    fi
+
+migrate-init: _check-server
+    bash scripts/migrate-test.sh init
+
+migrate-setup VERSION: _check-server
+    bash scripts/migrate-test.sh setup {{VERSION}}
+
+migrate-test: _check-server
+    bash scripts/migrate-test.sh test
+
+migrate-full: _check-server
+    bash scripts/migrate-test.sh full
+
+migrate-status: _check-server
+    bash scripts/migrate-test.sh status
+
+migrate-diff: _check-server
+    bash scripts/migrate-test.sh diff
+
+migrate-perms: _check-server
+    bash scripts/migrate-test.sh perms
+
+migrate-logs: _check-server
+    bash scripts/migrate-test.sh logs
+
+migrate-versions: _check-server
+    bash scripts/migrate-test.sh versions
+
+migrate-switch VERSION: _check-server
+    bash scripts/migrate-test.sh switch {{VERSION}}
+
+migrate-cleanup: _check-server
+    bash scripts/migrate-test.sh cleanup

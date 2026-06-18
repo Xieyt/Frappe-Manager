@@ -576,9 +576,11 @@ class MigrationV0190(MigrationBase):
             self.output.print("Regenerating supervisor configuration...")
             self._regenerate_supervisor_config(bench)
 
-            if bench.running or bench.workers_running:
-                self.output.print("Recreating & restarting services (force-recreate)...")
-                self._restart_services(bench)
+            # Always restart services after migration — the runtime environment
+            # has fundamentally changed (new Python, Node, supervisor configs,
+            # docker-compose images, etc.)
+            self.output.print("Recreating & restarting services (force-recreate)...")
+            self._restart_services(bench)
 
         self.output.print("Runtime environment rebuilt successfully")
         self.logger.info(f"[_rebuild_runtime_environment] Completed successfully for {bench.name}")
