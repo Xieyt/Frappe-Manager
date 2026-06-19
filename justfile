@@ -93,7 +93,7 @@ export FM_HOME           := env("FM_HOME", "/home/frappe")
 export FM_UV             := env("FM_UV", "/home/frappe/.local/bin/uv")
 export FM_PREVIOUS_PYTHON := env("FM_PREVIOUS_PYTHON", "3.12")
 export FM_PYTHON         := env("FM_PYTHON", "3.13")
-export FM_MIGRATE_FLAGS  := env("FM_MIGRATE_FLAGS", "--all-benches --auto-proceed --skip-all-backup")
+export FM_MIGRATE_FLAGS  := env("FM_MIGRATE_FLAGS", "--all-benches --auto-proceed")
 export FM_PREVIOUS_REPO  := env("FM_PREVIOUS_REPO", "git+https://github.com/rtcamp/frappe-manager@fix/install-deps")
 export FM_REPO           := env("FM_REPO", "git+https://github.com/Xieyt/Frappe-Manager@fix-migrations")
 

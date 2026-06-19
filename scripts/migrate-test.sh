@@ -37,7 +37,7 @@ FM_PREVIOUS_PYTHON="${FM_PREVIOUS_PYTHON:-3.12}"
 FM_REPO="${FM_REPO:-git+https://github.com/Xieyt/Frappe-Manager@fix-migrations}"
 FM_PYTHON="${FM_PYTHON:-3.13}"
 FM_UV="${FM_UV:-$FM_HOME/.local/bin/uv}"
-FM_MIGRATE_FLAGS="${FM_MIGRATE_FLAGS:---all-benches --auto-proceed --skip-all-backup}"
+FM_MIGRATE_FLAGS="${FM_MIGRATE_FLAGS:---all-benches --auto-proceed}"
 
 SSH_OPTS="-o ConnectTimeout=5 -o BatchMode=yes"
 SSH="ssh $SSH_OPTS $FM_SERVER"
