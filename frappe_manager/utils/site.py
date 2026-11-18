@@ -334,6 +334,26 @@ def stock_images_missing() -> bool:
     return any(not docker.image_exists(image) for image in images)
 
 
+def check_docker_images() -> dict[str, str]:
+    """``{image: published digest}`` for every stock image whose local copy is not what the
+    registry's tag points at now. Empty when everything matches or nothing can be reached.
+
+    Local digest, not image id: an id is per-daemon and never equals a registry digest.
+    """
+    from frappe_manager.docker import DockerClient
+
+    docker = DockerClient()
+    behind: dict[str, str] = {}
+    for image in sorted({f"{info['name']}:{info['tag']}" for info in get_all_docker_images().values()}):
+        published = docker.registry_digest(image)
+        if not published:
+            continue
+        local = docker.image_repo_digests(image)
+        if local and published not in local:
+            behind[image] = published
+    return behind
+
+
 def get_sitename_from_current_path() -> str | None:
     current_path = Path().absolute()
     sites_path = CLI_BENCHES_DIRECTORY.absolute()
