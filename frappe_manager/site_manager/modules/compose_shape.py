@@ -168,16 +168,16 @@ class RuntimeShape(Protocol):
 
 def default_code_image() -> str:
     """Stock fm frappe image for the running fm version (matches the template render)."""
-    import importlib.metadata
+    from frappe_manager.utils.helpers import get_docker_image_tag
 
-    return f"ghcr.io/rtcamp/frappe-manager-frappe:v{importlib.metadata.version('frappe-manager')}"
+    return f"ghcr.io/rtcamp/frappe-manager-frappe:{get_docker_image_tag()}"
 
 
 def default_nginx_image() -> str:
     """Stock fm nginx image for the running fm version (matches the template render)."""
-    import importlib.metadata
+    from frappe_manager.utils.helpers import get_docker_image_tag
 
-    return f"ghcr.io/rtcamp/frappe-manager-nginx:v{importlib.metadata.version('frappe-manager')}"
+    return f"ghcr.io/rtcamp/frappe-manager-nginx:{get_docker_image_tag()}"
 
 
 @dataclass(frozen=True)

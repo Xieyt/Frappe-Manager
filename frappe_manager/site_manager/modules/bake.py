@@ -14,7 +14,6 @@ The provisioning step is the exact same shared path used by ``fm create``
 ``BenchAppManager`` runner seam differs (``provision_image`` set -> docker run).
 """
 
-import importlib.metadata
 import json
 import os
 import shutil
@@ -87,8 +86,9 @@ class BakeManager:
         """Base image for provisioning and the runtime ``FROM``."""
         if self.bench_config.build and self.bench_config.build.base_image:
             return self.bench_config.build.base_image
-        version = importlib.metadata.version("frappe-manager")
-        return f"ghcr.io/rtcamp/frappe-manager-frappe:v{version}"
+        from frappe_manager.utils.helpers import get_docker_image_tag
+
+        return f"ghcr.io/rtcamp/frappe-manager-frappe:{get_docker_image_tag()}"
 
     @staticmethod
     def apply_build_overrides(bench_config, output=None) -> None:
