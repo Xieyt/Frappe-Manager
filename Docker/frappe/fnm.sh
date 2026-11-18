@@ -19,3 +19,8 @@ if [ -d "/workspace/frappe-bench/.uv/python-default/bin" ]; then
 fi
 
 export PATH="/opt/user/.bin:$PATH"
+
+# Debian's /etc/profile REPLACES PATH, so a login shell loses the fnm bin dir baked in by ENV.
+if [ -d "${FNM_DIR}/aliases/default/bin" ]; then
+    export PATH="${FNM_DIR}/aliases/default/bin:$PATH"
+fi

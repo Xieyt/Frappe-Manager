@@ -4,11 +4,13 @@ updates:
     directory: "/Docker/frappe"
     schedule:
       interval: "monthly"
-    # The bench image hardcodes a jammy-built wkhtmltopdf package and no CI job
-    # builds this Dockerfile on a pull request, so base-image bumps arrive
-    # unverifiable. Upgrade the base deliberately, not by merging a bot PR.
+    # The bench image hardcodes a bookworm-built wkhtmltopdf package (upstream publishes none for
+    # trixie and the project is archived) and no CI job builds this Dockerfile on a pull request,
+    # so base-image bumps arrive unverifiable. Upgrade the base deliberately, not by merging a bot
+    # PR -- and re-run the Trivy scan on the BUILT image when you do: the pinned base layer can
+    # carry a fixed CVE that the package install happens to paper over.
     ignore:
-      - dependency-name: "ubuntu"
+      - dependency-name: "debian"
   - package-ecosystem: "docker"
     directory: "/Docker/nginx"
     schedule:

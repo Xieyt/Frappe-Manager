@@ -16,6 +16,10 @@ cleanup() {
 	echo "Received signal SIGTERM, stopping..."
 	if [ -n "$running_script_pid" ]; then
 		kill -s SIGTERM "$running_script_pid"
+		# Exiting here instead would end PID 1, and docker tears the container down the moment it
+		# does -- the stop grace period is never spent and supervisor's children (a worker mid-job)
+		# are killed outright.
+		wait "$running_script_pid"
 	fi
 	exit 0
 }

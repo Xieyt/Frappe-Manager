@@ -1,0 +1,10 @@
+# ./fmx is a real package a developer runs `just test-fmx` in, so its venv and build output live
+# here on a laptop (35 MB) and are tarred into every build without this file. The image builds fmx
+# from source with uv; none of this is input.
+fmx/.venv
+fmx/dist
+fmx/build
+fmx/.pytest_cache
+fmx/**/__pycache__
+**/*.pyc
+*.log
