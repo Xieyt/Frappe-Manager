@@ -1,6 +1,11 @@
 services:
   mariadb:
     container_name: fm_mariadb
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     image: mariadb:11.8
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
     restart: always
@@ -28,6 +33,11 @@ services:
 
   postgres:
     container_name: fm_postgres
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     image: postgres:18
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
     restart: always
@@ -47,6 +57,11 @@ services:
 
   nginx-proxy:
     container_name: fm_nginx-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
     image: jwilder/nginx-proxy:1.11
     environment:

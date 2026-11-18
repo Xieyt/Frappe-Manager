@@ -2,6 +2,11 @@ services:
   mailpit:
     image: axllent/mailpit:v1.22
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     volumes:
       - mailpit-data:/data
     expose:
@@ -19,6 +24,11 @@ services:
   adminer:
     image: adminer:5
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     expose:
       - 8080
     networks:
