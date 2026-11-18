@@ -115,7 +115,7 @@ from typing import Any, cast
 import tomlkit
 from ruamel.yaml import YAML
 
-from frappe_manager import CLI_BENCHES_DIRECTORY, CLI_FM_CONFIG_PATH, MARIADB_IMAGE
+from frappe_manager import CLI_BENCHES_DIRECTORY, CLI_FM_CONFIG_PATH, CLI_SERVICES_DIRECTORY, MARIADB_IMAGE
 from frappe_manager.docker import DockerClient, DockerException
 from frappe_manager.migration_manager.migration_base import MigrationBase
 from frappe_manager.migration_manager.migration_constants import DOCKER_COMPOSE_DOWN_TIMEOUT_SECONDS
@@ -348,6 +348,50 @@ def _add_site_network_aliases(services: MutableMapping) -> bool:
     return changed
 
 
+# 1.0.0 resolves a bench's own domains through the proxy, via `extra_hosts` on the shared
+# frontend network (`bench_docker.generate_compose`). A pre-1.0.0 bench only reaches its own
+# site through the site-name alias its nginx publishes, and the next `generate_compose`
+# REPLACES that alias list -- so without this the first ordinary `fm update`/`fm ssl add`
+# after a migration kills every server-side self-call (PDF, OAuth, get_url) while public
+# traffic keeps answering 200.
+FRONTEND_NETWORK_KEY = "frontend-network"
+FRONTEND_NETWORK_NAME = "fm-frontend-network"
+
+
+def _attach_frontend_network(compose_data: MutableMapping, extra_hosts: list[str]) -> bool:
+    """Put every backend service on the shared frontend network and point its own domains at
+    the proxy; returns whether anything changed.
+
+    Membership is decided by the service already being on `backend-network` (frappe, schedule,
+    the workers) or being socketio, which is what the 1.0.0 templates attach.
+    """
+    changed = False
+    services = compose_data.get("services") or {}
+
+    for service_name, service in services.items():
+        if not isinstance(service, MutableMapping):
+            continue
+        networks = service.get("networks")
+        if not isinstance(networks, MutableMapping):
+            continue
+        if "backend-network" not in networks and service_name != "socketio":
+            continue
+
+        if FRONTEND_NETWORK_KEY not in networks:
+            networks[FRONTEND_NETWORK_KEY] = None
+            changed = True
+        if extra_hosts and service.get("extra_hosts") != extra_hosts:
+            service["extra_hosts"] = list(extra_hosts)
+            changed = True
+
+    if changed:
+        top = compose_data.setdefault("networks", {})
+        if isinstance(top, MutableMapping) and FRONTEND_NETWORK_KEY not in top:
+            top[FRONTEND_NETWORK_KEY] = {"name": FRONTEND_NETWORK_NAME, "external": True}
+
+    return changed
+
+
 def rewrite_compose_for_rename(compose_data: dict) -> bool:
     """Apply every rename to one loaded compose document; returns whether anything changed.
 
@@ -414,6 +458,7 @@ class MigrationV100(MigrationBase):
     def migrate_bench(self, bench: MigrationBench):
         self._admin_tools_and_config_bench(bench)
         self._service_rename_bench(bench)
+        self._cap_container_logs(bench.path)
 
     def migrate_services(self):
         self._admin_tools_and_config_services()
@@ -421,9 +466,40 @@ class MigrationV100(MigrationBase):
         # environment into the running proxy. Docker reads env once, at container creation, so a
         # write after it would sit on disk until some later, unrelated recreate.
         self._refresh_proxy_log_format()
+        self._backfill_proxy_defaults()
         self._convert_proxy_vhostd_to_fragments()
         self._service_rename_services()
         self._add_postgres_service()
+        # After the rename: the networks it recreates are the ones being recorded.
+        self._seed_network_config()
+        self._cap_container_logs(CLI_SERVICES_DIRECTORY)
+
+    def _cap_container_logs(self, directory: Path) -> None:
+        """Docker's json-file driver never rotates, and a compose file written before 1.0.0 carries
+        no `logging` block, so its containers grow on disk for the life of the container. A service
+        that already declares one is left alone: that is either a newer write or an operator's own
+        choice, and neither is ours to overwrite.
+        """
+        from frappe_manager.docker.compose_file import ComposeFile
+
+        for compose_path in sorted(directory.glob("docker-compose*.yml")):
+            try:
+                doc = _load_yaml(compose_path.read_text())
+            except Exception:
+                continue
+            changed = False
+            for name, service in (doc.get("services") or {}).items():
+                if not isinstance(service, MutableMapping) or service.get("logging"):
+                    continue
+                max_size, max_files = ComposeFile._log_limits(name)
+                service["logging"] = {
+                    "driver": "json-file",
+                    "options": {"max-size": max_size, "max-file": str(max_files)},
+                }
+                changed = True
+            if changed:
+                compose_path.write_text(_dump_yaml(doc))
+                self.logger.info(f"Capped container logs in {compose_path}")
 
     def _refresh_proxy_log_format(self):
         """Bring an existing install's access-log format up to the one this fm ships.
@@ -463,6 +539,60 @@ class MigrationV100(MigrationBase):
         environment["LOG_FORMAT_ESCAPE"] = "json"
         compose_path.write_text(_dump_yaml(doc))
         self.output.info("Updated the global proxy's access-log format")
+
+    def _backfill_proxy_defaults(self) -> None:
+        """Give an existing proxy the webroot mount and the forwarded-proto default a NEW install
+        gets at create time.
+
+        Same constraint as `_refresh_proxy_log_format`: `generate_compose` applies onto the file
+        on disk and never re-renders, so neither would ever appear on an upgraded host. Without
+        the webroot mount `ProxyStoragePaths` builds no `dirs.html` attribute at all, and
+        `fm maintenance` and every external-domain HTTP-01 challenge die on an AttributeError.
+        `TRUST_DOWNSTREAM_PROXY` unset means the image default, which passes a CLIENT-supplied
+        `X-Forwarded-Proto` to gunicorn -- anyone may then assert https over plaintext.
+        """
+        from frappe_manager import CLI_SERVICES_DIRECTORY
+
+        (CLI_SERVICES_DIRECTORY / "nginx-proxy" / "html").mkdir(parents=True, exist_ok=True)
+
+        compose_path = CLI_SERVICES_DIRECTORY / "docker-compose.yml"
+        if not compose_path.exists():
+            return
+
+        doc = _load_yaml(compose_path.read_text())
+        services = doc.get("services")
+        if not isinstance(services, dict):
+            return
+        proxy = services.get("nginx-proxy") or services.get("global-nginx-proxy")
+        if not isinstance(proxy, dict):
+            return
+
+        changed = False
+
+        mount = "./nginx-proxy/html:/usr/share/nginx/html"
+        volumes = proxy.setdefault("volumes", [])
+        if isinstance(volumes, list) and mount not in volumes:
+            volumes.append(mount)
+            changed = True
+
+        environment = proxy.setdefault("environment", {})
+        if isinstance(environment, dict) and "TRUST_DOWNSTREAM_PROXY" not in environment:
+            environment["TRUST_DOWNSTREAM_PROXY"] = "false"
+            changed = True
+
+        if changed:
+            compose_path.write_text(_dump_yaml(doc))
+            self.output.info("Added the proxy's webroot mount and forwarded-proto default")
+
+    def _seed_network_config(self) -> None:
+        """Record the shared networks' subnet and the proxy's address in fm_config.
+
+        A new install writes these at create; an upgraded one has an empty `[network]`, which
+        leaves nothing able to recreate a network that gets deleted, and no pinned proxy address,
+        so a proxy recreate can move the IP every bench's `extra_hosts` still names.
+        """
+        with contextlib.suppress(Exception):
+            self.services_manager.configure_shared_networks()
 
     def _add_proxy_fmd_mount(self) -> bool:
         """Give an existing services compose the `fm.d` mount `ProxyDropins` fragments need.
@@ -2067,6 +2197,12 @@ class MigrationV100(MigrationBase):
             self.logger.debug("[rename] services compose not found, skipping")
             return
 
+        # The in-memory document was loaded at migration init, BEFORE `_refresh_proxy_log_format`
+        # and `_add_proxy_fmd_mount` wrote to the same file on disk. `write_to_file` dumps this
+        # document wholesale, so without re-reading first the rename silently reverts both of
+        # them -- leaving the proxy with plain-text logs and every converted fragment unmounted.
+        compose_file_manager.reload()
+
         services = compose_file_manager.yml.get("services") or {}
         if "mariadb" in services and "global-db" not in services:
             # Dev builds re-run this migration (1.0.0.dev0 sorts below 1.0.0); an
@@ -2222,7 +2358,30 @@ class MigrationV100(MigrationBase):
             if bench_name in self._was_running:
                 self._start_bench(bench)
 
+    def _bench_extra_hosts(self, bench: MigrationBench) -> list[str]:
+        """`<domain>:<proxy ip>` for every domain this bench serves, empty when the proxy has no
+        address yet. Read live from docker, never cached: a recreated proxy moves."""
+        from frappe_manager.site_manager.modules.bench_docker import get_proxy_ip_on_frontend
+
+        proxy_ip = get_proxy_ip_on_frontend()
+        if not proxy_ip:
+            return []
+
+        config_path = bench.path / "bench_config.toml"
+        domains: list[str] = []
+        if config_path.exists():
+            with contextlib.suppress(Exception):
+                doc = tomlkit.parse(config_path.read_text())
+                for site_name, site in (doc.get("sites") or {}).items():
+                    domains.append(str(site_name))
+                    domains.extend(str(alias) for alias in (site.get("alias_domains") or []))
+        if not domains:
+            domains = [bench.name]
+
+        return [f"{domain}:{proxy_ip}" for domain in dict.fromkeys(domains)]
+
     def _rewrite_bench_files(self, bench: MigrationBench):
+        extra_hosts = self._bench_extra_hosts(bench)
         changed_any = False
         self._images_retagged = False
         for compose_name in ("docker-compose.yml", "docker-compose.workers.yml", "docker-compose.admin-tools.yml"):
@@ -2244,7 +2403,10 @@ class MigrationV100(MigrationBase):
             retagged = self.retag_fm_images(compose_data.get("services", {}), compose_name)
             self._images_retagged |= retagged
             aliased = _add_site_network_aliases(compose_data.get("services", {}))
-            if renamed or retagged or aliased:
+            attached = compose_name != "docker-compose.admin-tools.yml" and _attach_frontend_network(
+                compose_data, extra_hosts
+            )
+            if renamed or retagged or aliased or attached:
                 compose_data["x-version"] = str(self.version)
                 with compose_path.open("w") as f:
                     yaml.dump(compose_data, f)
