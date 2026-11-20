@@ -20,6 +20,7 @@ from ruamel.yaml import YAML
 from frappe_manager.migration_manager.migrations.migrate_1_0_0 import (
     MigrationV100,
     _add_site_network_aliases,
+    _attach_frontend_network,
     rewrite_compose_for_rename,
 )
 
@@ -131,6 +132,8 @@ class TestServicesComposeRewrite:
         assert json.dumps(data, default=str) == snapshot
 
 
+# Measured on a real 0.20.0 bench: only nginx is on the frontend network there, and the bench
+# reaches its own site through the site-name alias nginx publishes.
 PRE_1_0_0_BENCH_COMPOSE = """\
 services:
   frappe:
@@ -138,7 +141,6 @@ services:
     networks:
       site-network:
       backend-network:
-      frontend-network:
   nginx:
     image: ghcr.io/rtcamp/frappe-manager-nginx:v0.20.0
     networks:
@@ -150,7 +152,6 @@ services:
     image: ghcr.io/rtcamp/frappe-manager-frappe:v0.20.0
     networks:
       site-network:
-      frontend-network:
   redis-cache:
     image: redis:8-alpine
     networks:
@@ -192,6 +193,46 @@ class TestSiteNetworkAliases:
 
         assert _add_site_network_aliases(data["services"]) is False
         assert json.dumps(data, default=str) == snapshot
+
+
+class TestFrontendNetworkAttach:
+    def test_backend_services_join_the_proxy_network_and_point_their_domains_at_it(self):
+        """1.0.0 reaches a bench's own site through the proxy. A migrated bench survives only on
+        the site-name alias its nginx publishes, and the next `generate_compose` REPLACES that
+        list -- after which every server-side self-call times out while public traffic is fine."""
+        data = _load(PRE_1_0_0_BENCH_COMPOSE)
+
+        assert _attach_frontend_network(data, ["shop.localhost:10.1.0.2"]) is True
+
+        for name in ("frappe", "socketio"):
+            assert "frontend-network" in data["services"][name]["networks"]
+            assert data["services"][name]["extra_hosts"] == ["shop.localhost:10.1.0.2"]
+        assert data["networks"]["frontend-network"]["name"] == "fm-frontend-network"
+        assert data["networks"]["frontend-network"]["external"] is True
+
+    def test_redis_stays_off_the_proxy_network(self):
+        """Only what the 1.0.0 template attaches: redis has no business reaching the proxy."""
+        data = _load(PRE_1_0_0_BENCH_COMPOSE)
+
+        _attach_frontend_network(data, ["shop.localhost:10.1.0.2"])
+
+        assert "frontend-network" not in (data["services"]["redis-cache"]["networks"] or {})
+
+    def test_attaching_is_idempotent(self):
+        data = _load(PRE_1_0_0_BENCH_COMPOSE)
+        _attach_frontend_network(data, ["shop.localhost:10.1.0.2"])
+        snapshot = json.dumps(data, default=str)
+
+        assert _attach_frontend_network(data, ["shop.localhost:10.1.0.2"]) is False
+        assert json.dumps(data, default=str) == snapshot
+
+    def test_no_proxy_address_means_membership_without_a_hosts_entry(self):
+        """A proxy that is down yields no IP; joining the network is still correct, and writing
+        a stale or empty address never is."""
+        data = _load(PRE_1_0_0_BENCH_COMPOSE)
+
+        assert _attach_frontend_network(data, []) is True
+        assert "extra_hosts" not in data["services"]["frappe"]
 
 
 class TestBenchComposeRewrite:
@@ -537,3 +578,51 @@ class TestTelemetryTableRewrite:
         m._rewrite_telemetry_table(bench)
 
         m.backup_manager.backup.assert_called_once_with(path, bench_name="shop")
+
+
+class TestProxyIpPin:
+    """A migrated proxy that comes back on a different address strands every bench: their
+    extra_hosts still name the old one, so server-side self-calls die while public traffic
+    keeps answering 200. Measured: the proxy moved 10.1.0.2 -> 10.1.0.9 and the call failed."""
+
+    def _compose(self, networks):
+        return {"services": {"nginx-proxy": {"container_name": "fm_nginx-proxy", "networks": networks}}}
+
+    def test_the_address_the_proxy_already_holds_is_written_onto_its_service(self):
+        migration = MigrationV100.__new__(MigrationV100)
+        migration._old_proxy_ip = "10.1.0.2"
+        data = self._compose({"frontend-network": None})
+
+        migration._pin_proxy_ip(data)
+
+        entry = data["services"]["nginx-proxy"]["networks"]["frontend-network"]
+        assert entry["ipv4_address"] == "10.1.0.2"
+
+    def test_the_legacy_list_form_is_converted_so_it_can_carry_an_address(self):
+        migration = MigrationV100.__new__(MigrationV100)
+        migration._old_proxy_ip = "10.1.0.2"
+        data = self._compose(["frontend-network", "backend-network"])
+
+        migration._pin_proxy_ip(data)
+
+        networks = data["services"]["nginx-proxy"]["networks"]
+        assert networks["frontend-network"]["ipv4_address"] == "10.1.0.2"
+        assert "backend-network" in networks
+
+    def test_an_address_the_operator_already_pinned_is_never_overwritten(self):
+        migration = MigrationV100.__new__(MigrationV100)
+        migration._old_proxy_ip = "10.1.0.2"
+        data = self._compose({"frontend-network": {"ipv4_address": "10.1.0.50"}})
+
+        migration._pin_proxy_ip(data)
+
+        assert data["services"]["nginx-proxy"]["networks"]["frontend-network"]["ipv4_address"] == "10.1.0.50"
+
+    def test_nothing_is_written_when_the_proxy_was_not_running(self):
+        migration = MigrationV100.__new__(MigrationV100)
+        migration._old_proxy_ip = None
+        data = self._compose({"frontend-network": None})
+
+        migration._pin_proxy_ip(data)
+
+        assert data["services"]["nginx-proxy"]["networks"]["frontend-network"] is None

@@ -454,6 +454,8 @@ class MigrationV100(MigrationBase):
         # Daemon-truth subnets of the OLD networks, captured before anything is deleted;
         # keyed by the NEW compose network key. The rollback needs them too.
         self._old_subnets: dict[str, str | None] = {}
+        # The proxy's address before the rename; every bench's `extra_hosts` already names it.
+        self._old_proxy_ip: str | None = None
 
     def migrate_bench(self, bench: MigrationBench):
         self._admin_tools_and_config_bench(bench)
@@ -591,8 +593,37 @@ class MigrationV100(MigrationBase):
         leaves nothing able to recreate a network that gets deleted, and no pinned proxy address,
         so a proxy recreate can move the IP every bench's `extra_hosts` still names.
         """
-        with contextlib.suppress(Exception):
-            self.services_manager.configure_shared_networks()
+        from frappe_manager.metadata_manager import FMConfigManager
+        from frappe_manager.utils.network import detect_running_network, pick_proxy_ip
+
+        # The executor's OWN instance, not a fresh read: it was loaded before this migration and
+        # stamps the ledger through `export_to_toml` afterwards, which writes that document
+        # wholesale. A seed written to disk here would be overwritten by the stamp.
+        executor = getattr(self, "migration_executor", None)
+        fm_config = getattr(executor, "fm_config_manager", None) or FMConfigManager.import_from_toml()
+        changed = False
+
+        for network_name, subnet_field in (
+            ("fm-frontend-network", "subnet_cidr"),
+            ("fm-backend-network", "backend_subnet_cidr"),
+        ):
+            if getattr(fm_config.network, subnet_field, None):
+                continue
+            running = detect_running_network(network_name)
+            if not running:
+                continue
+            setattr(fm_config.network, subnet_field, running["subnet_cidr"])
+            changed = True
+            if network_name == "fm-frontend-network" and not fm_config.network.proxy_ip:
+                # The proxy may be detached at this instant; a free address in the range it
+                # already lives on beats persisting an empty one.
+                fm_config.network.proxy_ip = running["proxy_ip"] or pick_proxy_ip(
+                    running["subnet_cidr"], network_name
+                )
+
+        if changed:
+            fm_config.export_to_toml()
+            self.output.info(f"Recorded the shared network range {fm_config.network.subnet_cidr}")
 
     def _add_proxy_fmd_mount(self) -> bool:
         """Give an existing services compose the `fm.d` mount `ProxyDropins` fragments need.
@@ -664,10 +695,69 @@ class MigrationV100(MigrationBase):
                 if self._convert_vhost_domain(dropins, vhost_file.name, vhost_file):
                     converted = True
 
+        converted |= self._seed_proxy_fragments(ProxyDropins.for_services_path(CLI_SERVICES_DIRECTORY))
+
         if mount_added:
             self._recreate_proxy()
         elif converted:
             self._reload_proxy()
+
+    def _seed_proxy_fragments(self, dropins) -> bool:
+        """Write the three per-domain fragments a NEW 1.0.0 install gets, for every bench domain.
+
+        The conversion above only rewrites what a legacy `vhostd/<domain>` already held, and a
+        0.20.0 host held nothing for a plain bench: no `client_max_body_size` reached the proxy,
+        so every upgraded bench kept nginx's built-in 1M default and refused uploads with a 413
+        while its own config advertised 50M. `apply_upload_limit`/`apply_hsts`/`apply_proxy_retry`
+        write these on create and on `fm start`, neither of which a migration runs.
+        """
+        from frappe_manager.services_manager.proxy_failover import upstream_retry_conf
+        from frappe_manager.site_manager.modules.upload_limit import (
+            domains_needing_upload_limit,
+            upload_limit_conf,
+        )
+        from frappe_manager.ssl_manager.proxy_conf import hsts_conf
+
+        changed = False
+        benches_manager = getattr(self, "benches_manager", None)
+        if benches_manager is None:
+            return False
+
+        for bench_name, compose_path in benches_manager.get_all_benches().items():
+            config_path = compose_path.parent / "bench_config.toml"
+            if not config_path.exists():
+                continue
+            try:
+                doc = tomlkit.parse(config_path.read_text())
+            except Exception:
+                continue
+
+            bench_limit = str(doc.get("upload_limit", "50M"))
+            limits: dict[str, str] = {}
+            for site_name, entry in (doc.get("sites") or {}).items():
+                domains = [str(site_name)]
+                if hasattr(entry, "get"):
+                    domains += [str(alias) for alias in (entry.get("alias_domains") or [])]
+                    site_limit = str(entry.get("upload_limit") or bench_limit)
+                else:
+                    site_limit = bench_limit
+                for domain in domains:
+                    limits[domain] = site_limit
+            if not limits:
+                limits = {bench_name: bench_limit}
+
+            for domain in sorted(limits):
+                for name, content in (
+                    ("upstream-retry", upstream_retry_conf()),
+                    ("hsts", hsts_conf("off")),
+                ):
+                    changed |= bool(dropins.set(domain, name, content))
+            for domain in domains_needing_upload_limit(sorted(limits)):
+                changed |= bool(dropins.set(domain, "upload-limit", upload_limit_conf(limits[domain])))
+
+        if changed:
+            self.output.info("Wrote the proxy's per-domain upload limit, retry and HSTS fragments")
+        return changed
 
     def _convert_vhost_domain(self, dropins, domain: str, vhost_file: Path) -> bool:
         """Convert one domain's vhost.d file; returns whether it held anything to convert.
@@ -1033,7 +1123,13 @@ class MigrationV100(MigrationBase):
         try:
             yaml = YAML()
             data = yaml.load((CLI_SERVICES_DIRECTORY / "docker-compose.yml").read_text())
-            ipam = ((data.get("networks") or {}).get("global-frontend-network") or {}).get("ipam") or {}
+            # Either spelling: the per-bench tier always runs AFTER `migrate_services` renamed
+            # this key, so reading only the legacy name can never hit and the step would depend
+            # entirely on the daemon fallback below, which writes nothing while the proxy is down.
+            networks = data.get("networks") or {}
+            ipam = ((networks.get("frontend-network") or networks.get("global-frontend-network")) or {}).get(
+                "ipam"
+            ) or {}
             subnet = (ipam.get("config") or [{}])[0].get("subnet")
         except Exception:
             subnet = None
@@ -2219,6 +2315,9 @@ class MigrationV100(MigrationBase):
         self._old_subnets = {
             new_key: self._daemon_subnet(old_name) for new_key, old_name in NEW_KEY_TO_OLD_NETWORK.items()
         }
+        # Same window, same reason: the running proxy's address is only readable while the old
+        # network still exists, and it is what every bench's `extra_hosts` already names.
+        self._old_proxy_ip = self._daemon_proxy_ip()
 
         # 1. Every bench's containers must be REMOVED: removed containers are what free
         #    the old networks, and the bench composes are about to reference new ones.
@@ -2267,6 +2366,7 @@ class MigrationV100(MigrationBase):
         #    no owner at all -- nothing would recreate them after the deletion above.
         rewrite_compose_for_rename(compose_file_manager.yml)
         self._normalize_services_networks(compose_file_manager.yml)
+        self._pin_proxy_ip(compose_file_manager.yml)
         compose_file_manager.yml["x-version"] = str(self.version)
         compose_file_manager.write_to_file()
 
@@ -2338,6 +2438,57 @@ class MigrationV100(MigrationBase):
             subnet = self._old_subnets.get(key)
             if subnet:
                 network["ipam"] = {"config": [{"subnet": subnet}]}
+
+    def _pin_proxy_ip(self, compose_data: dict) -> None:
+        """Pin the proxy to the address it already holds.
+
+        A new install writes this; an upgraded one did not, so a proxy that went down while
+        anything else was starting came back on a different address while every bench's
+        `extra_hosts` still named the old one -- killing server-side self-calls with public
+        traffic still answering 200. Measured: the proxy moved 10.1.0.2 -> 10.1.0.9 and the
+        bench's call to its own site stopped connecting.
+        """
+        if not self._old_proxy_ip:
+            return
+        proxy = (compose_data.get("services") or {}).get("nginx-proxy")
+        if not isinstance(proxy, dict):
+            return
+
+        networks = proxy.get("networks")
+        # Legacy installs carry the list form, which has nowhere to put an address.
+        if isinstance(networks, list):
+            networks = {name: None for name in networks}
+            proxy["networks"] = networks
+        if not isinstance(networks, dict) or FRONTEND_NETWORK_KEY not in networks:
+            return
+
+        entry = networks.get(FRONTEND_NETWORK_KEY)
+        if not isinstance(entry, dict):
+            entry = {}
+            networks[FRONTEND_NETWORK_KEY] = entry
+        entry.setdefault("ipv4_address", self._old_proxy_ip)
+
+    @staticmethod
+    def _daemon_proxy_ip() -> str | None:
+        """The running proxy's address on the frontend network, under either service name."""
+        for container in ("fm_nginx-proxy", "fm_global-nginx-proxy"):
+            try:
+                out = run_command_with_exit_code(
+                    [
+                        "docker",
+                        "inspect",
+                        "--format",
+                        "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}",
+                        container,
+                    ],
+                    stream=False,
+                )
+            except Exception:
+                continue
+            address = "".join(out.stdout).split()  # type: ignore[union-attr]
+            if address:
+                return address[0]
+        return None
 
     @staticmethod
     def _daemon_subnet(network_name: str) -> str | None:
@@ -2537,6 +2688,13 @@ class MigrationV100(MigrationBase):
                         continue
                     client = DockerClient(compose_file_path=compose_path)
                     assert client.compose is not None
+                    if compose_name == "docker-compose.admin-tools.yml":
+                        # `pull_bench_images` covers the main compose only, and this file was just
+                        # re-pointed at adminer:5, which a 0.20.0 host has never fetched. With
+                        # `pull="never"` below, a host without it cached comes back with its
+                        # database console and mail catcher down.
+                        with contextlib.suppress(Exception):
+                            client.compose.pull(stream=False)
                     client.compose.up(services=[], detach=True, pull="never", stream=False)
         except DockerException as e:
             self.output.warning(
