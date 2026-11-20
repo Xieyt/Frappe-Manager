@@ -24,10 +24,9 @@ ends in "is not readable." (capitalized, trailing period). fm's own refusals nev
 """
 
 import os
+import re
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
-
-import re
 
 import pytest
 import typer
