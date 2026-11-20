@@ -15,6 +15,13 @@ updates:
     directory: "/Docker/nginx"
     schedule:
       interval: "monthly"
+  # The four data-and-traffic images fm renders into compose are digest-pinned, so a published
+  # rebuild reaches a host only through a bot PR and the next release. The files are .tmpl, not
+  # docker-compose.yml, so dependabot finds them only via this explicit directory entry.
+  - package-ecosystem: "docker-compose"
+    directory: "/frappe_manager/templates"
+    schedule:
+      interval: "monthly"
   - package-ecosystem: "uv"
     directory: "/"
     schedule:

@@ -6,7 +6,7 @@ services:
       options:
         max-size: 10m
         max-file: "3"
-    image: mariadb:11.8
+    image: mariadb:11.8@sha256:d36f18d65a0459510b8b0f643b226a6d299e3206486e2b64ff20754a6d291707
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
     restart: always
     profiles:
@@ -38,7 +38,7 @@ services:
       options:
         max-size: 10m
         max-file: "3"
-    image: postgres:18
+    image: postgres:18@sha256:eb63372c1e05c755f55fa30cbd07aecc443676fc6c0fa90b9002d01537841e1a
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
     restart: always
     profiles:
@@ -63,7 +63,7 @@ services:
         max-size: 10m
         max-file: "3"
     user: REPLACE_WITH_CURRENT_USER:REPLACE_WITH_CURRENT_USER_GROUP
-    image: jwilder/nginx-proxy:1.11
+    image: jwilder/nginx-proxy:1.11@sha256:dd78565eca9742624655bb743723e0aeeab552153c4eea01095e4266c59150d5
     environment:
       ACME_HTTP_CHALLENGE_LOCATION: false
       LOG_FORMAT_ESCAPE: json

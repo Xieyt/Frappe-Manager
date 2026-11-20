@@ -743,24 +743,14 @@ class BenchDockerOps:
 
         self.output.change_head("Checking required docker images availability")
         fm_images = get_all_docker_images()
-        system_available_images = self.docker_client.images()
 
+        # `docker images` lists a digest-pinned pull under its repository with NO tag, so a
+        # repository+tag match reports every pinned image missing. Inspect the reference instead.
         not_available_images = []
-
-        for key, value in fm_images.items():
-            name = value["name"]
-            tag = value["tag"]
-
-            found = False
-
-            for item in system_available_images:
-                if item.get("Repository") == name and item.get("Tag") == tag:
-                    found = True
-                    break
-
-            if not found:
-                image = f"{name}:{tag}"
-                not_available_images.append(image)
+        for value in fm_images.values():
+            reference = value["image"]
+            if not self.docker_client.image_exists(reference):
+                not_available_images.append(reference)
 
         not_available_images = list(dict.fromkeys(not_available_images))
 

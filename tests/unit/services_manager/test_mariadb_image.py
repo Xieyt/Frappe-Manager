@@ -29,8 +29,11 @@ def _mariadb_image(text: str) -> str:
 
 
 def test_both_service_templates_pin_the_constant():
+    # Constant plus digest: the tag must still be the constant, or a digest bump could move the
+    # server version while looking routine.
     for template in _SERVICES_TEMPLATES:
-        assert _mariadb_image(template.read_text()) == MARIADB_IMAGE, template
+        image = _mariadb_image(template.read_text())
+        assert image.startswith(f"{MARIADB_IMAGE}@sha256:"), (image, template)
 
 
 def test_the_pin_is_a_mariadb_tag_with_an_explicit_version():

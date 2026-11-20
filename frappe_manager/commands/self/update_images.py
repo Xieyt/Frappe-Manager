@@ -29,12 +29,17 @@ def update_images(
     if check:
         with spinner(output, "Checking published images"):
             behind = check_docker_images()
+        # print, not info: the answer IS the command's output, and info is hidden below -v, so
+        # `--check` on an up-to-date host printed nothing at all.
         if not behind:
-            output.info("Every image is the build the registry publishes.")
+            output.print("Every image matches the build this fm pins.")
             return
-        for image, published in behind.items():
-            output.warning(f"{image} has a newer build published ({published})")
-        output.info("Run 'fm self update-images' to pull them.")
+        for image, (kind, digest) in behind.items():
+            if kind == "pinned":
+                output.warning(f"{image.split('@')[0]} pinned to {digest}, not on disk")
+            else:
+                output.warning(f"{image} has a newer build published ({digest})")
+        output.print("Run 'fm self update-images' to pull them.")
         return
     with spinner(output, "Pulling latest Docker images"):
         pull_docker_images()

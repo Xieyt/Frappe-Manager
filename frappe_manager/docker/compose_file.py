@@ -24,6 +24,9 @@ yaml.representer.ignore_aliases = lambda *args: True
 
 yaml.default_flow_style = False
 yaml.default_style = None
+# A digest-pinned image is 85 characters; ruamel's default width folds it onto its own line,
+# which is valid YAML docker accepts but reads like a mistake in a file operators open.
+yaml.width = 4096
 
 
 def _warn_missing_service(container: str, what: str) -> None:

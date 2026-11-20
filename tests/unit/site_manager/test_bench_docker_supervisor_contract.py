@@ -1479,8 +1479,8 @@ class TestRequiredImagesCheck:
     @pytest.mark.timeout(15)
     def test_all_images_present_raises_nothing(self, tmp_path, monkeypatch):
         ops = _ops(tmp_path)
-        self._patch_fm_images(monkeypatch, {"frappe": {"name": "fm/frappe", "tag": "v1"}})
-        ops.docker_client.images.return_value = [{"Repository": "fm/frappe", "Tag": "v1"}]
+        self._patch_fm_images(monkeypatch, {"frappe": {"name": "fm/frappe", "tag": "v1", "image": "fm/frappe:v1"}})
+        ops.docker_client.image_exists.side_effect = lambda ref: ref == "fm/frappe:v1"
 
         ops.check_required_docker_images_available()
 
@@ -1492,8 +1492,8 @@ class TestRequiredImagesCheck:
         from frappe_manager.site_manager.exceptions import BenchOperationRequiredDockerImagesNotAvailable
 
         ops = _ops(tmp_path)
-        self._patch_fm_images(monkeypatch, {"frappe": {"name": "fm/frappe", "tag": "v2"}})
-        ops.docker_client.images.return_value = [{"Repository": "fm/frappe", "Tag": "v1"}]
+        self._patch_fm_images(monkeypatch, {"frappe": {"name": "fm/frappe", "tag": "v2", "image": "fm/frappe:v2"}})
+        ops.docker_client.image_exists.side_effect = lambda ref: ref == "fm/frappe:v1"
 
         with pytest.raises(BenchOperationRequiredDockerImagesNotAvailable):
             ops.check_required_docker_images_available()
@@ -1509,12 +1509,12 @@ class TestRequiredImagesCheck:
         self._patch_fm_images(
             monkeypatch,
             {
-                "frappe": {"name": "fm/frappe", "tag": "v1"},
-                "schedule": {"name": "fm/frappe", "tag": "v1"},
-                "nginx": {"name": "fm/nginx", "tag": "v1"},
+                "frappe": {"name": "fm/frappe", "tag": "v1", "image": "fm/frappe:v1"},
+                "schedule": {"name": "fm/frappe", "tag": "v1", "image": "fm/frappe:v1"},
+                "nginx": {"name": "fm/nginx", "tag": "v1", "image": "fm/nginx:v1"},
             },
         )
-        ops.docker_client.images.return_value = []
+        ops.docker_client.image_exists.return_value = False
 
         with pytest.raises(BenchOperationRequiredDockerImagesNotAvailable):
             ops.check_required_docker_images_available()

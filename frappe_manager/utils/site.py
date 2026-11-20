@@ -287,8 +287,7 @@ def pull_docker_images() -> bool:
     images_list = []
 
     for _service, image_info in images.items():
-        image = f"{image_info['name']}:{image_info['tag']}"
-        images_list.append(image)
+        images_list.append(image_info["image"])
 
     images_list = list(dict.fromkeys(images_list))
 
@@ -330,27 +329,43 @@ def stock_images_missing() -> bool:
     from frappe_manager.docker import DockerClient
 
     docker = DockerClient()
-    images = {f"{info['name']}:{info['tag']}" for info in get_all_docker_images().values()}
+    images = {info["image"] for info in get_all_docker_images().values()}
     return any(not docker.image_exists(image) for image in images)
 
 
-def check_docker_images() -> dict[str, str]:
-    """``{image: published digest}`` for every stock image whose local copy is not what the
-    registry's tag points at now. Empty when everything matches or nothing can be reached.
+def check_docker_images() -> dict[str, tuple[str, str]]:
+    """``{reference: (kind, digest)}`` for every stock image whose local copy is not the one this
+    fm asks for. ``kind`` is ``"pinned"`` (the reference names a digest and the daemon does not
+    have it) or ``"moved"`` (a floating tag now points somewhere else in the registry). Empty
+    when everything matches or nothing can be reached.
+
+    A pinned image is NEVER compared against its tag in the registry: the tag keeps moving and
+    the pin does not, so that comparison would report every host behind forever and the warning
+    would stop meaning anything. Only a newer fm changes a pin.
 
     Local digest, not image id: an id is per-daemon and never equals a registry digest.
     """
     from frappe_manager.docker import DockerClient
 
     docker = DockerClient()
-    behind: dict[str, str] = {}
-    for image in sorted({f"{info['name']}:{info['tag']}" for info in get_all_docker_images().values()}):
-        published = docker.registry_digest(image)
+    behind: dict[str, tuple[str, str]] = {}
+    for info in sorted(get_all_docker_images().values(), key=lambda i: i["image"]):
+        reference = info["image"]
+        if reference in behind:
+            continue
+        pinned = info["digest"]
+        if pinned:
+            # Absent counts: a pinned reference always comes from a registry, so "no local copy"
+            # and "a different copy" are the same answer -- pull it.
+            if pinned not in docker.image_repo_digests(reference):
+                behind[reference] = ("pinned", pinned)
+            continue
+        published = docker.registry_digest(reference)
         if not published:
             continue
-        local = docker.image_repo_digests(image)
+        local = docker.image_repo_digests(reference)
         if local and published not in local:
-            behind[image] = published
+            behind[reference] = ("moved", published)
     return behind
 
 

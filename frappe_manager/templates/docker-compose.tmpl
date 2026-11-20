@@ -103,7 +103,7 @@ services:
       frontend-network:
 
   redis-cache:
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -118,7 +118,7 @@ services:
       site-network:
 
   redis-queue:
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file

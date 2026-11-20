@@ -191,6 +191,8 @@ class BenchInfo:
         """
         if not running_digest or self.docker_client is None:
             return
+        if "@" in reference:
+            return
         published = self.docker_client.registry_digest(reference)
         if published and published != running_digest:
             card.fact(
