@@ -215,7 +215,7 @@ class TestUpdateDbCaExistenceGuard:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "CA path is not a file" in result.output
+        assert "CA path is not a file" in _plain(result.output)
 
 
 class TestUpdateDbCaReadableGate:
@@ -236,7 +236,7 @@ class TestUpdateDbCaReadableGate:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "CA file is not readable" in result.output
+        assert "CA file is not readable" in _plain(result.output)
 
 
 # --------------------------------------------------------------------- fm ssl add --cert/--key/--ca
@@ -339,5 +339,5 @@ class TestMaintenancePageReadableGate:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "--page file is not readable" in result.output
+        assert "--page file is not readable" in _plain(result.output)
 
