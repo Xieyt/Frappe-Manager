@@ -237,6 +237,10 @@ class BenchWorkers:
 
                 self.compose_file_manager.yml["services"][worker] = worker_config
 
+            # After the rename: a worker's own [logs.containers."long-worker"] entry cannot be
+            # resolved while the service is still the template's placeholder.
+            self.compose_file_manager.apply_log_limits()
+
             self.compose_file_manager.with_prefix(
                 get_container_name_prefix(self.bench.name),
                 "site-network",

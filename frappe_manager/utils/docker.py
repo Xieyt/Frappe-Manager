@@ -282,10 +282,9 @@ def fix_host_path_ownership(
     if gid is None:
         gid = os.getgid()
     if image is None:
-        from frappe_manager.utils.helpers import get_docker_image_tag
+        from frappe_manager.utils.helpers import fm_image
 
-        tag = get_docker_image_tag()
-        image = f"ghcr.io/rtcamp/frappe-manager-frappe:{tag}"
+        image = fm_image("frappe")
 
     needs_fix = []
     for path in paths:

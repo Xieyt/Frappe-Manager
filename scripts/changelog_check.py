@@ -23,9 +23,12 @@ ROOT = Path(__file__).parent.parent
 # Where an entry may be recorded. Add "changelog.d/" here when fragments arrive.
 RECORD_PATHS = ("docs/changelog.md",)
 
-# Commits before this predate the gate and cannot be given trailers without rewriting
-# published history; their entries were written by hand in 60efd717.
-BASELINE = "60efd717"
+# Commits before this predate the gate and cannot be given trailers without rewriting published
+# history; their entries were written by hand in this commit. It MUST be reachable from the
+# branch under audit: an unresolvable sha falls back to the last release tag, which drags the
+# range back years and reports hundreds of ancient commits as unaccounted. The earlier value
+# (60efd717) was rewritten out of existence and resolved only on clones still holding the orphan.
+BASELINE = "2d748a09"
 
 # Commits whose entry was written after the fact, in one later pass over docs/changelog.md.
 # The three normal verdicts are all properties of the commit OBJECT, so a commit that shipped
@@ -34,15 +37,6 @@ BASELINE = "60efd717"
 # same diff that adds the sha. Prefer moving BASELINE only for a whole prehistory, never for a
 # commit someone could still have written an entry for.
 COVERED = {
-    "aa4aed80",  # redis: move a bench between external and fm-managed redis
-    "679740ba",  # redis: cache and queue on different servers
-    "7ca67438",  # redis: drain the queue before moving it
-    "849fe2b6",  # redis: backlog wait timeout + resume producers on Ctrl-C
-    "858aac22",  # redis: unbounded backlog wait
-    "3f36999a",  # workers: scoped signal handling
-    "4daf87fc",  # workers: pause the scheduler explicitly
-    "9aafa139",  # migrate: squash the unreleased 0.20/0.21 migrations into 1.0.0
-    "23d71ab3",  # migrate: --rerun version floor underflow
     "39fc71ab",  # migrate: render the plan outside the spinner
     "82baee18",  # cli: operator suggestions on the exception base
     "868b32d1",  # create: announce dotted bench names

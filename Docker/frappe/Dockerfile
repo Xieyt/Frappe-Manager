@@ -1,20 +1,21 @@
-FROM ubuntu:22.04 AS base
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS base
 
 LABEL author=rtCamp
 LABEL org.opencontainers.image.source=https://github.com/rtcamp/Frappe-Manager
 
-COPY find-best-mirror.sh /tmp/find-best-mirror.sh
+# The digest is an OCI index (amd64, arm64 and five more), NOT a single-platform manifest -- a
+# per-platform digest here would break the arm64 half of bake-images.yml.
 
-# PGDG rather than Ubuntu's own postgresql-client: jammy ships 14, and `pg_dump` REFUSES a server
-# whose major is newer than its own ("aborting because of server version mismatch" -- measured
-# against a PostgreSQL 17 server from this very image). `psql` connects fine in that pairing, so the
-# skew shows up only when a backup is taken, which is the worst moment to discover it. The client
-# major shipped here is therefore a statement about which servers fm can back up, and it has to
-# lead the servers people run, not trail them.
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl ca-certificates gnupg \
-    && chmod +x /tmp/find-best-mirror.sh \
-    && /tmp/find-best-mirror.sh \
-    && rm /tmp/find-best-mirror.sh \
+# PGDG rather than Debian's own postgresql-client: trixie ships 17 today, and `pg_dump` REFUSES a
+# server whose major is newer than its own ("aborting because of server version mismatch" --
+# measured against a PostgreSQL 17 server from this very image). `psql` connects fine in that
+# pairing, so the skew shows up only when a backup is taken, which is the worst moment to discover
+# it. The client major shipped here is a statement about which servers fm can back up, and it has
+# to lead the servers people run, not trail them; PGDG is what keeps that bump a one-line change
+# instead of a wait for the next Debian release.
+RUN --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
+    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y curl ca-certificates gnupg \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -28,6 +29,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     libssl-dev \
     fonts-cantarell \
     libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libharfbuzz0b \
+    libpangoft2-1.0-0 \
+    media-types \
+    pkg-config \
     locales \
     build-essential \
     cron \
@@ -38,7 +44,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     tree \
     nano \
     less \
-    software-properties-common \
     bash-completion \
     libpq-dev \
     libffi-dev \
@@ -46,7 +51,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     libldap2-dev \
     libmariadb-dev \
     libsasl2-dev \
-    libtiff5-dev \
+    libtiff-dev \
     libwebp-dev \
     redis-tools \
     rlwrap \
@@ -58,9 +63,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     libsqlite3-dev \
     zlib1g-dev \
     libreadline-dev \
-    llvm \
-    libncurses5-dev \
-    libncursesw5-dev \
+    libncurses-dev \
+    python3 \
     xz-utils \
     tk-dev \
     liblzma-dev \
@@ -72,9 +76,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     fonts-powerline \
     file \
     unzip \
-    # Chromium runtime libs for frappe's chrome PDF generator (frappe downloads
-    # headless_shell itself). jammy has no chromium-headless-shell package and
-    # chromium-browser is a snap stub, so the libs are listed individually
+    # Chromium runtime libs for frappe's chrome PDF generator (frappe downloads headless_shell
+    # itself, so Debian's own chromium-headless-shell would be a second browser nothing runs)
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -96,8 +99,14 @@ ENV WKHTMLTOPDF_VERSION=0.12.6.1-3
 RUN ARCH="$(uname -m)" && \
     if [ "$ARCH" = "aarch64" ]; then ARCH=arm64; fi && \
     if [ "$ARCH" = "x86_64" ]; then ARCH=amd64; fi && \
-    downloaded_file=wkhtmltox_$WKHTMLTOPDF_VERSION.jammy_${ARCH}.deb && \
+    downloaded_file=wkhtmltox_$WKHTMLTOPDF_VERSION.bookworm_${ARCH}.deb && \
     wget -q https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOPDF_VERSION/$downloaded_file && \
+    case "$ARCH" in \
+    amd64) expected=98ba0d157b50d36f23bd0dedf4c0aa28c7b0c50fcdcdc54aa5b6bbba81a3941d ;; \
+    arm64) expected=b6606157b27c13e044d0abbe670301f88de4e1782afca4f9c06a5817f3e03a9c ;; \
+    *) echo "no pinned checksum for $ARCH" >&2; exit 1 ;; \
+    esac && \
+    echo "$expected  $downloaded_file" | sha256sum -c - && \
     dpkg -i $downloaded_file && \
     rm $downloaded_file
 
@@ -131,7 +140,6 @@ RUN mkdir -p /opt/user/conf.d && chown -R frappe:frappe /opt/user
 USER frappe
 
 WORKDIR /opt
-COPY --chown=frappe:frappe ./fmx /opt/user/fmx
 RUN mkdir -p /workspace && touch /opt/user/.hushlogin
 
 USER root
@@ -149,17 +157,24 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # Configure UV to install tools in a shared, non-persistent location
 ENV UV_TOOL_DIR=/opt/uv-tools
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
-RUN uv tool install --python 3.10 frappe-bench \
-    && uv tool install --python 3.10 --from /opt/user/fmx fmx \
-    && rm -rf /opt/user/fmx \
-    && chmod -R 755 /opt/uv-tools
 
 # Install fnm (Fast Node Manager) - binary only, Node versions installed later
 RUN echo "Installing fnm v${FNM_VERSION}..." && \
-    curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir /tmp/fnm-install --skip-shell && \
+    curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir /tmp/fnm-install --skip-shell --release "v${FNM_VERSION}" && \
     mv /tmp/fnm-install/fnm /usr/local/bin/fnm && \
     chmod +x /usr/local/bin/fnm && \
     rm -rf /tmp/fnm-install
+
+# ./fmx is copied here, AFTER both downloads: a stray file under it (a local .venv, a test
+# artefact) would otherwise invalidate their layers and re-fetch uv and fnm on every build.
+COPY --chown=frappe:frappe ./fmx /opt/user/fmx
+# --python /usr/bin/python3, never a version: a version the base lacks makes uv download its own
+# interpreter into /root, which the bench user cannot enter, and both tools then die "permission
+# denied" under supervisor forever.
+RUN uv tool install --python /usr/bin/python3 frappe-bench \
+    && uv tool install --python /usr/bin/python3 --from /opt/user/fmx fmx \
+    && rm -rf /opt/user/fmx \
+    && chmod -R 755 /opt/uv-tools
 
 RUN mkdir -p /opt/user/.bin
 
@@ -184,7 +199,7 @@ ENV PATH="/workspace/frappe-bench/.fnm/aliases/default/bin:/usr/local/bin:/opt/u
 ENV BASH_ENV=/etc/profile.d/fnm.sh
 ENV ENV=/etc/profile.d/fnm.sh
 
-# Prebake Python 3.12 and Node 22 into /workspace for faster first site creation
+# Prebake the pinned Python and Node into /workspace for faster first site creation
 USER frappe
 
 RUN mkdir -p /workspace/frappe-bench/.uv/python /workspace/frappe-bench/.fnm /workspace/frappe-bench/.uv/cache && \
@@ -210,9 +225,7 @@ COPY --chmod=0755 ./launch_supervisor_service.sh /scripts/
 
 WORKDIR /workspace
 
-COPY --from=tooling --chown=frappe:frappe /opt/user /opt/user
-COPY --from=tooling /opt/uv-tools /opt/uv-tools
-COPY --from=tooling /etc/bash.bashrc /etc/bash.bashrc
+
 
 # Setup fnm and python for ALL shell types (login, non-login, interactive, non-interactive)
 # Respect existing env vars — only use defaults if not already set

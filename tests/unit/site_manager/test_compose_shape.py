@@ -86,6 +86,16 @@ def test_mount_shape_base_image_override():
     assert shape.image("nginx") == default_nginx_image()  # nginx keeps the stock image in mount
 
 
+def test_mount_shape_honours_the_image_tag_override(monkeypatch):
+    # FM_DOCKER_IMAGE_TAG is the only way to canary a test image; the compose template already
+    # honours it, so a mount bench pinning the version tag would run a DIFFERENT image than its own
+    # docker-compose.yml names.
+    monkeypatch.setenv("FM_DOCKER_IMAGE_TAG", "vtest-base")
+    shape = runtime_shape(_cfg(BenchRuntime.mount))
+    assert shape.image("frappe") == "ghcr.io/rtcamp/frappe-manager-frappe:vtest-base"
+    assert shape.image("nginx") == "ghcr.io/rtcamp/frappe-manager-nginx:vtest-base"
+
+
 def test_image_shape_tags_and_binds():
     shape = runtime_shape(_cfg(BenchRuntime.image, tag="ghcr.io/acme/erp:jun01", nginx_tag="ghcr.io/acme/erp-nginx:jun01"))
     assert shape.image("frappe") == "ghcr.io/acme/erp:jun01"

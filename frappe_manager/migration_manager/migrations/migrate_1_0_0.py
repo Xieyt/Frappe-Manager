@@ -115,7 +115,7 @@ from typing import Any, cast
 import tomlkit
 from ruamel.yaml import YAML
 
-from frappe_manager import CLI_BENCHES_DIRECTORY, CLI_FM_CONFIG_PATH, MARIADB_IMAGE
+from frappe_manager import CLI_BENCHES_DIRECTORY, CLI_FM_CONFIG_PATH, CLI_SERVICES_DIRECTORY, MARIADB_IMAGE
 from frappe_manager.docker import DockerClient, DockerException
 from frappe_manager.migration_manager.migration_base import MigrationBase
 from frappe_manager.migration_manager.migration_constants import DOCKER_COMPOSE_DOWN_TIMEOUT_SECONDS
@@ -460,6 +460,7 @@ class MigrationV100(MigrationBase):
     def migrate_bench(self, bench: MigrationBench):
         self._admin_tools_and_config_bench(bench)
         self._service_rename_bench(bench)
+        self._cap_container_logs(bench.path)
 
     def migrate_services(self):
         self._admin_tools_and_config_services()
@@ -473,6 +474,34 @@ class MigrationV100(MigrationBase):
         self._add_postgres_service()
         # After the rename: the networks it recreates are the ones being recorded.
         self._seed_network_config()
+        self._cap_container_logs(CLI_SERVICES_DIRECTORY)
+
+    def _cap_container_logs(self, directory: Path) -> None:
+        """Docker's json-file driver never rotates, and a compose file written before 1.0.0 carries
+        no `logging` block, so its containers grow on disk for the life of the container. A service
+        that already declares one is left alone: that is either a newer write or an operator's own
+        choice, and neither is ours to overwrite.
+        """
+        from frappe_manager.docker.compose_file import ComposeFile
+
+        for compose_path in sorted(directory.glob("docker-compose*.yml")):
+            try:
+                doc = _load_yaml(compose_path.read_text())
+            except Exception:
+                continue
+            changed = False
+            for name, service in (doc.get("services") or {}).items():
+                if not isinstance(service, MutableMapping) or service.get("logging"):
+                    continue
+                max_size, max_files = ComposeFile._log_limits(name)
+                service["logging"] = {
+                    "driver": "json-file",
+                    "options": {"max-size": max_size, "max-file": str(max_files)},
+                }
+                changed = True
+            if changed:
+                compose_path.write_text(_dump_yaml(doc))
+                self.logger.info(f"Capped container logs in {compose_path}")
 
     def _refresh_proxy_log_format(self):
         """Bring an existing install's access-log format up to the one this fm ships.

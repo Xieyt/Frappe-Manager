@@ -42,6 +42,15 @@ def _root(config) -> Path:
     return Path(config.root_path).parent
 
 
+def _short_digest(digest: str, hex_chars: int = 12) -> str:
+    """`sha256:62405df118ab…` -- enough to compare two hosts by eye; `--json` carries it whole.
+
+    A full digest is ~80 unbreakable characters and folds over three lines in an 80-column card.
+    """
+    algorithm, _, hexpart = digest.partition(":")
+    return f"{algorithm}:{hexpart[:hex_chars]}…" if hexpart else digest
+
+
 class BenchInfo:
     """
     Manages information retrieval and display for a bench.
@@ -158,6 +167,39 @@ class BenchInfo:
             except (ValueError, TypeError):
                 return []
         return read_bench_app_refs(host_bench_dir(self.bench_path))
+
+    def get_running_image(self) -> tuple[str | None, str | None]:
+        """``(reference, digest)`` of the image the bench's web container is running.
+
+        None when the bench is not up: there is no running image to report, and the compose file
+        only names a tag, which is exactly the thing that cannot be trusted to mean one build.
+        """
+        if self.docker_client is None:
+            return None, None
+        from frappe_manager import CLI_DEFAULT_DELIMETER
+        from frappe_manager.utils.helpers import get_container_name_prefix
+
+        container = f"{get_container_name_prefix(self.bench_name)}{CLI_DEFAULT_DELIMETER}frappe"
+        try:
+            return self.docker_client.container_image_digest(container)
+        except Exception:
+            return None, None
+
+    def _report_image_drift(self, card, reference: str, running_digest: str | None) -> None:
+        """fm skips a pull whenever the tag is already on disk, so a republished tag (release
+        images are rebuilt with base-image fixes) never reaches an existing host by itself.
+        """
+        if not running_digest or self.docker_client is None:
+            return
+        if "@" in reference:
+            return
+        published = self.docker_client.registry_digest(reference)
+        if published and published != running_digest:
+            card.fact(
+                "",
+                "[fm.warn]newer build published[/fm.warn] "
+                f"[fm.muted]{_short_digest(published)} · pull with 'fm self update-images'[/fm.muted]",
+            )
 
     @staticmethod
     def _short_ts(iso: str) -> str:
@@ -592,6 +634,7 @@ class BenchInfo:
             "node_version": str(self.get_node_version()),
             "apps": apps,
             "image": image,
+            "running_image": dict(zip(("reference", "digest"), self.get_running_image(), strict=True)),
             "previous_image": previous_image,
             "base_image": config.base_image,
             "apps_from": config.apps_from,
@@ -834,13 +877,23 @@ class BenchInfo:
                 card.fact("telemetry", "newrelic [fm.muted]· enabled, no license key, not reporting[/fm.muted]")
             else:
                 card.fact("telemetry", "newrelic [fm.muted]· license key stored, not enabled[/fm.muted]")
+        running_ref, running_digest = self.get_running_image()
         if config.runtime == BenchRuntime.image:
             deployments = config.deployments
             image = deployments.current.app_image if deployments and deployments.current else None
-            card.fact("image", image or "[fm.muted]N/A (not yet deployed)[/fm.muted]")
+            fingerprint = f"  [fm.muted]{_short_digest(running_digest)}[/fm.muted]" if running_digest else ""
+            card.fact("image", f"{image}{fingerprint}" if image else "[fm.muted]N/A (not yet deployed)[/fm.muted]")
+            if image:
+                self._report_image_drift(card, image, running_digest)
             if deployments and deployments.previous:
                 card.fact("previous", deployments.previous.app_image)
         else:
+            # A mount bench runs fm's own stock image, whose tag is rebuilt upstream, so the
+            # digest is the only thing that says which build is on this host.
+            if running_ref:
+                short = _short_digest(running_digest) if running_digest else "local build"
+                card.fact("image", f"{running_ref}  [fm.muted]{short}[/fm.muted]")
+                self._report_image_drift(card, running_ref, running_digest)
             if config.base_image:
                 card.fact("base", config.base_image)
             if config.apps_from:

@@ -18,19 +18,24 @@ _SERVICES_TEMPLATES = (
     _TEMPLATES / "docker-compose.services.tmpl",
     _TEMPLATES / "docker-compose.services.osx.tmpl",
 )
+_PINS = _TEMPLATES / "compose.images.yml"
 
 
-def _mariadb_image(text: str) -> str:
-    # the mariadb service is the first block in both templates
-    block = text.split("mariadb:", 1)[1]
-    match = re.search(r"^\s*image:\s*(\S+)", block, re.MULTILINE)
-    assert match, "no image line found under mariadb"
-    return match.group(1)
+def test_the_pinned_reference_carries_the_constant_and_a_digest():
+    # One place holds the reference; the tag in it must still be the constant, or a digest bump
+    # could move the server version while looking routine.
+    image = yaml.safe_load(_PINS.read_text())["services"]["mariadb"]["image"]
+    assert image.startswith(f"{MARIADB_IMAGE}@sha256:"), image
 
 
-def test_both_service_templates_pin_the_constant():
+def test_both_service_templates_read_the_pin_rather_than_naming_one():
+    # A literal here is the drift this file exists to prevent.
     for template in _SERVICES_TEMPLATES:
-        assert _mariadb_image(template.read_text()) == MARIADB_IMAGE, template
+        text = template.read_text()
+        block = text.split("mariadb:", 1)[1]
+        match = re.search(r"^\s*image:\s*(\S+.*)$", block, re.MULTILINE)
+        assert match, template
+        assert "images.mariadb" in match.group(1), (match.group(1), template)
 
 
 def test_the_pin_is_a_mariadb_tag_with_an_explicit_version():

@@ -157,6 +157,18 @@ jobs:
           cache-from: ${{ env.USE_CACHE == 'true' && env.cache_from || '' }}
           cache-to: ${{ env.cache_to }}
 
+      # Last point where a broken image is still private: `combine` writes the
+      # public tag from these per-arch ones. Each runner is native for its arch,
+      # so this runs the real binaries, not qemu.
+      - name: Smoke the built image
+        run: |
+          docker pull "${{ env.image_name }}"
+          if [ "${{ matrix.service_name }}" = "frappe" ]; then
+            docker run --rm --user frappe --entrypoint bash "${{ env.image_name }}" -lc 'bench --version && fmx --version && node --version'
+          else
+            docker run --rm --entrypoint nginx "${{ env.image_name }}" -t
+          fi
+
   combine:
     name: Combine both platform images
     needs: build-and-push
@@ -197,20 +209,15 @@ jobs:
 
       - name: Combine manifest and push
         run: |
-          # Read version from __about__.py
           version=$(grep '^__version__' frappe_manager/__about__.py | sed 's/__version__ = "\(.*\)"/\1/')
           tag="v${version}"
           owner=$( echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]' )
-          
-          img="ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}"
-          rm -rf ~/.docker/manifests
-          docker pull "$img:amd64-${tag}"
-          docker pull "$img:arm64-${tag}"
-          docker manifest create "$img":"${tag}" \
-            --amend "$img":amd64-${tag} \
-            --amend "$img":arm64-${tag}
-          docker manifest push "$img:${tag}"
 
-      - name: Cleanup
-        run: |
-          rm -rf ~/.docker/manifests
+          img="ghcr.io/${owner}/frappe-manager-${{ matrix.service_name }}"
+          # imagetools reads the two manifests from the registry; `docker manifest` pulled both
+          # multi-gigabyte images first to write a few hundred bytes of index. It also writes an
+          # OCI index rather than the Docker-specific one, which is what forces provenance off.
+          docker buildx imagetools create --tag "$img:${tag}" \
+            "$img:amd64-${tag}" \
+            "$img:arm64-${tag}"
+          docker buildx imagetools inspect "$img:${tag}"
