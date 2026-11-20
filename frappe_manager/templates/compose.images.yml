@@ -1,0 +1,20 @@
+# Every upstream image fm runs, pinned once. The compose templates read their references from
+# here, so a pin is changed in one place.
+#
+# A real compose document with a bot-readable name on purpose: dependabot's docker-compose
+# manager matches `compose(.<word>)?.ya?ml` and nothing else, so the same pins living in a
+# `.tmpl` file -- or in Python -- would never be updated. The services below are never started;
+# this file is data.
+services:
+  mariadb:
+    image: mariadb:11.8@sha256:d36f18d65a0459510b8b0f643b226a6d299e3206486e2b64ff20754a6d291707
+  postgres:
+    image: postgres:18@sha256:eb63372c1e05c755f55fa30cbd07aecc443676fc6c0fa90b9002d01537841e1a
+  redis:
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+  proxy:
+    image: jwilder/nginx-proxy:1.11@sha256:dd78565eca9742624655bb743723e0aeeab552153c4eea01095e4266c59150d5
+  adminer:
+    image: adminer:5
+  mailpit:
+    image: axllent/mailpit:v1.22

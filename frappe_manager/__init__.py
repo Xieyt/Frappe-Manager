@@ -70,8 +70,8 @@ STABLE_APP_BRANCH_MAPPING_LIST = {
 # The shared mariadb engine. Pinned to what Frappe's own CI tests against on the
 # branch above (frappe/.github/workflows/_base-server-tests.yml), which is the real
 # statement of support: the soft bounds in frappe/database/mariadb/setup_db.py warn
-# below 10.6 and above 11.8. Kept in sync with the `image:` line in both
-# docker-compose.services templates by tests/unit/services_manager/test_mariadb_image.py.
+# below 10.6 and above 11.8. The reference itself lives in templates/compose.images.yml,
+# the one file dependabot updates; this is its tag, for code that needs the version.
 MARIADB_IMAGE = "mariadb:11.8"
 
 # Commands that must not trigger the first-install prefetch of the stock image set.

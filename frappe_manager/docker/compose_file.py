@@ -16,7 +16,13 @@ from frappe_manager.docker.compose_exceptions import (
 )
 from frappe_manager.migration_manager.version import Version
 from frappe_manager.output_manager import get_global_output_handler
-from frappe_manager.utils.helpers import ImageRef, get_docker_image_tag, get_template_path, represent_null_empty
+from frappe_manager.utils.helpers import (
+    ImageRef,
+    fm_image,
+    get_template_path,
+    represent_null_empty,
+    upstream_images,
+)
 from frappe_manager.utils.site import parse_docker_volume
 
 yaml = YAML(typ="rt")
@@ -130,8 +136,11 @@ class ComposeFile:
         template_path: Path = get_template_path(self.template_name, self.template_dir)
 
         template = Template(template_path.read_text())
-        image_tag = get_docker_image_tag()
-        rendered_template = template.render(frappe_image_tag=image_tag, nginx_image_tag=image_tag)
+        rendered_template = template.render(
+            fm_frappe_image=fm_image("frappe"),
+            fm_nginx_image=fm_image("nginx"),
+            images=upstream_images(),
+        )
 
         yml = yaml.load(rendered_template)
         self._apply_configured_log_limits(yml)

@@ -1,6 +1,6 @@
 services:
   frappe:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -26,7 +26,7 @@ services:
       frontend-network:
 
   nginx:
-    image: ghcr.io/rtcamp/frappe-manager-nginx:{{ nginx_image_tag }}
+    image: "{{ fm_nginx_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -58,7 +58,7 @@ services:
       frontend-network:
 
   socketio:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -82,7 +82,7 @@ services:
       frontend-network:
 
   schedule:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -103,7 +103,7 @@ services:
       frontend-network:
 
   redis-cache:
-    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+    image: "{{ images.redis }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file
@@ -118,7 +118,7 @@ services:
       site-network:
 
   redis-queue:
-    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+    image: "{{ images.redis }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
     logging:
       driver: json-file

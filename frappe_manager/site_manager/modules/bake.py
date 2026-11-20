@@ -86,9 +86,9 @@ class BakeManager:
         """Base image for provisioning and the runtime ``FROM``."""
         if self.bench_config.build and self.bench_config.build.base_image:
             return self.bench_config.build.base_image
-        from frappe_manager.utils.helpers import get_docker_image_tag
+        from frappe_manager.utils.helpers import fm_image
 
-        return f"ghcr.io/rtcamp/frappe-manager-frappe:{get_docker_image_tag()}"
+        return fm_image("frappe")
 
     @staticmethod
     def apply_build_overrides(bench_config, output=None) -> None:
