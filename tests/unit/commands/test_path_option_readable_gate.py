@@ -27,6 +27,8 @@ import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
+import re
+
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -45,9 +47,17 @@ requires_non_root = pytest.mark.skipif(
 )
 
 
+def _plain(output: str) -> str:
+    """Output with rich's styling and box drawing removed, whitespace collapsed: a CI runner puts
+    style escapes inside a refusal and wraps it, which a plain-text search then misses."""
+    text = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    text = text.translate({ord(c): " " for c in "\u2502\u2500\u256d\u256e\u2570\u256f"})
+    return " ".join(text.split())
+
+
 def _is_click_path_failure(output: str) -> bool:
     """click.Path's own wording: 'Invalid value for '--flag': Path '<p>' is not readable.'"""
-    return "Invalid value for" in output and "is not readable." in output
+    return "Invalid value for" in _plain(output) and "is not readable." in _plain(output)
 
 
 @contextmanager
@@ -99,7 +109,7 @@ class TestCreateDbCaExistenceGuard:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "no such file" in result.output
+        assert "no such file" in _plain(result.output)
         assert bench_service_cls.return_value.create_bench.called is False
 
     def test_a_directory_is_refused_the_same_way_as_a_missing_file(self, create_cli, tmp_path):
@@ -112,7 +122,7 @@ class TestCreateDbCaExistenceGuard:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "no such file" in result.output
+        assert "no such file" in _plain(result.output)
         assert bench_service_cls.return_value.create_bench.called is False
 
 
@@ -131,7 +141,7 @@ class TestCreateDbCaReadableGate:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "file is not readable" in result.output
+        assert "file is not readable" in _plain(result.output)
         assert bench_service_cls.return_value.create_bench.called is False
 
 
@@ -196,7 +206,7 @@ class TestUpdateDbCaExistenceGuard:
 
         assert result.exit_code != 0
         assert not _is_click_path_failure(result.output)
-        assert "CA file not found" in result.output
+        assert "CA file not found" in _plain(result.output)
 
     def test_a_directory_is_refused_by_fm_not_click(self, update_world, tmp_path):
         a_directory = tmp_path / "a-directory"
