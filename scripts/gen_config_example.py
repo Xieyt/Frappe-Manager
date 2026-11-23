@@ -8,7 +8,7 @@ That gate is the whole point. `frappe_manager/templates/bench_config.toml` was a
 that nothing generated, nothing checked and nothing read, so it drifted through two schema redesigns
 without anyone noticing, and its last accurate statement was several releases old. Deriving the
 example from `Field(description=...)` means the schema documents itself and the documentation cannot
-be wrong about a key's name, its default, or whether fm writes it at all.
+be wrong about a key's name, its default, or whether fmx writes it at all.
 """
 
 import sys
@@ -35,11 +35,11 @@ from frappe_manager.ssl_manager.letsencrypt_certificate import LetsencryptSSLCer
 
 WRAP = 96
 
-# Fields on the global config that describe fm's own state rather than anything a reader sets.
+# Fields on the global config that describe fmx's own state rather than anything a reader sets.
 GLOBAL_NOT_WRITTEN = frozenset({"root_path", "version", "dns_providers"})
 
-# Written to disk, but by fm and only by fm. Listing them as configurable would invite hand edits of
-# fm's own bookkeeping, which is how a bench ends up claiming a migration it never ran.
+# Written to disk, but by fmx and only by fmx. Listing them as configurable would invite hand edits of
+# fmx's own bookkeeping, which is how a bench ends up claiming a migration it never ran.
 # These are FIELD names, not TOML names: `schema_state` is written as `[schema]` via its alias.
 FM_OWNED = frozenset({"schema_state", "deployments"})
 
@@ -112,15 +112,15 @@ def _table_block(header: str, model: type[BaseModel], intro: str | None = None) 
 
 def bench_config_example() -> str:
     lines = [
-        "# bench_config.toml, every key fm reads, generated from the models by",
+        "# bench_config.toml, every key fmx reads, generated from the models by",
         "# `just config-example`. Committed and drift-tested, so it cannot fall behind the schema.",
         "#",
-        "# This is a REFERENCE, not a starting file: fm writes bench_config.toml itself when you run",
-        "# `fm create`. Everything below is commented out. Copy a line, uncomment it, set a value.",
-        "# Comments you add to a real bench_config.toml are preserved when fm saves it.",
+        "# This is a REFERENCE, not a starting file: fmx writes bench_config.toml itself when you run",
+        "# `fmx create`. Everything below is commented out. Copy a line, uncomment it, set a value.",
+        "# Comments you add to a real bench_config.toml are preserved when fmx saves it.",
         "#",
-        "# fm's own bookkeeping tables are omitted: [schema] and [deployments] are written",
-        "# by fm and are not settings.",
+        "# fmx's own bookkeeping tables are omitted: [schema] and [deployments] are written",
+        "# by fmx and are not settings.",
         "",
         "# ---- top-level keys " + "-" * (WRAP - 21),
         "",
@@ -158,7 +158,7 @@ def bench_config_example() -> str:
     lines += _table_block("ssl.dns_providers.<label>", DNSProviderConfig)
     lines += ["#"]
     lines += _comment(
-        "One entry per domain, written by `fm ssl add`. A certificate never holds a credential; it "
+        "One entry per domain, written by `fmx ssl add`. A certificate never holds a credential; it "
         "names one with dns_provider."
     )
     lines.append("# [[ssl.certificates]]")
@@ -169,8 +169,8 @@ def bench_config_example() -> str:
 
     lines += ["", "# ---- [[apps]] " + "-" * (WRAP - 15), ""]
     lines += _comment(
-        "Apps installed in this bench, in install order. fm READS this array but never writes it: "
-        "the list it maintains comes from the container. `fm create --config` and `fm bake --config` "
+        "Apps installed in this bench, in install order. fmx READS this array but never writes it: "
+        "the list it maintains comes from the container. `fmx create --config` and `fmx bake --config` "
         "supply it, and a copy persisted here is preserved across saves rather than pruned."
     )
     lines.append("# [[apps]]")
@@ -189,10 +189,10 @@ def bench_config_example() -> str:
 
 def fm_config_example() -> str:
     lines = [
-        "# ~/frappe/fm_config.toml, fm's own settings, generated from the models by",
+        "# ~/frappe/fm_config.toml, fmx's own settings, generated from the models by",
         "# `just config-example`. Committed and drift-tested, so it cannot fall behind the schema.",
         "#",
-        "# fm writes this file itself. Everything below is commented out; comments you add are kept.",
+        "# fmx writes this file itself. Everything below is commented out; comments you add are kept.",
         "",
     ]
     scalars, tables = [], []
@@ -214,7 +214,7 @@ def fm_config_example() -> str:
     lines += _comment(
         "DNS-01 credential sets shared by every bench on this host, keyed by a free-form label. A "
         "bench-level set with the same label wins. Bind a certificate to one with "
-        "`fm ssl add <bench> <domain> --dns-provider <label>`."
+        "`fmx ssl add <bench> <domain> --dns-provider <label>`."
     )
     lines += _table_block("ssl.dns_providers.<label>", DNSProviderConfig)
     return "\n".join(lines).rstrip() + "\n"

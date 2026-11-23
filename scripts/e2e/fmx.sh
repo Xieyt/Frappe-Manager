@@ -6,12 +6,12 @@ CreateSite() {
 	info_blue "Creating site: $siteName (Environment: ${envN:-default})"
 
 	if [ ! "${envN:-}" ]; then
-		fm --non-interactive create "$siteName" || {
+		fmx --non-interactive create "$siteName" || {
 			info_red "Failed to create site $siteName"
 			exit 1
 		}
 	else
-		fm --non-interactive create "$siteName" --environment "$envN" || {
+		fmx --non-interactive create "$siteName" --environment "$envN" || {
 			info_red "Failed to create site $siteName with environment $envN"
 			exit 1
 		}
@@ -43,32 +43,32 @@ InstallLatestFM() {
 		# Fallback for local testing
 		pip install -U frappe-manager
 	fi
-	fm --version
+	fmx --version
 }
 
 MigrateServices() {
-	info_blue "Migrating fm's global services & configuration"
-	fm --non-interactive services migrate --yes --on-failure rollback || {
-		info_red "fm services migrate failed"
+	info_blue "Migrating fmx's global services & configuration"
+	fmx --non-interactive services migrate --yes --on-failure rollback || {
+		info_red "fmx services migrate failed"
 		exit 1
 	}
 }
 
 MigrateAllBenches() {
 	info_blue "Migrating all benches"
-	fm --non-interactive migrate all --yes --on-failure rollback || {
-		info_red "fm migrate all failed"
+	fmx --non-interactive migrate all --yes --on-failure rollback || {
+		info_red "fmx migrate all failed"
 		exit 1
 	}
 }
 
 MigrationToLatest() {
 	InstallLatestFM
-	# The command split: the services tier is a prerequisite fm migrate refuses to pull in
+	# The command split: the services tier is a prerequisite fmx migrate refuses to pull in
 	# implicitly, so a full upgrade is exactly these two commands, in this order.
 	MigrateServices
 	MigrateAllBenches
-	fm --non-interactive list
+	fmx --non-interactive list
 }
 
 LedgerVersion() {
@@ -102,11 +102,11 @@ InjectFailingMigration() {
 	# A real migration class dropped into the installed package: discovery picks it up like
 	# any shipped migration. Same version as the current release's base, module name sorting
 	# AFTER the real ones ('zz'), so every real migration runs first and the failure lands at
-	# the END of the chain -- the deepest rollback. No fm code knows this file exists.
+	# the END of the chain -- the deepest rollback. No fmx code knows this file exists.
 	local target="$(MigrationsDir)/migrate_zz_rollback_drill.py"
 	info_blue "Injecting failing migration: $target"
 	cat > "$target" <<'PYEOF'
-"""E2E rollback drill: an always-failing migration injected by scripts/e2e/fm.sh."""
+"""E2E rollback drill: an always-failing migration injected by scripts/e2e/fmx.sh."""
 
 from packaging.version import Version as PV
 
@@ -133,8 +133,8 @@ RemoveFailingMigration() {
 
 ExpectServicesMigrateToFailAndRollBack() {
 	info_blue "Running services migration expected to FAIL and roll back"
-	if fm --non-interactive services migrate --yes --on-failure rollback; then
-		info_red "fm services migrate SUCCEEDED with the failing migration injected"
+	if fmx --non-interactive services migrate --yes --on-failure rollback; then
+		info_red "fmx services migrate SUCCEEDED with the failing migration injected"
 		exit 1
 	fi
 	info_green "Migration failed and exited non-zero, as expected"
@@ -143,28 +143,28 @@ ExpectServicesMigrateToFailAndRollBack() {
 DeleteSite() {
 	local siteName="$1"
 	echo "Delete SiteName: $siteName"
-	fm --non-interactive delete "$siteName" --yes
+	fmx --non-interactive delete "$siteName" --yes
 }
 
 GetInfoSite() {
 	local siteName="$1"
 	echo "Info SiteName: $siteName"
-	fm --non-interactive info "$siteName"
+	fmx --non-interactive info "$siteName"
 }
 
 ListSites() {
 	echo "List Sites"
-	fm --non-interactive list
+	fmx --non-interactive list
 }
 
 StartSite() {
 	local siteName="$1"
 	echo "Start SiteName: $siteName"
-	fm --non-interactive start "$siteName"
+	fmx --non-interactive start "$siteName"
 }
 
 StopSite() {
 	local siteName="$1"
 	echo "Stop SiteName: $siteName"
-	fm --non-interactive stop "$siteName"
+	fmx --non-interactive stop "$siteName"
 }

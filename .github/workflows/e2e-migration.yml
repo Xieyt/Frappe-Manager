@@ -56,6 +56,8 @@ jobs:
           cd /tmp
           python -m pip install -U git+https://github.com/rtCamp/Frappe-Manager.git@v0.18.0
 
+      # This installs frappe-manager@v0.18.0 above, which predates the `fmx` entry point,
+      # so every invocation against this install must keep saying `fm`.
       - name: fm version
         run: fm --version
 
@@ -149,7 +151,7 @@ jobs:
   e2e-rollback-drill:
     # The failure path, exercised for real: a bench on the previous release, the migration
     # chain made to fail at its end by an injected failing migration (dropped into the
-    # installed package by scripts/e2e/fm.sh -- no fm code knows about it), then proof that
+    # installed package by scripts/e2e/fmx.sh -- no fm code knows about it), then proof that
     # rollback rewound the ledger, kept the site serving, and left a state clean enough
     # that the same migration succeeds on retry.
     runs-on: ${{ matrix.os }}

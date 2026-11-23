@@ -4,7 +4,7 @@
 
 **Run Frappe benches on Docker: one command to create one, one to ship it.**
 
-`fm` gives every Frappe bench its own containers, database, workers and web server, then takes it from a local `.localhost` URL to an HTTPS production deploy without you writing a compose file.
+`fmx` gives every Frappe bench its own containers, database, workers and web server, then takes it from a local `.localhost` URL to an HTTPS production deploy without you writing a compose file.
 
 [![PyPI](https://img.shields.io/pypi/v/frappe-manager.svg)](https://pypi.org/project/frappe-manager/) [![Python](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/) [![Tests](../../actions/workflows/pytest.yml/badge.svg)](../../actions/workflows/pytest.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -12,7 +12,7 @@
 
 </div>
 
-![fm create acme --apps erpnext, then fm info acme](docs/assets/fm-demo.svg)
+![fmx create pinned.localhost --apps erpnext, then fmx info pinned.localhost](docs/assets/fm-demo.svg)
 
 ## Quick start
 
@@ -23,48 +23,48 @@ You need [Docker](https://docs.docker.com/get-docker/) running and Python 3.13.
 uv tool install --python 3.13 frappe-manager
 
 # 2. create a bench (add --apps erpnext for ERPNext)
-fm create mybench
+fmx create mybench
 
 # 3. visit it
 #    http://mybench.localhost
 ```
 
-`fm create` builds the bench, starts it, and prints the URL and login. A bare name becomes a `.localhost` domain, so nothing to add to `/etc/hosts`. The default login is `Administrator` / `admin`.
+`fmx create` builds the bench, starts it, and prints the URL and login. A bare name becomes a `.localhost` domain, so nothing to add to `/etc/hosts`. The Administrator password is generated per site and printed when the bench is ready; `fmx info mybench` shows it again later.
 
 Prefer pipx, want to try it without installing, or need a dev build? See the [Installation guide](https://opensource.rtcamp.com/Frappe-Manager/dev/getting-started/installation/).
 
 > [!IMPORTANT]
-> From v0.20.0 the CLI is installed as **`fmx`** as well as `fm`. `fm` is deprecated and is removed in 1.0.0, because macOS 27 ships Apple's own `/usr/bin/fm`. Every run as `fm` prints a warning; switch scripts and cron jobs to `fmx`.
+> From v0.20.0 the CLI installs under two names, `fmx` and `fm`, which run the same program. These docs write `fmx`, and that is the name to put in scripts and cron jobs. `fm` still works, including in 1.0.0, but every run prints a deprecation warning and the name will be withdrawn in a later release, because macOS 27 ships Apple's own `/usr/bin/fm`.
 
 ## What you get
 
 | Capability | What it means |
 |---|---|
-| **Isolated benches** | Each bench owns its containers, apps and database, and several run side by side on one host. `fm list` shows them all. |
-| **Dev or prod, per bench** | `dev` mounts an editable workspace with admin tools on; `prod` runs lean behind the shared proxy. Switch with `fm update -e`. |
+| **Isolated benches** | Each bench owns its containers, apps and database, and several run side by side on one host. `fmx list` shows them all. |
+| **Dev or prod, per bench** | `dev` mounts an editable workspace with admin tools on; `prod` runs lean behind the shared proxy. Switch with `fmx update -e`. |
 | **Any Frappe app** | Install ERPNext, HRMS or your own repo with `--apps`, pinned to a branch, tag or commit. |
-| **HTTPS in one command** | `fm ssl add` issues a Let's Encrypt certificate over HTTP-01 or DNS-01; `fm ssl renew all` is cron-safe. |
-| **VS Code, attached** | `fm code mybench` opens the bench inside its running container, `--debugger` adds the Frappe debug config. |
-| **Immutable deploys** | `fm bake` builds an image of the bench, `fm switch` swaps onto it with a rolling web swap, `fm switch --previous` rolls back. |
+| **HTTPS in one command** | `fmx ssl add` issues a Let's Encrypt certificate over HTTP-01 or DNS-01; `fmx ssl renew all` is cron-safe. |
+| **VS Code, attached** | `fmx code mybench` opens the bench inside its running container, `--debugger` adds the Frappe debug config. |
+| **Immutable deploys** | `fmx bake` builds an image of the bench, `fmx switch` swaps onto it with a rolling web swap, `fmx switch --previous` rolls back. |
 | **Batteries for debugging** | Adminer and Mailpit path-routed under the bench URL, behind basic auth, on by default for `dev`. |
 | **Scriptable** | Every command takes `-n` for non-interactive use and `--json` for one JSON line per output event. |
 
 ## Commands
 
-`fm` groups its commands by what you address: a bench, one site in a bench, a domain, or the host.
+`fmx` groups its commands by what you address: a bench, one site in a bench, a domain, or the host.
 
 ```bash
-fm create mybench --apps erpnext     # create a bench and install apps
-fm start mybench                     # start, stop, restart it
-fm info mybench                      # URL, credentials, apps, deploy history
-fm shell mybench                     # a shell in the frappe container
-fm ssl add mybench/example.com       # HTTPS for a domain it serves
-fm bake mybench                      # build an image of the bench
-fm switch mybench local/mybench:TAG  # deploy onto it, rolling swap
-fm switch mybench --previous         # roll back to the last image
+fmx create mybench --apps erpnext     # create a bench and install apps
+fmx start mybench                     # start, stop, restart it
+fmx info mybench                      # URL, credentials, apps, deploy history
+fmx shell mybench                     # a shell in the frappe container
+fmx ssl add mybench/example.com       # HTTPS for a domain it serves
+fmx bake mybench                      # build an image of the bench
+fmx switch mybench local/mybench:TAG  # deploy onto it, rolling swap
+fmx switch mybench --previous         # roll back to the last image
 ```
 
-Run `fm --help` for the grouped command list, or `fm <command> --help` for a command's options and worked examples. The [command reference](https://opensource.rtcamp.com/Frappe-Manager/dev/commands/) documents all of them.
+Run `fmx --help` for the grouped command list, or `fmx <command> --help` for a command's options and worked examples. The [command reference](https://opensource.rtcamp.com/Frappe-Manager/dev/commands/) documents all of them.
 
 ## Documentation
 
@@ -85,7 +85,7 @@ Issues and pull requests are welcome.
 - [Report a bug or request a feature](../../issues)
 - [Ask a question in Discussions](../../discussions)
 
-Working on `fm` itself: clone the repo, `uv sync`, and run the CLI with `uv run fm`. `just test` runs the suite and `just docs` serves the documentation locally.
+Working on `fmx` itself: clone the repo, `uv sync`, and run the CLI with `uv run fmx`. `just test` runs the suite and `just docs` serves the documentation locally.
 
 ## Credits and license
 

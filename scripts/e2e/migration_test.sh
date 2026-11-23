@@ -12,7 +12,7 @@ handle_error() {
 }
 
 
-source ${PWD}/fm.sh
+source ${PWD}/fmx.sh
 source ${PWD}/helpers.sh
 
 oldToNew() {
@@ -56,7 +56,7 @@ rollbackDrill() {
 	InjectFailingMigration
 	ExpectServicesMigrateToFailAndRollBack
 	AssertLedgerVersion "$LEDGER_BEFORE"
-	# curl only, no fm command: the bench is legitimately stale relative to the new CLI
+	# curl only, no fmx command: the bench is legitimately stale relative to the new CLI
 	# here, and observation via HTTP is exactly what a rolled-back host must still do.
 	TestSiteReachability "rollback-drill.localhost"
 	RemoveFailingMigration

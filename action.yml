@@ -4,11 +4,11 @@ author: rtCamp
 
 # Installs from a git ref, not PyPI. PyPI is behind: the released version predates the
 # current bake/switch surface, so an action installing from PyPI would get a different CLI
-# from the one this file drives. `fm-version` takes any ref (branch, tag, sha), and the
+# from the one this file drives. `fmx-version` takes any ref (branch, tag, sha), and the
 # FM_VERSION environment variable overrides it without touching the workflow.
 
 inputs:
-  fm-version:
+  fmx-version:
     description: 'Git ref of Frappe Manager to install (branch, tag or sha). Defaults to the ref this action was called with. The FM_VERSION environment variable overrides this.'
     required: false
     default: ''
@@ -30,7 +30,7 @@ inputs:
     required: false
     default: ''
   base-image:
-    description: 'Image the runtime Dockerfile builds FROM (fm bake --base-image). Needs an explicit tag.'
+    description: 'Image the runtime Dockerfile builds FROM (fmx bake --base-image). Needs an explicit tag.'
     required: false
     default: ''
   apps:
@@ -38,14 +38,14 @@ inputs:
     required: false
     default: ''
   config:
-    description: 'TOML overlay for the bake. Either a path to a file in your checked-out repo (e.g. ci/build.toml) or the TOML itself inline as a block scalar. Passed to fm bake --config. For several files, commit one file that carries everything, or use config-files.'
+    description: 'TOML overlay for the bake. Either a path to a file in your checked-out repo (e.g. ci/build.toml) or the TOML itself inline as a block scalar. Passed to fmx bake --config. For several files, commit one file that carries everything, or use config-files.'
     required: false
     default: ''
   config-files:
     description: 'Paths to TOML overlay files, one per line, applied in order so later files win. Use this instead of config when the overlay is split across files.'
     required: false
     default: ''
-  fm-remote-path:
+  fmx-remote-path:
     description: 'Absolute path to fm on the switch target. Only needed when it is somewhere the preflight does not look (PATH, ~/.local/bin, /usr/local/bin, /usr/bin).'
     required: false
     default: ''
@@ -92,7 +92,7 @@ inputs:
     required: false
     default: ''
   switch-args:
-    description: 'Extra arguments appended to fm switch, e.g. --keep 5 or --no-backup-db.'
+    description: 'Extra arguments appended to fmx switch, e.g. --keep 5 or --no-backup-db.'
     required: false
     default: ''
 
@@ -108,7 +108,7 @@ runs:
       id: resolve
       shell: bash
       env:
-        INPUT_FM_VERSION: ${{ inputs.fm-version }}
+        INPUT_FMX_VERSION: ${{ inputs.fmx-version }}
         INPUT_IMAGE: ${{ inputs.image }}
         INPUT_TAG: ${{ inputs.tag }}
         INPUT_PHASE: ${{ inputs.phase }}
@@ -126,7 +126,7 @@ runs:
         # Precedence: FM_VERSION env, then the input, then the ref this action was called
         # with. A local `uses: ./` leaves action_ref empty, hence the final fallback.
         ref="${FM_VERSION:-}"
-        [ -n "$ref" ] || ref="$INPUT_FM_VERSION"
+        [ -n "$ref" ] || ref="$INPUT_FMX_VERSION"
         [ -n "$ref" ] || ref="$ACTION_REF"
         [ -n "$ref" ] || ref="main"
         repo="${ACTION_REPO:-rtCamp/Frappe-Manager}"
@@ -155,6 +155,8 @@ runs:
       run: |
         set -euo pipefail
         uv tool install "$SPEC"
+        # fm stays here, not fmx: the fmx-version ref installed above may predate the
+        # fmx entry point, and the installed package still ships the fm name alongside it.
         fm --version
 
     - name: Registry login
@@ -190,7 +192,7 @@ runs:
         SSH_HOST: ${{ inputs.ssh-host }}
         SSH_USER: ${{ inputs.ssh-user }}
         SSH_PORT: ${{ inputs.ssh-port }}
-        FM_REMOTE_PATH: ${{ inputs.fm-remote-path }}
+        FMX_REMOTE_PATH: ${{ inputs.fmx-remote-path }}
       run: |
         set -euo pipefail
         for name in BENCH SSH_HOST SSH_USER SSH_PRIVATE_KEY; do
@@ -210,7 +212,7 @@ runs:
         # the steps of this action, which the switch step needs.
         args+=(--workdir "${RUNNER_TEMP:-/tmp}/fm-action-ssh")
         args+=(--github-output "$GITHUB_OUTPUT")
-        if [ -n "$FM_REMOTE_PATH" ]; then args+=(--fm-path "$FM_REMOTE_PATH"); fi
+        if [ -n "$FMX_REMOTE_PATH" ]; then args+=(--fmx-path "$FMX_REMOTE_PATH"); fi
         if [ -z "$SSH_KNOWN_HOSTS" ]; then
           echo "::warning::ssh-known-hosts not set; trusting the host key ssh-keyscan returns"
           args+=(--keyscan)
@@ -291,6 +293,8 @@ runs:
           args+=(--no-push)
         fi
 
+        # fm stays here, not fmx: the fmx-version ref resolved above may predate the fmx
+        # entry point, and the installed package still ships the fm name alongside it.
         printf 'fm'; printf ' %q' "${args[@]}"; printf '\n'
         fm "${args[@]}"
 
@@ -305,7 +309,7 @@ runs:
         SSH_PORT: ${{ inputs.ssh-port }}
         SSH_KEY: ${{ steps.preflight.outputs.key }}
         SSH_KNOWN: ${{ steps.preflight.outputs.known-hosts }}
-        FM_BIN: ${{ steps.preflight.outputs.fm-bin }}
+        FMX_BIN: ${{ steps.preflight.outputs.fmx-bin }}
         SWITCH_ARGS: ${{ inputs.switch-args }}
       run: |
         set -euo pipefail
@@ -314,9 +318,9 @@ runs:
         # directory and moves its traffic. All of that is local work on that host, which is
         # why the target runs fm itself rather than being driven remotely.
         #
-        # FM_BIN is the absolute path the preflight already resolved and ran --version on,
+        # FMX_BIN is the absolute path the preflight already resolved and ran --version on,
         # so this does not depend on the non-interactive shell's PATH.
-        remote="$(printf '%q' "$FM_BIN") switch $(printf '%q' "$BENCH") $(printf '%q' "$IMAGE_REF") $SWITCH_ARGS"
+        remote="$(printf '%q' "$FMX_BIN") switch $(printf '%q' "$BENCH") $(printf '%q' "$IMAGE_REF") $SWITCH_ARGS"
         echo "Running on ${SSH_USER}@${SSH_HOST}: ${remote}"
         ssh -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \

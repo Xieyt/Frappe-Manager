@@ -25,97 +25,97 @@ _https_probe() {
 
 describe G1 "ssl ca install/status/remove touch the host trust store once, guarded by a sentinel, and never crash"
 case_G1() {
-    fm_t 15 ssl ca status --json
+    fmx_t 15 ssl ca status --json
     expect_rc 0 "ssl ca status (before)"
     local had_ca pre_stores
     had_ca="$(json_get 'result.exists' <<<"$FM_STDOUT")"
     pre_stores="$(json_get 'result.trusted_stores' <<<"$FM_STDOUT")"
 
     if [[ "$had_ca" != "true" ]]; then
-        # install refuses outright with no CA on disk; mint one the only way fm does, through a
+        # install refuses outright with no CA on disk; mint one the only way fmx does, through a
         # dev certificate, so install/status/remove below have something real to act on.
-        fm create e2eg1 --environment dev
+        fmx create e2eg1 --environment dev
         expect_rc 0 "create e2eg1"
         cleanup_bench e2eg1
-        fm_t 30 ssl add e2eg1/e2eg1.localhost --dev
+        fmx_t 30 ssl add e2eg1/e2eg1.localhost --dev
         expect_rc 0 "ssl add --dev (mints the CA)"
     fi
 
-    fm_t 30 ssl ca install
+    fmx_t 30 ssl ca install
     local install_rc=$FM_RC
     # Best-effort (TrustStoreManager.install): no sudo, a locked keychain -- still 1, never a
     # traceback, which is the "works with a broken host" half of this case.
     [[ $install_rc -eq 0 || $install_rc -eq 1 ]] || fail "ssl ca install: exit $install_rc"
     [[ $install_rc -ne 0 ]] || expect_file "$G_CA_DIR/.installed"
 
-    fm_t 15 ssl ca status --json
+    fmx_t 15 ssl ca status --json
     expect_rc 0 "ssl ca status (after install)"
     expect_jv 'result.exists' 'true'
 
     # The sentinel's whole job: a second explicit install must not error just because the first
     # one already ran.
-    fm_t 30 ssl ca install
+    fmx_t 30 ssl ca install
     [[ $FM_RC -eq 0 || $FM_RC -eq 1 ]] || fail "second ssl ca install: exit $FM_RC"
 
     if [[ "$had_ca" != "true" ]]; then
         # Ours from the start, so nothing else on the host could depend on it: take it all the
         # way back out, cert and key included, leaving the host as found.
-        fm_t 30 ssl ca remove --yes --delete-ca
+        fmx_t 30 ssl ca remove --yes --delete-ca
         [[ $FM_RC -eq 0 || $FM_RC -eq 1 ]] || fail "ssl ca remove --delete-ca: exit $FM_RC"
         expect_absent "$G_CA_DIR/.installed"
         expect_absent "$G_CA_DIR/rootCA.pem"
     elif [[ "$pre_stores" == "[]" ]]; then
         # Existed but was not trusted before this case touched it: put that back, keep the CA
         # itself since other benches may already hold certificates signed by it.
-        fm_t 30 ssl ca remove --yes
+        fmx_t 30 ssl ca remove --yes
         [[ $FM_RC -eq 0 || $FM_RC -eq 1 ]] || fail "ssl ca remove: exit $FM_RC"
     fi
 }
 
-describe G2 "ssl add --dev issues a certificate nginx actually serves over https, trusted by fm's own CA"
+describe G2 "ssl add --dev issues a certificate nginx actually serves over https, trusted by fmx's own CA"
 case_G2() {
-    fm create e2eg2 --environment dev
+    fmx create e2eg2 --environment dev
     expect_rc 0 "create e2eg2"
     cleanup_bench e2eg2
 
-    fm_t 30 ssl add e2eg2/e2eg2.localhost --dev
+    fmx_t 30 ssl add e2eg2/e2eg2.localhost --dev
     expect_rc 0 "ssl add --dev"
     expect_file "$G_SSL_DIR/dev/e2eg2.localhost/fullchain.pem"
     expect_file "$G_SSL_DIR/dev/e2eg2.localhost/key.pem"
 
-    fm ssl list e2eg2 --json
+    fmx ssl list e2eg2 --json
     expect_rc 0 "ssl list e2eg2"
     expect_jv 'result.0.domain' 'e2eg2.localhost'
     expect_jv 'result.0.certificate_type' 'dev'
     expect_jv 'result.0.status' 'issued'
 
-    # expect_http only speaks plain HTTP; the https half needs curl directly, trusting fm's own
-    # CA rather than the host's, so this survives a host that never ran 'fm ssl ca install'.
+    # expect_http only speaks plain HTTP; the https half needs curl directly, trusting fmx's own
+    # CA rather than the host's, so this survives a host that never ran 'fmx ssl ca install'.
     local ca="$G_CA_DIR/rootCA.pem"
     expect_file "$ca"
     _https_probe "e2eg2.localhost" "200" "" --cacert "$ca"
 
-    fm_t 30 ssl renew e2eg2/e2eg2.localhost --force
+    fmx_t 30 ssl renew e2eg2/e2eg2.localhost --force
     expect_rc 0 "ssl renew --force"
     expect_file "$G_SSL_DIR/dev/e2eg2.localhost/fullchain.pem"
 
     _https_probe "e2eg2.localhost" "200" "after renew" --cacert "$ca"
 
-    fm ssl remove e2eg2/e2eg2.localhost --yes
+    fmx ssl remove e2eg2/e2eg2.localhost --yes
     expect_rc 0 "ssl remove"
     expect_absent "$G_SSL_DIR/dev/e2eg2.localhost"
 
-    # `ssl remove` restarts nginx; a single request fired the instant fm returns can still land
+    # `ssl remove` restarts nginx; a single request fired the instant fmx returns can still land
     # on the old workers, or on none at all.
     expect_http_until e2eg2.localhost 200
 }
 
 describe G3 "ssl add --custom validates the cert/key pair before installing it, and refuses a mismatched one"
 case_G3() {
-    fm create e2eg3 --environment dev
+    fmx create e2eg3 --environment dev
     expect_rc 0 "create e2eg3"
     cleanup_bench e2eg3
-    # No explicit `ssl remove` before teardown: `fm delete` already walks remove_bench ->
+    # No explicit `ssl remove` before teardown: `fmx delete` already walks remove_bench ->
     # remove_certificate -> SSLCertificateManager.remove_all_certificates for every certificate
     # the bench owns, so cleanup_bench's delete sweeps this custom cert on its own.
 
@@ -129,12 +129,12 @@ case_G3() {
         -subj "/CN=e2eg3.localhost" -addext "subjectAltName=DNS:e2eg3.localhost" >/dev/null 2>&1
 
     # a's own certificate paired with b's key: same subject and SAN, different keypair.
-    fm ssl add e2eg3/e2eg3.localhost --custom --cert "$tmp/a.crt" --key "$tmp/b.key"
+    fmx ssl add e2eg3/e2eg3.localhost --custom --cert "$tmp/a.crt" --key "$tmp/b.key"
     expect_rc 1 "mismatched cert/key"
     expect_out "match"
     expect_absent "$G_SSL_DIR/custom/e2eg3.localhost"
 
-    fm ssl add e2eg3/e2eg3.localhost --custom --cert "$tmp/a.crt" --key "$tmp/a.key"
+    fmx ssl add e2eg3/e2eg3.localhost --custom --cert "$tmp/a.crt" --key "$tmp/a.key"
     expect_rc 0 "matching cert/key"
     expect_file "$G_SSL_DIR/custom/e2eg3.localhost/fullchain.pem"
     expect_file "$G_SSL_DIR/custom/e2eg3.localhost/key.pem"
@@ -187,59 +187,59 @@ case_G5() {
         return 0
     fi
 
-    fm create e2eg5 --environment dev
+    fmx create e2eg5 --environment dev
     expect_rc 0 "create e2eg5"
     cleanup_bench e2eg5
 
-    fm domain add e2eg5 "$FM_E2E_LE_DOMAIN"
+    fmx domain add e2eg5 "$FM_E2E_LE_DOMAIN"
     expect_rc 0 "domain add $FM_E2E_LE_DOMAIN"
 
-    fm_t 120 ssl add "e2eg5/${FM_E2E_LE_DOMAIN}" --test-ca
+    fmx_t 120 ssl add "e2eg5/${FM_E2E_LE_DOMAIN}" --test-ca
     expect_rc 0 "ssl add --test-ca"
     expect_out 'STAGING|staging'
 
     # A rehearsal persists nothing: no symlinks, no vhost, no entry to renew or remove later.
-    fm ssl list e2eg5 --json
+    fmx ssl list e2eg5 --json
     expect_rc 0 "ssl list e2eg5 after rehearsal"
     expect_jv 'result.0.status' 'not_issued'
 
-    # The leak this case exists to catch: the NEXT issuance in a fresh fm process must not see
+    # The leak this case exists to catch: the NEXT issuance in a fresh fmx process must not see
     # staging mode, which it only could if some earlier run's env mutation ever escaped that run.
-    fm_t 30 ssl add e2eg5/e2eg5.localhost --dev
+    fmx_t 30 ssl add e2eg5/e2eg5.localhost --dev
     expect_rc 0 "ssl add --dev right after a staging rehearsal"
     expect_not_out 'STAGING|staging'
 }
 
 describe G6 "ssl dns-config cloudflare stores credentials per-bench and globally with secrets redacted; dns01 issuance needs a real Cloudflare zone"
 case_G6() {
-    fm create e2eg6 --environment dev
+    fmx create e2eg6 --environment dev
     expect_rc 0 "create e2eg6"
     cleanup_bench e2eg6
 
     local fake_global="cf_e2eg6_global_FAKETOKEN0000" fake_bench="cf_e2eg6_bench_FAKETOKEN0000"
 
-    fm ssl dns-config cloudflare --api-token "$fake_global" --name e2eg6-global
+    fmx ssl dns-config cloudflare --api-token "$fake_global" --name e2eg6-global
     expect_rc 0 "dns-config cloudflare (global, labelled)"
 
-    fm ssl dns-config cloudflare e2eg6 --api-token "$fake_bench" --name e2eg6-bench
+    fmx ssl dns-config cloudflare e2eg6 --api-token "$fake_bench" --name e2eg6-bench
     expect_rc 0 "dns-config cloudflare (bench, labelled)"
 
-    fm ssl dns-config cloudflare --show --name e2eg6-global
+    fmx ssl dns-config cloudflare --show --name e2eg6-global
     expect_rc 0 "dns-config --show (global)"
     expect_out "e2eg6-global"
     expect_not_out "$fake_global"
 
-    fm ssl dns-config cloudflare e2eg6 --show --name e2eg6-bench
+    fmx ssl dns-config cloudflare e2eg6 --show --name e2eg6-bench
     expect_rc 0 "dns-config --show (bench)"
     expect_out "e2eg6-bench"
     expect_not_out "$fake_bench"
 
-    fm ssl dns-config cloudflare --remove --name e2eg6-global
+    fmx ssl dns-config cloudflare --remove --name e2eg6-global
     expect_rc 0 "dns-config --remove (global)"
-    fm ssl dns-config cloudflare e2eg6 --remove --name e2eg6-bench
+    fmx ssl dns-config cloudflare e2eg6 --remove --name e2eg6-bench
     expect_rc 0 "dns-config --remove (bench)"
 
-    fm ssl dns-config cloudflare --show --name e2eg6-global
+    fmx ssl dns-config cloudflare --show --name e2eg6-global
     expect_out "No 'e2eg6-global'"
 
     if [[ -z "${FM_E2E_CF_TOKEN:-}" || -z "${FM_E2E_CF_DOMAIN:-}" ]]; then
@@ -247,36 +247,36 @@ case_G6() {
         return 0
     fi
 
-    fm domain add e2eg6 "$FM_E2E_CF_DOMAIN"
+    fmx domain add e2eg6 "$FM_E2E_CF_DOMAIN"
     expect_rc 0 "domain add $FM_E2E_CF_DOMAIN"
 
-    fm ssl dns-config cloudflare --api-token "$FM_E2E_CF_TOKEN"
+    fmx ssl dns-config cloudflare --api-token "$FM_E2E_CF_TOKEN"
     expect_rc 0 "dns-config cloudflare (real token, default label)"
 
-    fm_t 180 ssl add "e2eg6/${FM_E2E_CF_DOMAIN}" --challenge dns01 --dns-provider cloudflare
+    fmx_t 180 ssl add "e2eg6/${FM_E2E_CF_DOMAIN}" --challenge dns01 --dns-provider cloudflare
     expect_rc 0 "ssl add dns01 against a real Cloudflare zone"
 
-    fm ssl remove "e2eg6/${FM_E2E_CF_DOMAIN}" --yes
+    fmx ssl remove "e2eg6/${FM_E2E_CF_DOMAIN}" --yes
     expect_rc 0 "ssl remove dns01 certificate"
 
-    fm ssl dns-config cloudflare --remove
+    fmx ssl dns-config cloudflare --remove
     expect_rc 0 "dns-config cloudflare cleanup (real token)"
 }
 
 describe G7 "ssl add --skip-dns-check and --wait-for-dns are standalone's own DNS pre-check and nothing else"
 case_G7() {
-    fm ssl add e2eg7/e2eg7.localhost --skip-dns-check
+    fmx ssl add e2eg7/e2eg7.localhost --skip-dns-check
     expect_rc 2 "--skip-dns-check without --standalone"
     expect_out "skip-dns-check"
 
-    fm ssl add e2eg7/e2eg7.localhost --wait-for-dns
+    fmx ssl add e2eg7/e2eg7.localhost --wait-for-dns
     expect_rc 2 "--wait-for-dns without --standalone"
     expect_out "wait-for-dns"
 
     local domain="e2eg7.invalid" confpath out
     confpath="$G_CONFD_DIR/zz-fm-standalone-${domain}.conf"
 
-    fm_t 20 ssl add "$domain" --standalone --challenge dns01 --cname "delegate.${domain}"
+    fmx_t 20 ssl add "$domain" --standalone --challenge dns01 --cname "delegate.${domain}"
     expect_rc 1 "cname DNS check against a made-up delegation, no --skip-dns-check"
     expect_out "DNS validation failed"
     expect_absent "$confpath"
@@ -293,27 +293,27 @@ case_G7() {
 
 describe G8 "ssl renew all --force renews every bench's certificates independently, one certificate per domain"
 case_G8() {
-    fm create e2eg8 --environment dev
+    fmx create e2eg8 --environment dev
     expect_rc 0 "create e2eg8"
     cleanup_bench e2eg8
-    # No explicit `ssl remove` for either domain before teardown: `fm delete` walks remove_bench
+    # No explicit `ssl remove` for either domain before teardown: `fmx delete` walks remove_bench
     # -> remove_certificate -> SSLCertificateManager.remove_all_certificates for every
     # certificate the bench owns, so cleanup_bench's delete sweeps both the primary and the
     # alias cert on its own.
 
-    fm domain add e2eg8 e2eg8-alias.localhost
+    fmx domain add e2eg8 e2eg8-alias.localhost
     expect_rc 0 "domain add alias"
 
-    fm_t 30 ssl add e2eg8/e2eg8.localhost --dev
+    fmx_t 30 ssl add e2eg8/e2eg8.localhost --dev
     expect_rc 0 "ssl add primary"
-    fm_t 30 ssl add e2eg8/e2eg8-alias.localhost --dev
+    fmx_t 30 ssl add e2eg8/e2eg8-alias.localhost --dev
     expect_rc 0 "ssl add alias"
 
     local primary_before alias_before primary_after alias_after
     primary_before="$(openssl x509 -noout -serial -in "$G_SSL_DIR/dev/e2eg8.localhost/fullchain.pem")"
     alias_before="$(openssl x509 -noout -serial -in "$G_SSL_DIR/dev/e2eg8-alias.localhost/fullchain.pem")"
 
-    fm_t 180 ssl renew all --force
+    fmx_t 180 ssl renew all --force
     # Other benches already on the host may legitimately fail to renew for reasons this case
     # cannot see; only our own two domains below are the actual assertion.
     [[ $FM_RC -eq 0 || $FM_RC -eq 1 ]] || fail "ssl renew all --force: exit $FM_RC"
@@ -352,13 +352,13 @@ case_G9() {
         return 0
     fi
 
-    fm ssl acme-sh --list
+    fmx ssl acme-sh --list
     expect_rc 0 "ssl acme-sh --list"
     # output.info() renders only under -v: the command's OWN commentary is not assertable here.
     # acme.sh's own relayed table is -- its header is unconditional.
     expect_out 'Main_Domain'
 
     # A value round-tripped unmangled is one even a naive implementation could lose to quoting.
-    fm ssl acme-sh --info -d "nonexistent-e2eg9.example"
+    fmx ssl acme-sh --info -d "nonexistent-e2eg9.example"
     expect_out "nonexistent-e2eg9\.example"
 }

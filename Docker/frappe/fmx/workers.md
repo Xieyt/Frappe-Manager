@@ -2,7 +2,12 @@
 
 `fmx` drives one container's supervisor programs: `frappe` (Gunicorn), `short-worker`, `long-worker`, `schedule`, `socketio`. Cycling the web server and the scheduler is uninteresting; cycling the RQ workers is not, because each one may be holding a job. This note is about that.
 
-The host-side view, including how `fm restart` and `fmx restart` divide the work and the `[workers]` config keys that drive the host, lives in `docs/guides/fmx.md` and `docs/reference/configuration.md#workers`. Everything below is the in-container surface.
+There are two `fmx` binaries: a host CLI that runs on your machine and restarts a bench's
+*containers*, and this package, installed inside a bench container at `.venv/bin/fmx`, which
+restarts the *supervisor programs* running in one container. They share a name but not a
+binary. The host-side view, including the `[workers]` config keys that drive it, lives in
+`docs/guides/fmx.md` and `docs/reference/configuration.md#workers`. Everything below is the
+in-container surface.
 
 ## Check what is running first
 
@@ -62,4 +67,4 @@ fmx restart --migrate --maintenance-mode drain --maintenance-mode migrate
 
 **Suspend or resume fails.** The flag lives in the queue Redis, which fmx reads from `redis_queue` in `common_site_config.json`. Check that key and that Redis is reachable.
 
-**Services do not come back.** Supervisor writes to `/workspace/frappe-bench/logs/` inside the container; from the host, `fm logs BENCHNAME --service frappe -f` reads the container log directly.
+**Services do not come back.** Supervisor writes to `/workspace/frappe-bench/logs/` inside the container; from the host, `fmx logs BENCHNAME --service frappe -f` reads the container log directly.

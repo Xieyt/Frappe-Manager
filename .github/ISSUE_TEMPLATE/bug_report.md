@@ -21,7 +21,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **System information (please complete the following information):**
-- [ ] `fm --version`
+- [ ] `fmx --version`
 - [ ] `lsb_release -a`
 - [ ] `docker version`
 - [ ] `docker-compose version` or `docker compose version`

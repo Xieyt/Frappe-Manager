@@ -11,7 +11,7 @@
 #
 # B8/B9/B10/B11 need an app image, and there is no stock one (notes/e2e-matrix.md line 136).
 # FM_E2E_APP_IMAGE overrides with a ready-made one; left unset, each case bakes its OWN
-# fixture into a FIXED, content-addressed local tag via `fm bake` and leaves it in the daemon
+# fixture into a FIXED, content-addressed local tag via `fmx bake` and leaves it in the daemon
 # rather than `docker rmi`-ing it at case end: a bake is 5-10 min on the 2-core host this
 # matrix is budgeted for (notes/e2e-matrix.md section 2), and `docker image inspect` makes
 # every run after the first free. Remove `fm-e2e-shared-appimage:*` by hand when done with it.
@@ -31,13 +31,13 @@ _b_ext_postgres() {
 
 _b_skip() { log "  $(c_yellow skip:) $*"; }
 
-# Host-bench-dir layout fm itself never varies (utils/site.py:host_bench_dir): the bind-mount
+# Host-bench-dir layout fmx itself never varies (utils/site.py:host_bench_dir): the bind-mount
 # source is always BENCH/workspace/frappe-bench, for every runtime.
 _b_workspace() { printf '%s/frappe/sites/%s/workspace/frappe-bench' "$HOME" "$1"; }
 _b_bench_root() { printf '%s/frappe/sites/%s' "$HOME" "$1"; }
 
 # True when NAME is not a running container -- either absent or stopped. The inverse of
-# expect_container_running, needed because fm disables a redis container via a compose
+# expect_container_running, needed because fmx disables a redis container via a compose
 # profile rather than deleting its service block (compose_shape.py:BENCH_REDIS_SERVICES),
 # so the block staying in docker-compose.yml proves nothing about whether it is up.
 _b_not_running() {
@@ -45,7 +45,7 @@ _b_not_running() {
         fail "container $1 is running but should have been suppressed"
 }
 
-# Best-effort: drop the schema/login an external-db case made. fm never does this itself
+# Best-effort: drop the schema/login an external-db case made. fmx never does this itself
 # (docs/guides/external-database.md: "On your server ... left in place, flag or no flag"),
 # and the matrix host may not carry the client at all.
 _b_drop_mariadb_schema() {
@@ -81,7 +81,7 @@ _b_app_image() {
     local -a flags=()
     local a
     for a in "$@"; do flags+=(--apps "$a"); done
-    fm_t 900 bake "${flags[@]}" --app-image "$_B_IMAGE"
+    fmx_t 900 bake "${flags[@]}" --app-image "$_B_IMAGE"
     if [[ $FM_RC -ne 0 ]]; then
         fail "bake fixture image $_B_IMAGE"
         _B_IMAGE=""
@@ -90,17 +90,17 @@ _b_app_image() {
     return 0
 }
 
-describe B1 "mount + fm mariadb + dev: baseline, serves over http"
+describe B1 "mount + fmx mariadb + dev: baseline, serves over http"
 case_B1() {
-    fm create e2eb1 --environment dev
+    fmx create e2eb1 --environment dev
     expect_rc 0 "create"
     cleanup_bench e2eb1
     expect_http e2eb1.localhost 200
 }
 
-describe B2 "mount + fm mariadb + prod: developer mode off, assets built"
+describe B2 "mount + fmx mariadb + prod: developer mode off, assets built"
 case_B2() {
-    fm create e2eb2 --environment prod
+    fmx create e2eb2 --environment prod
     expect_rc 0 "create"
     cleanup_bench e2eb2
     expect_http e2eb2.localhost 200
@@ -118,33 +118,33 @@ case_B2() {
     [[ -n "$(find "$assets" -type f -print -quit 2>/dev/null)" ]] || fail "sites/assets has no built files"
 }
 
-describe B3 "mount + fm postgres + dev: postgres starts on demand, info names the engine"
+describe B3 "mount + fmx postgres + dev: postgres starts on demand, info names the engine"
 case_B3() {
-    fm create e2eb3 --db-type postgres
+    fmx create e2eb3 --db-type postgres
     expect_rc 0 "create"
     cleanup_bench e2eb3
     expect_http e2eb3.localhost 200
     expect_container_running fm_postgres
 
-    fm info e2eb3 --json
+    fmx info e2eb3 --json
     expect_json
     expect_res 'sites.0.database' 'postgres'
 }
 
-describe B4 "mount + external mariadb + prod: fm writes nothing into its own mariadb"
+describe B4 "mount + external mariadb + prod: fmx writes nothing into its own mariadb"
 case_B4() {
     if ! _b_ext_mariadb; then
         _b_skip "FM_E2E_EXT_MARIADB_HOST/_ADMIN_USER/_ADMIN_PASSWORD not set"
         return 0
     fi
-    fm create e2eb4 --environment prod \
+    fmx create e2eb4 --environment prod \
         --db-host "$FM_E2E_EXT_MARIADB_HOST" --db-port "$B_MARIADB_PORT" --db-name e2eb4 \
         --db-admin-user "$FM_E2E_EXT_MARIADB_ADMIN_USER" --db-admin-password "$FM_E2E_EXT_MARIADB_ADMIN_PASSWORD"
     expect_rc 0 "create"
     cleanup_bench e2eb4
     expect_http e2eb4.localhost 200
 
-    fm info e2eb4 --json
+    fmx info e2eb4 --json
     expect_json
     expect_res 'sites.0.external_database.host' "$FM_E2E_EXT_MARIADB_HOST"
     expect_res 'environment' 'prod'
@@ -159,14 +159,14 @@ case_B5() {
         _b_skip "FM_E2E_EXT_POSTGRES_HOST/_ADMIN_USER/_ADMIN_PASSWORD not set"
         return 0
     fi
-    fm create e2eb5 --db-type postgres \
+    fmx create e2eb5 --db-type postgres \
         --db-host "$FM_E2E_EXT_POSTGRES_HOST" --db-port "$B_POSTGRES_PORT" --db-name e2eb5 \
         --db-admin-user "$FM_E2E_EXT_POSTGRES_ADMIN_USER" --db-admin-password "$FM_E2E_EXT_POSTGRES_ADMIN_PASSWORD"
     expect_rc 0 "create"
     cleanup_bench e2eb5
     expect_http e2eb5.localhost 200
 
-    fm info e2eb5 --json
+    fmx info e2eb5 --json
     expect_json
     expect_res 'sites.0.database' 'postgres'
     expect_res 'sites.0.external_database.host' "$FM_E2E_EXT_POSTGRES_HOST"
@@ -181,7 +181,7 @@ case_B6() {
         _b_skip "FM_E2E_EXT_MARIADB_HOST/_ADMIN_USER/_ADMIN_PASSWORD/_CA not set"
         return 0
     fi
-    fm create e2eb6 \
+    fmx create e2eb6 \
         --db-host "$FM_E2E_EXT_MARIADB_HOST" --db-port "$B_MARIADB_PORT" --db-name e2eb6 \
         --db-admin-user "$FM_E2E_EXT_MARIADB_ADMIN_USER" --db-admin-password "$FM_E2E_EXT_MARIADB_ADMIN_PASSWORD" \
         --db-ca "$FM_E2E_EXT_MARIADB_CA" --db-no-verify-hostname
@@ -206,7 +206,7 @@ case_B7() {
     local site_config
     site_config="$(_b_workspace e2eb7)/sites/e2eb7.localhost/site_config.json"
 
-    fm create e2eb7 \
+    fmx create e2eb7 \
         --db-host "$FM_E2E_EXT_MARIADB_HOST" --db-port "$B_MARIADB_PORT" --db-name e2eb7 \
         --db-admin-user "$FM_E2E_EXT_MARIADB_ADMIN_USER" --db-admin-password "$FM_E2E_EXT_MARIADB_ADMIN_PASSWORD" \
         --db-password "$pass"
@@ -218,10 +218,10 @@ case_B7() {
 
     # --attach-existing-site requires --db-host (create.py:772-785), so this is the bench
     # directory + containers only: the schema it is about to re-attach to is untouched.
-    fm delete e2eb7 --yes --delete-fm-managed-db
+    fmx delete e2eb7 --yes --delete-fm-managed-db
     expect_rc 0 "delete (schema stays on the external server)"
 
-    fm create e2eb7 \
+    fmx create e2eb7 \
         --db-host "$FM_E2E_EXT_MARIADB_HOST" --db-port "$B_MARIADB_PORT" --db-name e2eb7 \
         --db-password "$pass" --attach-existing-site --encryption-key "$key"
     expect_rc 0 "attach"
@@ -236,12 +236,12 @@ case_B7() {
         "$FM_E2E_EXT_MARIADB_ADMIN_USER" "$FM_E2E_EXT_MARIADB_ADMIN_PASSWORD" e2eb7
 }
 
-describe B8 "image runtime + fm mariadb: apps.txt is a FILE, Found N app(s), bench serves"
+describe B8 "image runtime + fmx mariadb: apps.txt is a FILE, Found N app(s), bench serves"
 case_B8() {
     _b_app_image frappe-v1 frappe || return 0
     local img="$_B_IMAGE"
 
-    fm create e2eb8 --runtime image --app-image "$img"
+    fmx create e2eb8 --runtime image --app-image "$img"
     expect_rc 0 "create"
     cleanup_bench e2eb8
     expect_out 'Found [0-9]+ app\(s\)'
@@ -264,7 +264,7 @@ case_B9() {
     _b_app_image frappe-v1 frappe || return 0
     local img="$_B_IMAGE"
 
-    fm create e2eb9 --runtime image --app-image "$img" \
+    fmx create e2eb9 --runtime image --app-image "$img" \
         --db-host "$FM_E2E_EXT_MARIADB_HOST" --db-port "$B_MARIADB_PORT" --db-name e2eb9 \
         --db-admin-user "$FM_E2E_EXT_MARIADB_ADMIN_USER" --db-admin-password "$FM_E2E_EXT_MARIADB_ADMIN_PASSWORD"
     expect_rc 0 "create"
@@ -272,7 +272,7 @@ case_B9() {
     expect_http e2eb9.localhost 200
     expect_container_running "fm__e2eb9__frappe"
 
-    fm info e2eb9 --json
+    fmx info e2eb9 --json
     expect_json
     expect_res 'sites.0.external_database.host' "$FM_E2E_EXT_MARIADB_HOST"
 
@@ -285,13 +285,13 @@ case_B10() {
     _b_app_image frappe-v1 frappe || return 0
     local img="$_B_IMAGE"
 
-    fm create e2eb10 --runtime image --app-image "$img" --bench-only
+    fmx create e2eb10 --runtime image --app-image "$img" --bench-only
     expect_rc 0 "create --bench-only"
     cleanup_bench e2eb10
     expect_container_running "fm__e2eb10__frappe"
     expect_absent "$(_b_bench_root e2eb10)/sites/e2eb10.localhost"
 
-    fm create e2eb10/site10.localhost
+    fmx create e2eb10/site10.localhost
     expect_rc 0 "add site"
     expect_http site10.localhost 200
 }
@@ -301,7 +301,7 @@ case_B11() {
     _b_app_image frappe-erpnext-v1 frappe erpnext || return 0
     local img="$_B_IMAGE"
 
-    fm create e2eb11 --apps-from "$img" --apps erpnext
+    fmx create e2eb11 --apps-from "$img" --apps erpnext
     expect_rc 0 "create"
     cleanup_bench e2eb11
     expect_http e2eb11.localhost 200
@@ -318,9 +318,9 @@ case_B11() {
 describe B12 "mount + --apps erpnext --apps wiki: apps.txt order; recorded vs installed"
 case_B12() {
     # erpnext's own develop trunk breaks `bench build` on a yarn 1 workspace-link error
-    # unrelated to fm; version-16 is the release branch STABLE_APP_BRANCH_MAPPING_LIST
-    # names, so this measures fm rather than erpnext's trunk health.
-    fm create e2eb12 --apps erpnext:version-16 --apps wiki
+    # unrelated to fmx; version-16 is the release branch STABLE_APP_BRANCH_MAPPING_LIST
+    # names, so this measures fmx rather than erpnext's trunk health.
+    fmx create e2eb12 --apps erpnext:version-16 --apps wiki
     expect_rc 0 "create"
     cleanup_bench e2eb12
     expect_http e2eb12.localhost 200
@@ -332,7 +332,7 @@ case_B12() {
     [[ "${lines[0]:-}" == "frappe" && "${lines[1]:-}" == "erpnext" && "${lines[2]:-}" == "wiki" ]] ||
         fail "apps.txt order is ${lines[*]:-<empty>}, wanted frappe erpnext wiki"
 
-    fm apps list e2eb12 --json
+    fmx apps list e2eb12 --json
     expect_json
     # --apps never persists to bench_config.toml (bench_config.py NOT_WRITTEN_TO_DISK): a fresh
     # load, as every later command does, has nothing recorded even though the apps are installed.
@@ -342,12 +342,12 @@ case_B12() {
 
 describe B13 "mount + --bench-only: no site; info does not invent one"
 case_B13() {
-    fm create e2eb13 --bench-only
+    fmx create e2eb13 --bench-only
     expect_rc 0 "create"
     cleanup_bench e2eb13
     expect_container_running "fm__e2eb13__frappe"
 
-    fm info e2eb13 --json
+    fmx info e2eb13 --json
     expect_json
     expect_res 'sites' '[]'
     expect_res 'url' 'None'
@@ -355,10 +355,10 @@ case_B13() {
 
 describe B14 "multi-site: BENCH/one, then BENCH/two --default-site; default flips"
 case_B14() {
-    fm create "e2eb14/one.localhost"
+    fmx create "e2eb14/one.localhost"
     expect_rc 0 "create first site"
     cleanup_bench e2eb14
-    fm create "e2eb14/two.localhost" --default-site
+    fmx create "e2eb14/two.localhost" --default-site
     expect_rc 0 "add second site as default"
 
     expect_http one.localhost 200
@@ -382,7 +382,7 @@ case_B14() {
 
 describe B15 "--config + --dry-run: prints the resolved toml, creates nothing, exits 0"
 case_B15() {
-    fm create e2eb15 --dry-run --config 'environment = "prod"' --python 3.11
+    fmx create e2eb15 --dry-run --config 'environment = "prod"' --python 3.11
     expect_rc 0 "dry run"
     expect_out 'environment = "prod"'
     expect_out 'python_version = "3.11"'
@@ -404,13 +404,13 @@ case_B16() {
         _b_skip "FM_E2E_EXT_REDIS_URL not set; creating without external redis"
     fi
 
-    fm create e2eb16 "${flags[@]}"
+    fmx create e2eb16 "${flags[@]}"
     expect_rc 0 "create"
     cleanup_bench e2eb16
     expect_http e2eb16.localhost 200
     expect_http e2eb16-alias.localhost 200
 
-    fm info e2eb16 --json
+    fmx info e2eb16 --json
     expect_json
     local py node
     py="$(json_res 'python_version')"
@@ -422,7 +422,7 @@ case_B16() {
         fail "docker-compose.yml does not carry the always restart policy"
 
     if [[ $redis_ok -eq 1 ]]; then
-        # fm suppresses only the container for the side moved out: both sides moved here, so
+        # fmx suppresses only the container for the side moved out: both sides moved here, so
         # neither per-bench redis container should be running (compose_shape.py:BENCH_REDIS_SERVICES).
         _b_not_running "fm__e2eb16__redis-cache"
         _b_not_running "fm__e2eb16__redis-queue"
