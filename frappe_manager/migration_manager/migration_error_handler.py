@@ -180,7 +180,7 @@ class MigrationErrorHandler:
                 "",
                 "Available options:",
                 "[fm.info][yes][/fm.info] Rollback bench : Restore the bench to its last working version before migration.",
-                f"[fm.info][no][/fm.info] Skip rollback : Leave bench in current state. You can manually fix or retry with: fm migrate {bench_name}",
+                f"[fm.info][no][/fm.info] Skip rollback : Leave bench in current state. You can manually fix or retry with: fmx migrate {bench_name}",
                 "",
                 "Do you want to rollback the bench?",
             ]
@@ -195,7 +195,7 @@ class MigrationErrorHandler:
                 return "no"
             self.executor.output.print("\nSkipping rollback. Bench remains in current state", emoji_code="")
             self.executor.output.print(
-                f"You can manually fix the bench or retry with: fm migrate {bench_name}",
+                f"You can manually fix the bench or retry with: fmx migrate {bench_name}",
                 emoji_code="",
             )
             return "skip"
@@ -210,7 +210,7 @@ class MigrationErrorHandler:
         archive_msg = [
             "Available options after migrations failure :",
             rf"[fm.info][yes][/fm.info] Archive failed benches : Benches that have failed will be rolled back to there last successfully completed migration version and stored in '{CLI_SITES_ARCHIVE}'.",
-            r"[fm.info][no][/fm.info] Revert migration : Restore the FM CLI and FM environment to the last successfully completed migration version for all benches.",
+            r"[fm.info][no][/fm.info] Revert migration : Restore the FMX CLI and FMX environment to the last successfully completed migration version for all benches.",
             "\nDo you wish to archive all benches that failed during migration ?",
         ]
 
@@ -266,7 +266,7 @@ class MigrationErrorHandler:
 
         if show_cli_downgrade_instructions:
             self.executor.output.print(
-                f"To revert FM CLI to v{self.executor.rollback_version.version!s}, run:",
+                f"To revert FMX CLI to v{self.executor.rollback_version.version!s}, run:",
                 emoji_code="",
             )
             self.executor.output.print(

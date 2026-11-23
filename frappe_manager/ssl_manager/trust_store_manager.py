@@ -120,12 +120,12 @@ class TrustStoreManager:
             return
 
         self.output.warning(
-            "Firefox keeps its own certificate store and will NOT trust this CA yet: fm needs "
+            "Firefox keeps its own certificate store and will NOT trust this CA yet: fmx needs "
             "'certutil' to write to it, and it is not installed."
         )
         hint = "brew install nss" if sys.platform == "darwin" else "install the 'libnss3-tools' package"
         self.output.print(
-            f"Run '{hint}', then 'fm ssl ca install' to finish. Chrome and Safari are unaffected -- "
+            f"Run '{hint}', then 'fmx ssl ca install' to finish. Chrome and Safari are unaffected -- "
             "they use the host trust store, which is already done.",
             emoji_code="",
         )

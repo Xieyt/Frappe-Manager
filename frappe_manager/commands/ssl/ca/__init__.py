@@ -11,7 +11,7 @@ from frappe_manager.commands.gating import BrokenHostGroup
 ca_command = typer.Typer(
     no_args_is_help=True,
     rich_markup_mode="rich",
-    help="Inspect, install or remove fm's dev CA in this host's trust stores.",
+    help="Inspect, install or remove fmx's dev CA in this host's trust stores.",
     # Every command here only touches host trust stores, and removing a root CA fm installed is
     # exactly what an operator does when fm is on its way off the machine.
     cls=BrokenHostGroup,

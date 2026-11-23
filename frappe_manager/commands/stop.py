@@ -39,7 +39,7 @@ def stop(
 
     In-flight background jobs are waited for first: a container stop gives a running job ten seconds and then kills it, which leaves the job recorded as still running with nothing to finish it. If they outlast \[workers].drain_timeout the bench is left running and nothing is stopped, so the stop can be retried; --no-drain stops immediately and interrupts them.
 
-    Nothing is deleted; fm start brings the bench back.
+    Nothing is deleted; fmx start brings the bench back.
     """
     # No migration gate here: "stop" is in app_callback's commands_skip_bench_migration
     # whitelist (with "delete"), i.e. stopping an unmigrated bench must always work.

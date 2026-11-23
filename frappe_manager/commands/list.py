@@ -23,7 +23,7 @@ from frappe_manager.site_manager.bench_service import BenchService
 @example(
     "Script over the inventory",
     "--json",
-    detail="fm list --json | jq -r '.result[] | select(.status == \"active\") | .name'",
+    detail="fmx list --json | jq -r '.result[] | select(.status == \"active\") | .name'",
 )
 def list(
     ctx: typer.Context,

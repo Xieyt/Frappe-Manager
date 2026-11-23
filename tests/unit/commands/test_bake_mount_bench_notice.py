@@ -82,7 +82,7 @@ def test_a_mount_bench_is_given_the_command_that_does_work(cli, world):
     result = runner.invoke(cli, [BENCH])
 
     after_build = _flat(result.output.split("Baked image")[-1])
-    assert "fm create NAME --runtime image --app-image" in after_build
+    assert "fmx create NAME --runtime image --app-image" in after_build
     assert "local/mybench:t1" in after_build
 
 

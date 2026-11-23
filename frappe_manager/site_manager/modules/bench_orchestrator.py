@@ -239,8 +239,8 @@ class BenchOrchestrator:
                     # clue that this step is the cause.
                     self.logger.warning(f"{bench.name}: clear-cache failed: {e}")
                     self.output.warning(
-                        f"Could not clear the website route cache ({e}). The new site may answer 404 until you run: "
-                        f"fm shell {bench.name} -c 'bench --site {bench.site_name} clear-cache'"
+                    f"Could not clear the website route cache ({e}). The new site may answer 404 until you run: "
+                    f"fmx shell {bench.name} -c 'bench --site {bench.site_name} clear-cache'"
                     )
 
             self._report_created_bench(apps_installed)
@@ -262,7 +262,7 @@ class BenchOrchestrator:
             # Naming the command here is the whole cost of that default, so it is not optional.
             if not bench.bench_config.admin_tools:
                 self.output.print(
-                    f"Database console and mail catcher are off. Turn them on with 'fm tools enable {bench.name}'.",
+                    f"Database console and mail catcher are off. Turn them on with 'fmx tools enable {bench.name}'.",
                     emoji_code="",
                 )
 
@@ -301,9 +301,9 @@ class BenchOrchestrator:
         raise BenchOperationException(
             bench.name,
             message=(
-                f"'{image}' carries no recorded nginx companion for bench '{bench.name}': fm does not guess "
+                f"'{image}' carries no recorded nginx companion for bench '{bench.name}': fmx does not guess "
                 "a companion's name, and this image predates the fm.nginx.image label or was not built by "
-                "fm. Pass --nginx-image to name it explicitly."
+                "fmx. Pass --nginx-image to name it explicitly."
             ),
         )
 
@@ -574,7 +574,7 @@ class BenchOrchestrator:
             raise Exception(
                 f"Supervisord did not start within {supervisord_timeout}s. On an image bench the "
                 "entrypoint prepares the baked workspace before supervisord runs, so a very large "
-                f"image can outlast this; check 'fm logs {bench.name}' for where it stopped."
+                f"image can outlast this; check 'fmx logs {bench.name}' for where it stopped."
             )
 
         max_retries = 30
@@ -1046,7 +1046,7 @@ class BenchOrchestrator:
         if decision.refused or decision.flow is not self._external_flow:
             raise BenchOperationException(
                 bench.name,
-                "the external schema is no longer what the preflight found minutes ago, so fm"
+                "the external schema is no longer what the preflight found minutes ago, so fmx"
                 f" stopped before writing anything to it. {decision.message}",
             )
 
@@ -1072,7 +1072,7 @@ class BenchOrchestrator:
             raise BenchOperationException(
                 bench.name,
                 f"schema {database.name!r} does not exist on {database.host} and no admin"
-                " credentials were supplied, so fm has nothing to create it with. Pass"
+                " credentials were supplied, so fmx has nothing to create it with. Pass"
                 " --db-admin-user together with --db-admin-password, or point --db-name at a"
                 " schema that already exists.",
             )
@@ -1169,7 +1169,7 @@ class BenchOrchestrator:
         self.output.print(
             "Attached site: phase 6 is skipped entirely, because bench install-app and bench"
             " migrate both write to the database. If the schema does need reconciling against"
-            f" this bench's apps, that is yours to run when you choose: fm shell {bench.name},"
+            f" this bench's apps, that is yours to run when you choose: fmx shell {bench.name},"
             f" then bench --site {bench.site_name} migrate."
         )
 
@@ -1247,7 +1247,7 @@ class BenchOrchestrator:
         except Exception as e:
             self.output.display_error(
                 f"Could not drop schema {database.name} on {database.host}: {e}. It is still"
-                " there, and fm will not hold the admin credentials on any later run, so this"
+                " there, and fmx will not hold the admin credentials on any later run, so this"
                 " one is yours to clean up by hand."
             )
             return
@@ -1364,11 +1364,11 @@ class BenchOrchestrator:
                 "- Database migration errors\n"
                 "- Missing Python packages\n\n"
                 "How to fix:\n"
-                f"1. Shell into the bench: fm shell {bench.name}\n"
+                f"1. Shell into the bench: fmx shell {bench.name}\n"
                 "2. Install apps manually:\n"
                 f"   bench --site {bench.site_name} install-app <app_name>\n"
                 "3. Check logs for specific errors:\n"
-                f"   fm logs {bench.name} -f\n\n"
+                f"   fmx logs {bench.name} -f\n\n"
                 f"📋 Check detailed logs at: {CLI_DIR / 'logs' / 'fm.log'}\n",
             )
             return False
@@ -1400,7 +1400,7 @@ class BenchOrchestrator:
                 # BENCH) and once as the `--site` argument (the SITE). The address form says both
                 # at once, and `fm shell BENCH/SITE` exports FRAPPE_SITE so the bare `bench`
                 # command inside targets that site with no second name to keep in step.
-                f"  fm shell {bench.name}/{bench.site_name} -- bench migrate",
+                f"  fmx shell {bench.name}/{bench.site_name} -- bench migrate",
             )
             return False
         else:
@@ -1470,7 +1470,7 @@ class BenchOrchestrator:
             # that built nothing.
             self.output.warning(
                 f"Non-interactive: leaving the failed bench {bench.name!r} at {bench.path} for "
-                f"inspection. Remove it with: fm delete {bench.name} --yes"
+                f"inspection. Remove it with: fmx delete {bench.name} --yes"
             )
             raise exception
 
@@ -1703,7 +1703,7 @@ class BenchOrchestrator:
             if added_domains:
                 self.output.print("To add SSL certificates for new alias domains, use:", emoji_code="")
                 for domain in added_domains:
-                    self.output.print(f"  fm ssl add {bench.name}/{domain}", emoji_code="")
+                    self.output.print(f"  fmx ssl add {bench.name}/{domain}", emoji_code="")
 
         except Exception as e:
             entry.alias_domains = backup_aliases

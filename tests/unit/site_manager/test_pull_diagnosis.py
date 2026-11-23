@@ -129,7 +129,7 @@ class TestTheMessage:
         message = self._fail("ghcr.io/acme/app:v1", "manifest unknown", logged_in=True)
 
         assert "docker login" not in message
-        assert "fm bake --push" in message
+        assert "fmx bake --push" in message
 
     def test_the_registrys_own_words_survive(self):
         message = self._fail("ghcr.io/acme/app:v1", "manifest unknown", logged_in=True)

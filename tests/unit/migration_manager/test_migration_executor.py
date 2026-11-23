@@ -571,7 +571,7 @@ class TestMigrationNeverPrunesOnlyHints:
         assert result is True
         assert len(list(root.iterdir())) == 5  # nothing deleted, ever
         prints = " ".join(str(call) for call in output.print.call_args_list)
-        assert "fm services prune" in prints
+        assert "fmx services prune" in prints
         assert "2 backup session(s) beyond the configured keep of 3" in prints
 
     @pytest.mark.timeout(15)
@@ -595,7 +595,7 @@ class TestMigrationNeverPrunesOnlyHints:
         assert result is False
         assert len(list(root.iterdir())) == 5
         prints = " ".join(str(call) for call in output.print.call_args_list)
-        assert "fm services prune" not in prints
+        assert "fmx services prune" not in prints
 
 
 class TestDryRun:

@@ -141,7 +141,7 @@ def test_bench_only_points_at_the_command_that_takes_those_flags(cli, benches):
     """The flags are not wrong, the path is: they belong to the invocation that creates a site."""
     result, _ = _invoke(cli, ["fresh", "--bench-only", "--db-host", "h"])
 
-    assert "fm create BENCH/SITE" in _said(result)
+    assert "fmx create BENCH/SITE" in _said(result)
 
 
 # ------------------------------------------- add-site path checks domain uniqueness

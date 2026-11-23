@@ -22,9 +22,9 @@ from .helpers import get_output_handler
     "--standalone",
 )
 @example(
-    "List every certificate fm manages",
+    "List every certificate fmx manages",
     "all",
-    detail="Every bench and the external domains together. A bench fm cannot read is reported in place, not fatal.",
+    detail="Every bench and the external domains together. A bench fmx cannot read is reported in place, not fatal.",
 )
 def list_certificates(
     ctx: typer.Context,
@@ -51,8 +51,8 @@ def list_certificates(
     if ctx.obj and ctx.obj.get("domain"):
         output = get_output_handler(ctx)
         output.display_error(
-            "'fm ssl list' takes a bench, not a single domain: it reports every certificate the "
-            f"bench holds. Use 'fm ssl list {address}'."
+            "'fmx ssl list' takes a bench, not a single domain: it reports every certificate the "
+            f"bench holds. Use 'fmx ssl list {address}'."
         )
         raise typer.Exit(2)
 

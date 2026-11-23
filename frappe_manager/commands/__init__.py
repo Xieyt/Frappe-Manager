@@ -141,11 +141,11 @@ def check_bench_migration_required(bench_name: str | None) -> None:
 
             raise MigrationRequiredError(
                 f"Bench migration required: {bench_name} (v{bench_version} → v{fm_version})",
-                suggestions=[f"Run 'fm migrate {bench_name}'"],
+                suggestions=[f"Run 'fmx migrate {bench_name}'"],
             )
 
         output.warning(f"Bench migration required: {bench_name} (v{bench_version} → v{fm_version})\n", emoji_code="")
-        output.print(f"Run: [fm.info]fm migrate {bench_name}[/fm.info]\n", emoji_code="")
+        output.print(f"Run: [fm.info]fmx migrate {bench_name}[/fm.info]\n", emoji_code="")
         # Exit 1, not 0: this refuses the command without doing anything, so `fm start x && ...`
         # and any CI step or systemd unit checking $? must see a failure.
         raise typer.Exit(1)
@@ -277,7 +277,7 @@ app.add_typer(
 app.add_typer(
     self_app,
     name="self",
-    help="Manage the fm installation itself: upgrade it, pull images, stop everything, uninstall.",
+    help="Manage the fmx installation itself: upgrade it, pull images, stop everything, uninstall.",
     rich_help_panel=_PANEL_GLOBAL,
 )
 app.add_typer(
@@ -321,7 +321,7 @@ def app_callback(
             count=True,
             metavar="",
             show_default=False,
-            help="Show more: -v what fm changed and ran, -vv why it chose it.",
+            help="Show more: -v what fmx changed and ran, -vv why it chose it.",
         ),
     ] = 0,
     log_level: Annotated[
@@ -351,7 +351,7 @@ def app_callback(
         EventStreamFormat | None,
         typer.Option(
             "--events",
-            help="Stream what fm does as it happens, machine-readably: one JSON line per event (JSONL), sealed with a terminal exit event. This is the EVENT stream, not a command's result -- for a result, use a command's own --json. Implies --non-interactive.",
+            help="Stream what fmx does as it happens, machine-readably: one JSON line per event (JSONL), sealed with a terminal exit event. This is the EVENT stream, not a command's result -- for a result, use a command's own --json. Implies --non-interactive.",
         ),
     ] = None,
     version: Annotated[
@@ -468,7 +468,7 @@ def app_callback(
                 if CLI_DIR.exists():
                     output.display_error(f"{CLI_DIR} exists but is not a directory! Aborting!")
                     raise typer.Exit(1)
-                output.info(f"fm directory doesn't exists! Created at -> {CLI_DIR!s}")
+                output.info(f"fmx directory doesn't exists! Created at -> {CLI_DIR!s}")
             CLI_DIR.mkdir(parents=True, exist_ok=True)
             CLI_BENCHES_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
@@ -554,7 +554,7 @@ def app_callback(
                     # deleted an existing install's logs and backups because one image pull failed.
                     if created_home and CLI_DIR.exists():
                         shutil.rmtree(CLI_DIR)
-                    output.display_error("Aborting: could not pull every image fm needs. Fix the cause named above, "
+                    output.display_error("Aborting: could not pull every image fmx needs. Fix the cause named above, "
                         "then run the same command again.")
                     raise typer.Exit(1)
 
@@ -621,16 +621,16 @@ def app_callback(
                     _prompt_and_run_migration(
                         output,
                         fm_config_manager,
-                        warning=f"fm's global services & configuration need migration: v{global_services_version} -> v{current_version}",
-                        detail="This updates the shared services (mariadb, nginx-proxy) and fm's own config",
+                        warning=f"fmx's global services & configuration need migration: v{global_services_version} -> v{current_version}",
+                        detail="This updates the shared services (mariadb, nginx-proxy) and fmx's own config",
                         detail_emoji="  ",
                         prompt="How would you like to proceed?",
                         choices=[
                             {"name": "Update now (recommended)", "value": "update"},
-                            {"name": "Update later (run 'fm services migrate' when ready)", "value": "skip"},
+                            {"name": "Update later (run 'fmx services migrate' when ready)", "value": "skip"},
                         ],
-                        required_flag="'fm services migrate' (run migration explicitly)",
-                        start_notice="\n🔄 Updating fm's global services & configuration...\n",
+                        required_flag="'fmx services migrate' (run migration explicitly)",
+                        start_notice="\n🔄 Updating fmx's global services & configuration...\n",
                         start_emoji="",
                         executor_kwargs={
                             "migrate_global_services": True,
@@ -638,11 +638,11 @@ def app_callback(
                             "on_failure": "rollback",
                         },
                         failure_error="Global services & configuration update failed",
-                        failure_hint="Please run 'fm services migrate' manually to fix.",
+                        failure_hint="Please run 'fmx services migrate' manually to fix.",
                         record_version=None,
                         success_notice=f"Global services & configuration updated to v{current_version}\n",
-                        skip_error="Cannot proceed - fm's global services & configuration need migration",
-                        skip_hint="Run 'fm services migrate' when ready",
+                        skip_error="Cannot proceed - fmx's global services & configuration need migration",
+                        skip_hint="Run 'fmx services migrate' when ready",
                     )
 
                 # Scenario 2: Bench needs migration -- nested after the infra update above, or
@@ -661,9 +661,9 @@ def app_callback(
                         prompt=f"Migrate bench '{bench_arg}' now?",
                         choices=[
                             {"name": "Update now", "value": "update"},
-                            {"name": f"Update later (run 'fm migrate {bench_arg}' when ready)", "value": "skip"},
+                            {"name": f"Update later (run 'fmx migrate {bench_arg}' when ready)", "value": "skip"},
                         ],
-                        required_flag=f"'fm migrate {bench_arg}' (run migration explicitly)",
+                        required_flag=f"'fmx migrate {bench_arg}' (run migration explicitly)",
                         start_notice=f"\nMigrating bench '{bench_arg}'...\n",
                         start_emoji="🔄 ",
                         executor_kwargs={
@@ -672,13 +672,13 @@ def app_callback(
                             "on_failure": "rollback",
                         },
                         failure_error=f"Bench migration failed for '{bench_arg}'",
-                        failure_hint=f"Please run 'fm migrate {bench_arg}' manually.",
+                        failure_hint=f"Please run 'fmx migrate {bench_arg}' manually.",
                         record_version=record_bench_version,
                         success_notice=f"Bench '{bench_arg}' migrated to v{current_version}\n",
-                        skip_warning=f"Skipped bench migration. Run 'fm migrate {bench_arg}' when ready.",
+                        skip_warning=f"Skipped bench migration. Run 'fmx migrate {bench_arg}' when ready.",
                         skip_note="Note: Bench may not work correctly until migrated.",
                         skip_error=f"Cannot {invoked_command} '{bench_arg}' - migration required",
-                        skip_hint=f"Run 'fm migrate {bench_arg}' first",
+                        skip_hint=f"Run 'fmx migrate {bench_arg}' first",
                     )
 
             # Every state-touching command holds the host lock SHARED for its lifetime: the

@@ -53,7 +53,7 @@ def _print_cdn_hint(output: OutputHandler, domain: str) -> None:
     if result.status == CDNProxyStatus.proxied and not trusted:
         output.print(
             f"{domain} resolves into Cloudflare's published ranges. If it is proxied (orange-clouded), "
-            "run 'fm services trusted-proxies set --cdn cloudflare' so the redirect and self-calls "
+            "run 'fmx services trusted-proxies set --cdn cloudflare' so the redirect and self-calls "
             "stop assuming a direct TLS connection.",
             emoji_code=":information:",
         )
@@ -90,7 +90,7 @@ def _regenerate_bench_compose(bench: Bench, output) -> bool:
     except Exception as e:
         # Non-fatal: the certificate itself is already added/removed by the time this runs. A
         # bench left on a stale compose still works; it just needs a manual nudge to catch up.
-        output.warning(f"Could not update {bench.name}'s compose files: {e}. Run 'fm update {bench.name}' to retry.")
+        output.warning(f"Could not update {bench.name}'s compose files: {e}. Run 'fmx update {bench.name}' to retry.")
         return False
     else:
         return True
@@ -122,7 +122,7 @@ def _replace_existing_custom_certificate(output, bench, domain: str, custom: boo
         output.display_error(
             f"'{domain}' already has a {existing.ssl_type.value} certificate. Only a custom "
             f"certificate can be replaced in place; changing type means "
-            f"'fm ssl remove {bench.name}/{domain}' first, which serves the domain over plain HTTP "
+            f"'fmx ssl remove {bench.name}/{domain}' first, which serves the domain over plain HTTP "
             f"until the new certificate is added."
         )
         raise typer.Exit(1)
@@ -177,7 +177,7 @@ def _add_bench_certificate(
         output.display_error(
             f"Domain '{domain}' is not configured for bench '{benchname}'.\n"
             f"Allowed domains: {', '.join(allowed_domains)}\n"
-            f"To add an alias domain, use: fm domain add {benchname} {domain}",
+            f"To add an alias domain, use: fmx domain add {benchname} {domain}",
         )
         raise typer.Exit(2)
     domain = resolved
@@ -260,7 +260,7 @@ def _add_bench_certificate(
 
         if _regenerate_bench_compose(bench, output):
             output.print(
-                f"Run 'fm start {benchname}' to apply it (recreates only the services whose "
+                f"Run 'fmx start {benchname}' to apply it (recreates only the services whose "
                 "definition changed; running jobs are undisturbed until then).",
                 emoji_code=":information:",
             )
@@ -331,7 +331,7 @@ def _remove_bench_certificate(ctx: typer.Context, benchname: str, domain: str, y
 
         if _regenerate_bench_compose(bench, output):
             output.print(
-                f"Run 'fm start {benchname}' to apply it (recreates only the services whose "
+                f"Run 'fmx start {benchname}' to apply it (recreates only the services whose "
                 "definition changed; running jobs are undisturbed until then).",
                 emoji_code=":information:",
             )
@@ -518,7 +518,7 @@ def _list_bench_certificates(ctx: typer.Context, benchname: str):
         # identical "no ssl" cards, so this says so once and names how to fix it instead.
         output.print(
             f"No SSL certificates configured for bench '{benchname}'. "
-            f"Add one with 'fm ssl add {benchname} <domain>'.",
+            f"Add one with 'fmx ssl add {benchname} <domain>'.",
             emoji_code=":information:",
         )
         return

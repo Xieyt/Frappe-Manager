@@ -20,8 +20,8 @@ def _load_image_bench(ctx: typer.Context, benchname: str) -> Bench:
     if bench.bench_config.runtime != BenchRuntime.image:
         output.display_error(
             f"Bench '{benchname}' is not image runtime. Runtime is fixed at create time: an image "
-            "bench is created with 'fm create NAME --runtime image --app-image REPO:TAG', and an "
-            "editable copy of an image's workspace is 'fm create NAME --apps-from REPO:TAG'.",
+            "bench is created with 'fmx create NAME --runtime image --app-image REPO:TAG', and an "
+            "editable copy of an image's workspace is 'fmx create NAME --apps-from REPO:TAG'.",
         )
         raise typer.Exit(1)
     return bench
@@ -42,7 +42,7 @@ def _switch_target_shape_error(image: str) -> str | None:
     """
     if not ImageRef.parse(image).is_pinned:
         return (
-            f"'{image}' is a repository, not an image reference: it names no version, so fm "
+            f"'{image}' is a repository, not an image reference: it names no version, so fmx "
             f"cannot tell which build to deploy. An image reference is a repository plus a "
             f"version, e.g. ghcr.io/acme/mybench:v15.2.1 or "
             f"ghcr.io/acme/mybench@sha256:3f8a... If you passed a tag on its own, pass the "
@@ -115,7 +115,7 @@ def _find_current_deploy_backups(state) -> "tuple[dict[str, str], str | None]":
 @example(
     "Switch to an image you baked",
     "{benchname} local/mybench:20260721-abc123",
-    detail="fm bake prints the image; fm info lists the ones this bench has already run.",
+    detail="fmx bake prints the image; fmx info lists the ones this bench has already run.",
     benchname="mybench",
 )
 @example(
@@ -138,7 +138,7 @@ def _find_current_deploy_backups(state) -> "tuple[dict[str, str], str | None]":
 @example(
     "Roll back code and database unattended",
     "{benchname} --previous --restore-db --yes",
-    detail="Without --yes fm asks you to type the schema name, and refuses when there is no terminal to ask on.",
+    detail="Without --yes fmx asks you to type the schema name, and refuses when there is no terminal to ask on.",
     benchname="mybench",
 )
 @example(
@@ -162,7 +162,7 @@ def switch(
         str | None,
         typer.Option(
             "--nginx-image",
-            help="The companion assets image for this deploy, as an image reference. Recorded beside the app image, never worked out from its name. Omitted, fm reads the 'fm.nginx.image' label the bake stamped on the app image.",
+            help="The companion assets image for this deploy, as an image reference. Recorded beside the app image, never worked out from its name. Omitted, fmx reads the 'fm.nginx.image' label the bake stamped on the app image.",
             show_default=False,
         ),
     ] = None,
@@ -182,7 +182,7 @@ def switch(
         bool,
         typer.Option(
             "--restore-db",
-            help="Also restore the DB dump taken during the deploy you are undoing. This REPLACES the current database: the dump drops and recreates every table, so everything written since that deploy is lost. fm asks you to confirm before importing.",
+            help="Also restore the DB dump taken during the deploy you are undoing. This REPLACES the current database: the dump drops and recreates every table, so everything written since that deploy is lost. fmx asks you to confirm before importing.",
         ),
     ] = False,
     yes: Annotated[
@@ -197,7 +197,7 @@ def switch(
         int | None,
         typer.Option(
             "--keep",
-            help="After a successful deploy, prune old releases keeping the newest N (minimum 1; see fm prune).",
+            help="After a successful deploy, prune old releases keeping the newest N (minimum 1; see fmx prune).",
             show_default=False,
         ),
     ] = None,

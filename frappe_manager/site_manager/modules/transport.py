@@ -117,14 +117,14 @@ def _registry_refusal_remedy(image: str, host: str, said: str) -> str | None:
     elif "denied" in said or "unauthorized" in said or "authentication required" in said:
         remedy = (
             (
-                f"{host} rejected this host's stored credentials. fm's own images are public, so "
+                f"{host} rejected this host's stored credentials. fmx's own images are public, so "
                 f"`docker logout {host}` is usually the fix; log in again if the image is private "
                 f"and the token has expired"
             )
             if logged_in_to(host)
             else (
                 f"{host} refused an anonymous request. If that image is private, run "
-                f"`docker login {host}` here and retry: fm uses the daemon's own credentials and "
+                f"`docker login {host}` here and retry: fmx uses the daemon's own credentials and "
                 f"holds none itself"
             )
         )
@@ -144,11 +144,11 @@ def _registry_refusal_remedy(image: str, host: str, said: str) -> str | None:
             f"what an intercepting proxy looks like. Add its CA to the daemon's trust store"
         )
     elif "no space left on device" in said:
-        remedy = "the disk is full. Reclaim space (`fm prune`, `docker system prune`) and retry"
+        remedy = "the disk is full. Reclaim space (`fmx prune`, `docker system prune`) and retry"
     elif ("not found" in said or "manifest unknown" in said) and image.startswith(FM_IMAGE_PREFIX):
         remedy = (
-            "no such image is published. fm only publishes images for RELEASED versions, so a dev "
-            "or git checkout has none: install a released fm, or build the images yourself "
+            "no such image is published. fmx only publishes images for RELEASED versions, so a dev "
+            "or git checkout has none: install a released fmx, or build the images yourself "
             "(Docker/build.sh)"
         )
     return remedy
@@ -176,11 +176,11 @@ def pull_failure_cause(image: str, error: object) -> str:
         host,
         when_in=(
             f"this host is logged in to {host}, so check the image was actually pushed "
-            f"(fm bake --push) and that this account can read it"
+            f"(fmx bake --push) and that this account can read it"
         ),
         when_out=(
             f"no docker login for {host} was found. If that image is private, run "
-            f"`docker login {host}` here and retry: fm uses the daemon's own credentials "
+            f"`docker login {host}` here and retry: fmx uses the daemon's own credentials "
             f"and holds none itself"
         ),
     )
@@ -213,7 +213,7 @@ def _push_failure_message(image: str, error: object, pushed: list[str]) -> str:
             f"permitted to"
         ),
         when_out=(
-            f"no docker login for {host} was found. fm uses the daemon's own credentials "
+            f"no docker login for {host} was found. fmx uses the daemon's own credentials "
             f"and holds none itself, so run `docker login {host}` here and retry"
         ),
     )

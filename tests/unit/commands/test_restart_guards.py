@@ -89,7 +89,7 @@ def test_a_stopped_bench_is_sent_to_fm_start_whichever_path(cli, monkeypatch, ex
     result = runner.invoke(cli, ["x.localhost", *extra], obj={"services": object()})
 
     assert result.exit_code == 1
-    assert "fm start x.localhost" in result.output
+    assert "fmx start x.localhost" in result.output
 
 
 def test_the_stopped_bench_refusal_no_longer_offers_a_restart_flag(cli, monkeypatch):

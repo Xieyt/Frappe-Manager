@@ -117,7 +117,7 @@ class TestPreRenameGuardRefuses:
     _OLD_SHAPED = '\n[deploy_state]\ncurrent_image = "local/mybench:v2"\nprevious_image = "local/mybench:v1"\n'
 
     def test_deploy_state_with_no_deployments_is_refused(self, tmp_path):
-        with pytest.raises(BenchException, match="fm migrate"):
+        with pytest.raises(BenchException, match="fmx migrate"):
             _import(tmp_path, _BASE + self._OLD_SHAPED)
 
     def test_the_refusal_names_the_bench(self, tmp_path):
@@ -766,7 +766,7 @@ class TestVersionGateIsolatesATypoFromMigrationNoise:
 
         handler.warning.assert_called_once()
         assert handler.warning.call_args.args[0].endswith(
-            "has unrecognised key(s) typoed_stray; check for a typo, since fm will not use them."
+            "has unrecognised key(s) typoed_stray; check for a typo, since fmx will not use them."
         )
 
     def test_a_bench_a_newer_fm_has_migrated_is_silent_too(self, tmp_path):

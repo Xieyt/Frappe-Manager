@@ -230,8 +230,8 @@ def test_add_rejects_domain_that_already_has_a_certificate(h):
     h.output.display_error.assert_called_once_with(f"Certificate already exists for external domain '{DOMAIN}'")
     assert h.prints() == [
         "To update certificate:",
-        f"  1. Remove existing: fm ssl remove --standalone {DOMAIN}",
-        f"  2. Add new: fm ssl add --standalone {DOMAIN}",
+        f"  1. Remove existing: fmx ssl remove --standalone {DOMAIN}",
+        f"  2. Add new: fmx ssl add --standalone {DOMAIN}",
     ]
     h.SSLStorageConfig.assert_not_called()
 
@@ -310,7 +310,7 @@ def test_add_cname_validation_failure_with_wrong_target_reports_current_value(h)
     assert [c.args[0] for c in h.output.display_error.call_args_list] == [
         "DNS validation failed",
         f"Failed to add certificate for {DOMAIN}: 1. If this left an nginx configuration behind, "
-        f"'fm ssl remove --standalone {DOMAIN}' cleans it up.",
+        f"'fmx ssl remove --standalone {DOMAIN}' cleans it up.",
     ]
     prints = h.prints()
     assert f"  _acme-challenge.{DOMAIN}  →  _acme-challenge.deleg.fm.com" in prints
@@ -377,7 +377,7 @@ def test_add_wait_for_dns_timeout_aborts_before_touching_nginx(h):
     assert [c.args[0] for c in h.output.display_error.call_args_list] == [
         "DNS propagation timeout",
         f"Failed to add certificate for {DOMAIN}: 1. If this left an nginx configuration behind, "
-        f"'fm ssl remove --standalone {DOMAIN}' cleans it up.",
+        f"'fmx ssl remove --standalone {DOMAIN}' cleans it up.",
     ]
     assert "CNAME record did not propagate within 5 minutes." in h.prints()
     h.StandaloneNginxConfigManager.assert_not_called()
@@ -588,7 +588,7 @@ def test_add_issuance_failure_removes_nginx_config_and_exits(h):
     h.external_manager.add_domain.assert_not_called()
     h.output.display_error.assert_called_once_with(
         f"Failed to add certificate for {DOMAIN}: acme boom. If this left an nginx configuration "
-        f"behind, 'fm ssl remove --standalone {DOMAIN}' cleans it up."
+        f"behind, 'fmx ssl remove --standalone {DOMAIN}' cleans it up."
     )
     assert "Cleaning up after certificate generation failure" in h.heads()
     # Issuance cleanup does NOT try to remove a certificate: there is none yet.
@@ -606,7 +606,7 @@ def test_add_issuance_failure_with_failing_cleanup_debugs_and_still_exits(h):
     # the original error, not the cleanup error, is what the user is told about
     h.output.display_error.assert_called_once_with(
         f"Failed to add certificate for {DOMAIN}: acme boom. If this left an nginx configuration "
-        f"behind, 'fm ssl remove --standalone {DOMAIN}' cleans it up."
+        f"behind, 'fmx ssl remove --standalone {DOMAIN}' cleans it up."
     )
 
 
@@ -624,7 +624,7 @@ def test_add_https_config_failure_also_revokes_the_issued_certificate(h):
     assert "Cleaned up nginx configuration and certificate" in h.effects()
     h.output.display_error.assert_called_once_with(
         f"Failed to add certificate for {DOMAIN}: https boom. If this left an nginx configuration "
-        f"behind, 'fm ssl remove --standalone {DOMAIN}' cleans it up."
+        f"behind, 'fmx ssl remove --standalone {DOMAIN}' cleans it up."
     )
     h.external_manager.add_domain.assert_not_called()
 
@@ -638,7 +638,7 @@ def test_add_https_reload_failure_takes_the_same_cleanup_path(h):
     h.cert_manager.remove_certificate_by_domain.assert_called_once_with(DOMAIN)
     h.output.display_error.assert_called_once_with(
         f"Failed to add certificate for {DOMAIN}: reload boom. If this left an nginx configuration "
-        f"behind, 'fm ssl remove --standalone {DOMAIN}' cleans it up."
+        f"behind, 'fmx ssl remove --standalone {DOMAIN}' cleans it up."
     )
 
 
@@ -787,7 +787,7 @@ def test_remove_aborts_when_domain_config_vanished(h):
     assert exc.value.exit_code == 1
     h.output.display_error.assert_called_once_with(
         f"Failed to remove certificate for {DOMAIN}: Domain config not found for {DOMAIN}. "
-        f"Re-running 'fm ssl remove --standalone {DOMAIN}' finds and cleans up anything left behind."
+        f"Re-running 'fmx ssl remove --standalone {DOMAIN}' finds and cleans up anything left behind."
     )
     h.external_manager.to_ssl_certificate.assert_not_called()
 
@@ -802,7 +802,7 @@ def test_remove_aborts_when_certificate_object_cannot_be_rebuilt(h):
     assert exc.value.exit_code == 1
     h.output.display_error.assert_called_once_with(
         f"Failed to remove certificate for {DOMAIN}: Could not create certificate object for "
-        f"{DOMAIN}. Re-running 'fm ssl remove --standalone {DOMAIN}' finds and cleans up anything "
+        f"{DOMAIN}. Re-running 'fmx ssl remove --standalone {DOMAIN}' finds and cleans up anything "
         "left behind."
     )
     h.SSLCertificateManager.assert_not_called()
@@ -818,7 +818,7 @@ def test_remove_failure_leaves_the_toml_entry_in_place(h):
     assert exc.value.exit_code == 1
     h.output.display_error.assert_called_once_with(
         f"Failed to remove certificate for {DOMAIN}: rm boom. Re-running "
-        f"'fm ssl remove --standalone {DOMAIN}' finds and cleans up anything left behind."
+        f"'fmx ssl remove --standalone {DOMAIN}' finds and cleans up anything left behind."
     )
     h.external_manager.remove_domain.assert_not_called()
 
@@ -831,7 +831,7 @@ def test_renew_rejects_unknown_domain_with_a_list_hint(h):
 
     assert exc.value.exit_code == 2
     h.output.display_error.assert_called_once_with(f"No external certificate found for domain '{DOMAIN}'")
-    assert h.prints() == ["To list external certificates: fm ssl list --standalone"]
+    assert h.prints() == ["To list external certificates: fmx ssl list --standalone"]
 
 
 def test_renew_repairs_a_missing_vhost_before_the_challenge(h):
@@ -1264,7 +1264,7 @@ def test_list_with_nothing_configured_prints_the_getting_started_hint(h, listing
         "No external domains or SSL certificates configured",
         "",
         "To add an external certificate:",
-        "  fm ssl add --standalone <domain>",
+        "  fmx ssl add --standalone <domain>",
     ]
     listing.cards_fn.assert_not_called()
     h.output.print_data.assert_not_called()
@@ -1400,7 +1400,7 @@ def test_list_appends_detected_domains_without_ssl_and_a_tip(h, listing):
     assert _facts(no_ssl_card) == {}
     assert h.infos() == [
         "\n[fm.warn]💡 Tip: Add SSL certificates for non-SSL domains:[/fm.warn]",
-        "[fm.muted]  fm ssl add --standalone <domain>[/fm.muted]",
+        "[fm.muted]  fmx ssl add --standalone <domain>[/fm.muted]",
     ]
 
 
@@ -1624,7 +1624,7 @@ def test_guard_refuses_a_domain_a_bench_already_serves(h):
     assert exc.value.exit_code == 1
     message = h.output.display_error.call_args.args[0]
     assert "served by bench 'mybench'" in message
-    assert f"fm ssl add mybench/{DOMAIN}" in message
+    assert f"fmx ssl add mybench/{DOMAIN}" in message
 
 
 def test_guard_refuses_a_domain_that_already_has_a_backend_in_the_proxy(h):

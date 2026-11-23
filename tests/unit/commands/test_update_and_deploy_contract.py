@@ -270,9 +270,9 @@ def world(tmp_path):
 
 IMMUTABLE_REFUSAL = (
     f"{BENCH} is image runtime; code, apps, Python/Node and developer mode are immutable -- "
-    "ship changes with 'fm bake' then 'fm switch'. "
-    "'fm update' on an image bench still changes environment, restart policy and the database CA, "
-    "and APM is 'fm telemetry enable'."
+    "ship changes with 'fmx bake' then 'fmx switch'. "
+    "'fmx update' on an image bench still changes environment, restart policy and the database CA, "
+    "and APM is 'fmx telemetry enable'."
 )
 
 
@@ -346,8 +346,8 @@ class TestBenchMustBeRunning:
 
 
 NO_DATABASE_REFUSAL = (
-    f"{BENCH} has no \\[database] entry in bench_config.toml: the bench uses the fm-managed "
-    "'mariadb' container, whose TLS material fm owns, so there is no external CA to refresh."
+    f"{BENCH} has no \\[database] entry in bench_config.toml: the bench uses the fmx-managed "
+    "'mariadb' container, whose TLS material fmx owns, so there is no external CA to refresh."
 )
 
 
@@ -485,7 +485,7 @@ class TestEnvironmentSwitch:
         option = update.__annotations__["environment"].__metadata__[0]
 
         assert "admin-tool defaults" not in option.help
-        assert "fm tools" in option.help
+        assert "fmx tools" in option.help
         assert "FRAPPE_ENV" in option.help
 
 
@@ -879,8 +879,8 @@ class TestNoOptions:
 
 NOT_IMAGE_RUNTIME_REFUSAL = (
     f"Bench '{BENCH}' is not image runtime. Runtime is fixed at create time: an image "
-    "bench is created with 'fm create NAME --runtime image --app-image REPO:TAG', and an "
-    "editable copy of an image's workspace is 'fm create NAME --apps-from REPO:TAG'."
+    "bench is created with 'fmx create NAME --runtime image --app-image REPO:TAG', and an "
+    "editable copy of an image's workspace is 'fmx create NAME --apps-from REPO:TAG'."
 )
 
 
@@ -1097,13 +1097,13 @@ class TestSwitchTargetImageResolution:
         that swallowed the `suggestions` main.py renders, so a halted deploy named its symptom and
         not the command that recovers from it. `exit_code` on the exception carries the same 1."""
         ship.config.deployments = _deploy_state()
-        ship.orchestrator.deploy.side_effect = DeployError("swap failed", suggestions=["fm logs mybench"])
+        ship.orchestrator.deploy.side_effect = DeployError("swap failed", suggestions=["fmx logs mybench"])
 
         with pytest.raises(DeployError) as exc:
             ship.switch(image="local/mybench:t9")
 
         assert exc.value.exit_code == 1
-        assert exc.value.suggestions == ["fm logs mybench"]
+        assert exc.value.suggestions == ["fmx logs mybench"]
 
 
 class TestPrune:
@@ -1541,7 +1541,7 @@ class TestContainerFailureIsExplained:
             world.run(environment=FMBenchEnvType.prod)
 
         assert any("already recorded in bench_config.toml" in w for w in world.warnings)
-        assert any("fm restart" in w for w in world.warnings)
+        assert any("fmx restart" in w for w in world.warnings)
 
 
 class TestWorkerDrainGate:
@@ -1743,7 +1743,7 @@ class TestExternalRedis:
     def test_no_redis_on_a_managed_bench_is_nothing_to_do(self, world):
         world.run(no_redis=True)
 
-        assert any("already fm's own per-bench containers" in line for line in world.prints)
+        assert any("already fmx's own per-bench containers" in line for line in world.prints)
         assert world.compose_up_calls == []
 
     def test_the_whole_bench_is_recreated(self, world):

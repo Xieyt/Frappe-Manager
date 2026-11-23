@@ -33,11 +33,11 @@ def ca_remove(
     ] = False,
 ):
     """
-    Remove fm's dev CA from every trust store on this host that has it.
+    Remove fmx's dev CA from every trust store on this host that has it.
 
     Certificates signed by this CA stop being trusted the moment it is removed, so every dev bench served over https will warn until the CA is installed again. Nothing else is affected: the certificates themselves, the benches and their data are untouched.
 
-    The CA key and certificate stay on disk unless --delete-ca is passed, which is what lets `fm ssl ca install` put the same CA back. Deleting them means the next dev certificate is signed by a NEW CA that every client must be told to trust again.
+    The CA key and certificate stay on disk unless --delete-ca is passed, which is what lets `fmx ssl ca install` put the same CA back. Deleting them means the next dev certificate is signed by a NEW CA that every client must be told to trust again.
     """
     output = get_global_output_handler()
     paths = ca_paths()
@@ -46,9 +46,9 @@ def ca_remove(
     entries = manager.find()
 
     if not entries:
-        output.print("No trust store on this host has fm's dev CA.", emoji_code="")
+        output.print("No trust store on this host has fmx's dev CA.", emoji_code="")
     else:
-        output.warning(f"This will remove fm's dev CA from {len(entries)} trust store(s):")
+        output.warning(f"This will remove fmx's dev CA from {len(entries)} trust store(s):")
         for entry in entries:
             suffix = "  (needs sudo)" if entry.privileged else ""
             output.print(f"{entry.store:<28} {entry.location}{suffix}", emoji_code="", prefix="  ")
@@ -94,5 +94,5 @@ def ca_remove(
     if failures:
         for failure in failures:
             output.display_error(failure)
-        output.display_error("This host still trusts fm's dev CA in the stores listed above.")
+        output.display_error("This host still trusts fmx's dev CA in the stores listed above.")
         raise typer.Exit(1)

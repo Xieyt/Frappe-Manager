@@ -100,7 +100,7 @@ def cli_entrypoint():
         # through builtins `exit`, which only exists while `site` is loaded, and this refusal has
         # to hold in every packaging of fm. Same :no_entry: styling either way.
         basic_handler.display_error(
-            "fm must not run as root. Run it as the user that owns the benches, "
+            "fmx must not run as root. Run it as the user that owns the benches, "
             "and put that user in the 'docker' group if docker is unreachable."
         )
         raise SystemExit(1)
@@ -108,7 +108,7 @@ def cli_entrypoint():
     # click runs the program with _FM_COMPLETE set to collect tab completions; a stray line there corrupts them.
     # After the root refusal on purpose: `sudo fm` must refuse without nagging about a rename first.
     if Path(sys.argv[0]).name == "fm" and "_FM_COMPLETE" not in os.environ:
-        basic_handler.warning("'fm' is being renamed to 'fmx' and will stop working in 1.0.0; use 'fmx'.")
+        basic_handler.warning("'fm' is deprecated; use 'fmx' instead.")
 
     # Deferred on purpose: see the import comment at the top of this module.
     from frappe_manager.commands import app

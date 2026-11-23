@@ -50,17 +50,17 @@ def _image_bench_bake_refusal(name: str, bc: BenchConfig) -> str:
     return (
         f"'{name}' is an image-runtime bench, so it has no editable workspace to bake from and its "
         f"apps live inside the image, not in bench_config.toml.{runs} Build a new image from your app "
-        f"source with a standalone bake -- 'fm bake --apps <app:branch> --app-image {repo}' (or a --config "
-        f"carrying \\[\\[apps]]) -- then deploy it here with 'fm switch {name} <image>'."
+        f"source with a standalone bake -- 'fmx bake --apps <app:branch> --app-image {repo}' (or a --config "
+        f"carrying \\[\\[apps]]) -- then deploy it here with 'fmx switch {name} <image>'."
     )
 
 
 def _mount_bench_bake_notice(name: str) -> str:
     """Why `fm switch` will refuse this bake, before the build spends the minutes."""
     return (
-        f"'{name}' is a mount-runtime bench, so 'fm switch {name}' will refuse this image: runtime "
+        f"'{name}' is a mount-runtime bench, so 'fmx switch {name}' will refuse this image: runtime "
         "is fixed at create time. The image is still usable -- seed a new bench from it with "
-        "'fm create NAME --runtime image --app-image <image>'."
+        "'fmx create NAME --runtime image --app-image <image>'."
     )
 
 
@@ -69,7 +69,7 @@ def _mount_bench_bake_next_step(name: str, tag: str) -> str:
     constraint to remember."""
     return (
         f"'{name}' is mount runtime, so this image cannot be deployed to it. Run it as a new bench: "
-        f"fm create NAME --runtime image --app-image {tag}"
+        f"fmx create NAME --runtime image --app-image {tag}"
     )
 
 
@@ -225,7 +225,7 @@ def bake(
         str | None,
         typer.Option(
             "--base-image",
-            help="Image the runtime Dockerfile builds FROM. Defaults to \\[build].base_image, else fm's published frappe image for this fm version.",
+            help="Image the runtime Dockerfile builds FROM. Defaults to \\[build].base_image, else fmx's published frappe image for this fmx version.",
             callback=_base_image_callback,
             show_default=False,
         ),
@@ -302,7 +302,7 @@ def bake(
     """
     Bake an immutable app image.
 
-    Baking only builds. The image is always loaded into the local daemon and pushed when asked, but an image-runtime bench keeps serving its current tag until fm switch deploys the new one. A mount bench cannot switch to a bake at all, since runtime is fixed at create time, so its image is for seeding a new bench with fm create --runtime image. Each bake also builds the matching <repo>-nginx:<tag> assets image, and a push sends both.
+    Baking only builds. The image is always loaded into the local daemon and pushed when asked, but an image-runtime bench keeps serving its current tag until fmx switch deploys the new one. A mount bench cannot switch to a bake at all, since runtime is fixed at create time, so its image is for seeding a new bench with fmx create --runtime image. Each bake also builds the matching <repo>-nginx:<tag> assets image, and a push sends both.
 
     Two modes:
 

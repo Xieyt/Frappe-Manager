@@ -121,9 +121,9 @@ def restart(
     """
     Restart bench services: web and workers by default, redis and nginx on request.
 
-    Workers drain first: fm waits up to \\[workers].drain_timeout for in-flight jobs, and rather than kill a job that overruns it resumes the workers and aborts the restart before any service is touched. --no-drain skips the wait and interrupts running jobs, --force kills everything fast, and a run naming --service skips the drain as well.
+    Workers drain first: fmx waits up to \\[workers].drain_timeout for in-flight jobs, and rather than kill a job that overruns it resumes the workers and aborts the restart before any service is touched. --no-drain skips the wait and interrupts running jobs, --force kills everything fast, and a run naming --service skips the drain as well.
 
-    Restart bounces what is already running, and a stopped bench is fm start's job: unlike a restart, start also reconciles the bench nginx config and the global proxy entry.
+    Restart bounces what is already running, and a stopped bench is fmx start's job: unlike a restart, start also reconciles the bench nginx config and the global proxy entry.
     """
 
     output = get_global_output_handler()
@@ -171,13 +171,13 @@ def restart(
         if redis:
             output.display_error(
                 "--redis cannot be combined with --rolling (the rolling swap only replaces web containers; "
-                "bounce redis in its own run: fm restart <bench> --redis --no-web --no-workers)"
+                "bounce redis in its own run: fmx restart <bench> --redis --no-web --no-workers)"
             )
             raise typer.Exit(code=2)
         if nginx:
             output.display_error(
                 "--nginx cannot be combined with --rolling (the rolling swap only replaces web containers; "
-                "restart nginx in its own run: fm restart <bench> --nginx --no-web --no-workers)"
+                "restart nginx in its own run: fmx restart <bench> --nginx --no-web --no-workers)"
             )
             raise typer.Exit(code=2)
         if not web:
@@ -221,7 +221,7 @@ def restart(
     if not bench.running:
         output.display_error(
             f"Bench '{benchname}' is not fully running, and restart only bounces what is: "
-            f"use 'fm start {benchname}'."
+            f"use 'fmx start {benchname}'."
         )
         raise typer.Exit(code=1)
 

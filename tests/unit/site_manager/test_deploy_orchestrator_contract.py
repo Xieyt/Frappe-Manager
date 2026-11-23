@@ -446,7 +446,7 @@ class TestDrainWorkers:
 
         assert "--no-drain" in str(exc.value)
         assert "timed out" not in str(exc.value)
-        assert "fm self update-images" not in str(exc.value), "not the missing-fmx remedy"
+        assert "fmx self update-images" not in str(exc.value), "not the missing-fmx remedy"
 
     def test_resume_is_a_noop_when_drain_is_disabled(self, tmp_path):
         orch = self._drainable(tmp_path, drain=False)
@@ -680,7 +680,7 @@ class TestUnmanagedSites:
 
         message = str(excinfo.value)
         assert "ghost.localhost" in message
-        assert f"fm delete {SITE}/ghost.localhost" in message
+        assert f"fmx delete {SITE}/ghost.localhost" in message
         r.orch._fetch_image.assert_not_called()
 
     def test_a_sites_directory_that_cannot_be_read_refuses_nothing(self, rig):
@@ -1799,7 +1799,7 @@ class TestRestoreConfirmation:
         manager.db_run_query.assert_called_once()
         manager.db_import.assert_called_once_with("shopdb", dump, force=True)
         warned = " ".join(str(c.args) for c in orch.output.warning.call_args_list)
-        assert "fm's own mariadb container" in warned
+        assert "fmx's own mariadb container" in warned
 
     def test_typing_the_schema_name_authorises_the_overwrite(self, tmp_path):
         orch, manager, dump = self._restorer(tmp_path, answer=" shopdb ")

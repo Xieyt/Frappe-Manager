@@ -22,7 +22,7 @@ class ServicesFailureAction(str, Enum):
 @example(
     "Migrate after a CLI update",
     "",
-    detail="Updates the shared services (mariadb, nginx-proxy) and fm's own config. No bench version is touched; run fm migrate BENCH or fm migrate all afterwards.",
+    detail="Updates the shared services (mariadb, nginx-proxy) and fmx's own config. No bench version is touched; run fmx migrate BENCH or fmx migrate all afterwards.",
 )
 @example(
     "Migrate unattended",
@@ -58,7 +58,7 @@ def migrate_services(
         bool,
         typer.Option(
             "--skip-config-backup",
-            help="Skip the config-file backups (the services compose, fm's own config).",
+            help="Skip the config-file backups (the services compose, fmx's own config).",
         ),
     ] = False,
     skip_db_backup: Annotated[
@@ -81,9 +81,9 @@ def migrate_services(
     ] = False,
 ):
     """
-    Bring fm's global services & configuration up to the current version.
+    Bring fmx's global services & configuration up to the current version.
 
-    This is the host-wide half of a migration: the shared services every bench depends on (mariadb, nginx-proxy) and fm's own configuration. Benches are never migrated here; fm migrate refuses to run while this half is behind, so after a CLI update this command comes first.
+    This is the host-wide half of a migration: the shared services every bench depends on (mariadb, nginx-proxy) and fmx's own configuration. Benches are never migrated here; fmx migrate refuses to run while this half is behind, so after a CLI update this command comes first.
 
     A migration here can briefly take every bench on the host down, because the shared services are every bench's database and only route in.
     """

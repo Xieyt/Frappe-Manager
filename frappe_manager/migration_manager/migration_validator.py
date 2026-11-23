@@ -111,7 +111,7 @@ class MigrationValidator:
         if self.prev_version == Version("0.0.0"):
             from frappe_manager import CLI_FM_CONFIG_PATH
 
-            culprits.append(f"fm's global services & configuration: {CLI_FM_CONFIG_PATH}")
+            culprits.append(f"fmx's global services & configuration: {CLI_FM_CONFIG_PATH}")
 
         if self.bench_filter.target_benches is not None:
             all_benches = MigrationBenches(CLI_BENCHES_DIRECTORY).get_all_benches()
@@ -136,7 +136,7 @@ class MigrationValidator:
         """
         if effective_prev_version == Version("0.0.0"):
             self.output.display_error(
-                "Cannot migrate: fm could not determine what the following are migrated to, "
+                "Cannot migrate: fmx could not determine what the following are migrated to, "
                 "and will not guess -- migrating from an unknown state would re-run every "
                 "migration against a system that may already be current.",
             )

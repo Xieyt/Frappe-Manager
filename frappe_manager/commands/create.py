@@ -255,7 +255,7 @@ def _refuse_immutable_inputs(bc: BenchConfig) -> None:
     ):
         return
     raise typer.BadParameter(
-        "image runtime carries its own apps, Python/Node toolchain and app sources, so apps, --python, --node and developer mode cannot be set for it, in flags or in --config. Bake them into the image with 'fm bake' (its --config/--apps), or create a mount bench.",
+        "image runtime carries its own apps, Python/Node toolchain and app sources, so apps, --python, --node and developer mode cannot be set for it, in flags or in --config. Bake them into the image with 'fmx bake' (its --config/--apps), or create a mount bench.",
     )
 
 
@@ -399,16 +399,16 @@ def _refuse_unhonoured_site_flags(ctx: typer.Context, *, bench_only: bool, added
     if bench_only and given:
         output.display_error(
             f"--bench-only creates no site, so {', '.join(sorted(given))} would have nothing to "
-            "apply to. Create the bench, then add the site with 'fm create BENCH/SITE' and pass them there."
+            "apply to. Create the bench, then add the site with 'fmx create BENCH/SITE' and pass them there."
         )
         raise typer.Exit(2)
 
     if added_site and "--attach-existing-site" in given:
         output.display_error(
-            "'fm create BENCH/SITE' does not take --attach-existing-site: attach records the "
+            "'fmx create BENCH/SITE' does not take --attach-existing-site: attach records the "
             "attached site as the bench's default and skips its own app install, both of which only "
             "make sense for a bench's first site. Create the bench and its attached site together "
-            "with 'fm create BENCH --db-host ... --attach-existing-site' instead."
+            "with 'fmx create BENCH --db-host ... --attach-existing-site' instead."
         )
         raise typer.Exit(2)
 
@@ -702,7 +702,7 @@ def _add_site_to_bench(
             )
         else:
             schema_note = (
-                f"a schema named {schema} may exist on fm's {database.type.value}; it is not "
+                f"a schema named {schema} may exist on fmx's {database.type.value}; it is not "
                 "recorded in bench_config.toml, so nothing else refers to it."
             )
         output.warning(
@@ -802,14 +802,14 @@ def _resolve_external_options(
         if orphans:
             raise typer.BadParameter(
                 f"{_flags(orphans)} --db-host. The endpoint is given on the command line as a whole, or not at "
-                "all; without it the bench uses fm's own container for this engine."
+                "all; without it the bench uses fmx's own container for this engine."
             )
         if configured is None:
             orphans = [flag for flag, given in credential_flags.items() if given]
             if orphans:
                 raise typer.BadParameter(
                     f"{_flags(orphans)} an external database: pass --db-host, or declare [database] in a "
-                    "--config overlay. Without one the bench uses fm's own container for this engine."
+                    "--config overlay. Without one the bench uses fmx's own container for this engine."
                 )
             # No endpoint and no overlay: fm's own server for the engine asked for. The engine is
             # still recorded, because "which engine" and "whose server" are separate facts.
@@ -820,7 +820,7 @@ def _resolve_external_options(
     admin_given = db_admin_user is not None or db_admin_password is not None
     if admin_given and not (db_admin_user and db_admin_password):
         raise typer.BadParameter(
-            "--db-admin-user and --db-admin-password must be given together: fm provisions with both or with neither."
+            "--db-admin-user and --db-admin-password must be given together: fmx provisions with both or with neither."
         )
     if attach_existing_site and admin_given:
         raise typer.BadParameter(
@@ -830,7 +830,7 @@ def _resolve_external_options(
     if db_password is None and not admin_given:
         raise typer.BadParameter(
             "an external database needs credentials, and neither path was taken: pass --db-password for a login "
-            "that already exists on the server, or --db-admin-user with --db-admin-password so fm can have Frappe "
+            "that already exists on the server, or --db-admin-user with --db-admin-password so fmx can have Frappe "
             "create the schema, the user and the grant. Supplying both is legal too, and means 'create the user "
             "with this password'. Passwords are deliberately not config, so a [database] overlay cannot carry "
             "them either."
@@ -905,7 +905,7 @@ def _resolve_external_options(
 @example(
     "Run a pre-built app image",
     "{benchname} --runtime image --app-image ghcr.io/acme/mybench:v15-20260822",
-    detail="--app-image is the image the containers run; fm switch moves the bench to later images from there. Its companion is read from the image's own fm.nginx.image label, or named with --nginx-image.",
+    detail="--app-image is the image the containers run; fmx switch moves the bench to later images from there. Its companion is read from the image's own fm.nginx.image label, or named with --nginx-image.",
     benchname="mybench",
 )
 @example(
@@ -917,13 +917,13 @@ def _resolve_external_options(
 @example(
     "Create a bench on an external database",
     "{benchname} --db-host db.example.com --db-name app_prod --db-password - --db-ca /etc/ssl/rds-bundle.pem",
-    detail="Pass --db-admin-user with --db-admin-password instead of --db-password to have fm create the schema, the user and the grant.",
+    detail="Pass --db-admin-user with --db-admin-password instead of --db-password to have fmx create the schema, the user and the grant.",
     benchname="mybench",
 )
 @example(
     "Clean up automatically in CI",
     "{benchname} --apps erpnext --remove-on-failure",
-    detail="Pair with fm's own global -n: fm -n create {benchname} --apps erpnext --remove-on-failure removes the bench and its containers on failure instead of leaving them, and still exits non-zero either way.",
+    detail="Pair with fmx's own global -n: fmx -n create {benchname} --apps erpnext --remove-on-failure removes the bench and its containers on failure instead of leaving them, and still exits non-zero either way.",
     benchname="mybench",
 )
 @bench_lock(param="address", operation="create")
@@ -964,7 +964,7 @@ def create(
             rich_help_panel=_PANEL_MOUNT,
         ),
     ] = EnableDisableOptionsEnum.disable,
-    bench_only: Annotated[bool, typer.Option(help="Create the bench (config, directory, workspace or image, and containers) with no site in it. 'fm create BENCH/SITE' adds a site afterwards, into the workspace and containers already there. Every Site Option is ignored: there is no site yet for them to describe.")] = False,
+    bench_only: Annotated[bool, typer.Option(help="Create the bench (config, directory, workspace or image, and containers) with no site in it. 'fmx create BENCH/SITE' adds a site afterwards, into the workspace and containers already there. Every Site Option is ignored: there is no site yet for them to describe.")] = False,
     remove_on_failure: Annotated[
         bool,
         typer.Option(
@@ -1032,7 +1032,7 @@ def create(
         BenchRuntime | None,
         typer.Option(
             "--runtime",
-            help="'mount' (default) live-mounts an editable workspace; 'image' runs a pre-built app image, moved to a new image with 'fm switch'.",
+            help="'mount' (default) live-mounts an editable workspace; 'image' runs a pre-built app image, moved to a new image with 'fmx switch'.",
             show_default=False,
             rich_help_panel=_PANEL_RUNTIME,
         ),
@@ -1041,7 +1041,7 @@ def create(
         str | None,
         typer.Option(
             "--app-image",
-            help="The image the bench's containers run, as an image reference (a repository plus a version, e.g. ghcr.io/acme/mybench:v15.2.1). Mount runtime: the base frappe image, with your editable workspace mounted over it. Image runtime: the pre-built app image itself, which is where the bench starts and which 'fm switch' later moves to another image.",
+            help="The image the bench's containers run, as an image reference (a repository plus a version, e.g. ghcr.io/acme/mybench:v15.2.1). Mount runtime: the base frappe image, with your editable workspace mounted over it. Image runtime: the pre-built app image itself, which is where the bench starts and which 'fmx switch' later moves to another image.",
             show_default=False,
             rich_help_panel=_PANEL_RUNTIME,
         ),
@@ -1050,7 +1050,7 @@ def create(
         str | None,
         typer.Option(
             "--nginx-image",
-            help="Image runtime: the companion assets image that serves this app image's static files. Recorded beside it, never worked out from its name. Omitted, fm reads the 'fm.nginx.image' label the bake stamped on the app image.",
+            help="Image runtime: the companion assets image that serves this app image's static files. Recorded beside it, never worked out from its name. Omitted, fmx reads the 'fm.nginx.image' label the bake stamped on the app image.",
             show_default=False,
             rich_help_panel=_PANEL_RUNTIME,
         ),
@@ -1077,7 +1077,7 @@ def create(
         str | None,
         typer.Option(
             "--redis-cache",
-            help="External redis URL for the framework cache, e.g. redis://r.example:6379/0. Independent of the queue: either side may stay on fm's own container.",
+            help="External redis URL for the framework cache, e.g. redis://r.example:6379/0. Independent of the queue: either side may stay on fmx's own container.",
             show_default=False,
             rich_help_panel=_PANEL_REDIS,
         ),
@@ -1111,7 +1111,7 @@ def create(
     alias_domains: Annotated[
         str | None,
         typer.Option(
-            help="Extra domains THIS SITE answers on (comma-separated). Certificates come from 'fm ssl add'.",
+            help="Extra domains THIS SITE answers on (comma-separated). Certificates come from 'fmx ssl add'.",
             callback=alias_domains_validation_callback,
             show_default=False,
             rich_help_panel=_PANEL_SITE,
@@ -1121,7 +1121,7 @@ def create(
         DatabaseEngine,
         typer.Option(
             "--db-type",
-            help="Database engine for this site: mariadb or postgres. Without --db-host it is fm's own server for that engine.",
+            help="Database engine for this site: mariadb or postgres. Without --db-host it is fmx's own server for that engine.",
             # NOT the external-database panel: this selects the ENGINE, and without --db-host it
             # selects which of fm's OWN servers the site lands on. Filing it under "External
             # Database" told the reader postgres was only reachable on someone else's server.
@@ -1132,7 +1132,7 @@ def create(
         str | None,
         typer.Option(
             "--db-host",
-            help="External database host, replacing fm's own server for this site's engine. MySQL is not a supported backend.",
+            help="External database host, replacing fmx's own server for this site's engine. MySQL is not a supported backend.",
             show_default=False,
             rich_help_panel=_PANEL_DATABASE,
         ),
@@ -1207,7 +1207,7 @@ def create(
         bool,
         typer.Option(
             "--db-no-verify-hostname",
-            help="Check the certificate chain but not that the certificate names the host dialled. Applies to Frappe's own driver; fm's preflight uses the mariadb client, which verifies the hostname whenever a CA is set and cannot be told not to, so a certificate that cannot name the endpoint is still refused at create time.",
+            help="Check the certificate chain but not that the certificate names the host dialled. Applies to Frappe's own driver; fmx's preflight uses the mariadb client, which verifies the hostname whenever a CA is set and cannot be told not to, so a certificate that cannot name the endpoint is still refused at create time.",
             show_default=False,
             rich_help_panel=_PANEL_DATABASE,
         ),
@@ -1243,7 +1243,7 @@ def create(
         bool | None,
         typer.Option(
             "--drop-provisioned-db/--keep-provisioned-db",
-            help="Answer, without being asked, what happens to a schema and login this run created on an external database (--db-host) when the create then fails. Left unset, fm asks interactively and refuses non-interactively rather than guessing, because dropping a schema is not something --yes is allowed to decide for you.",
+            help="Answer, without being asked, what happens to a schema and login this run created on an external database (--db-host) when the create then fails. Left unset, fmx asks interactively and refuses non-interactively rather than guessing, because dropping a schema is not something --yes is allowed to decide for you.",
             show_default=False,
             rich_help_panel=_PANEL_DATABASE,
         ),
@@ -1252,7 +1252,7 @@ def create(
     """
     Create a new bench, or add a site to one that already exists.
 
-    fm create shop makes the bench shop serving the site shop.localhost. fm create shop/b.example.com adds b.example.com to the bench shop, leaving the sites already there untouched, and --bench-only makes an empty bench with no site at all. A bench name is just a name: it does not have to be a domain, and the site it serves is a separate thing from it.
+    fmx create shop makes the bench shop serving the site shop.localhost. fmx create shop/b.example.com adds b.example.com to the bench shop, leaving the sites already there untouched, and --bench-only makes an empty bench with no site at all. A bench name is just a name: it does not have to be a domain, and the site it serves is a separate thing from it.
 
     Which half of the address a flag acts on is written on its help panel: Bench Options apply either way, Site Options describe the site being created and are refused when there is no site to apply them to.
 
@@ -1464,7 +1464,7 @@ def create(
         # saying what it did.
         output.print(
             f"Bench [fm.info]{address}[/fm.info] will serve the site [fm.info]{sitename}[/fm.info]: the name "
-            "contains a dot, so fm took it as a domain and appended no .localhost. It resolves only where you "
+            "contains a dot, so fmx took it as a domain and appended no .localhost. It resolves only where you "
             "point it, with a DNS record or a hosts entry.",
             emoji_code=":globe_with_meridians:",
         )
@@ -1487,7 +1487,7 @@ def create(
     if newrelic_config and newrelic_config.enabled and not newrelic_config.license_key:
         raise typer.BadParameter(
             "[telemetry.newrelic] in --config sets enabled without a license_key. Add the key there, "
-            "or create the bench and run 'fm telemetry enable BENCH newrelic --license-key KEY'."
+            "or create the bench and run 'fmx telemetry enable BENCH newrelic --license-key KEY'."
         )
 
     all_domains = set(bench_config.domains)

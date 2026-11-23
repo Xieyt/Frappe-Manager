@@ -36,9 +36,9 @@ def route_sites(bench: Bench, site: str, output: OutputHandler, *, wanted: bool)
         output.display_error(
             f"Bench '{bench.name}' nginx conf predates one server block per site, so tool routing "
             "cannot be set per site yet: nginx would include none of it and the tools would answer "
-            "on no hostname at all. Run 'fm migrate' to re-render it, or recreate the nginx "
-            f"container with 'fm restart {bench.name} --nginx --recreate'. "
-            f"'fm tools enable {bench.name}' for the whole bench works today."
+            "on no hostname at all. Run 'fmx migrate' to re-render it, or recreate the nginx "
+            f"container with 'fmx restart {bench.name} --nginx --recreate'. "
+            f"'fmx tools enable {bench.name}' for the whole bench works today."
         )
         raise typer.Exit(1)
 
@@ -47,7 +47,7 @@ def route_sites(bench: Bench, site: str, output: OutputHandler, *, wanted: bool)
         # Nothing to route to: routing a hostname at a stopped container is a 502.
         output.display_error(
             f"Admin tools are disabled on {bench.name}, so there is nothing to route from {label}. "
-            f"Start them for the bench first with 'fm tools enable {bench.name}'."
+            f"Start them for the bench first with 'fmx tools enable {bench.name}'."
         )
         raise typer.Exit(1)
 
@@ -74,5 +74,5 @@ def route_sites(bench: Bench, site: str, output: OutputHandler, *, wanted: bool)
         # the command failing to do what it said.
         output.print(
             f"The Adminer and Mailpit containers are still running; stop them with "
-            f"'fm tools disable {bench.name}'"
+            f"'fmx tools disable {bench.name}'"
         )

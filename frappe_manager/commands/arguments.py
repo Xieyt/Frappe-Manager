@@ -121,7 +121,7 @@ BenchAllArgument = Annotated[
     str | None,
     typer.Argument(
         metavar="BENCH|all",
-        help="Bench to act on, or 'all' for every bench fm manages. Omit to pick from the benches you have.",
+        help="Bench to act on, or 'all' for every bench fmx manages. Omit to pick from the benches you have.",
         autocompletion=bench_all_autocompletion_callback,
         callback=bench_all_callback,
     ),
@@ -148,7 +148,7 @@ BenchSiteArgument = Annotated[
         callback=bench_site_callback,
     ),
 ]
-"""Optional address. The only alias that accepts a site part; `fm shell`, `fm delete`, `fm reset` and `fm update` use it."""
+"""Optional address. The only alias that accepts a site part; `fmx shell`, `fmx delete`, `fmx reset` and `fmx update` use it."""
 
 BenchSiteAllArgument = Annotated[
     str | None,
@@ -164,8 +164,8 @@ BenchSiteAllArgument = Annotated[
 A separate alias AND a separate callback, unlike the domain pair below. The domain callback does no
 must-exist check, so `all` passes through it for free and each body decides; the site callback does
 check, so `all` needs explicit permission. Granting it in the shared callback would have made
-`fm delete shop/all` and `fm reset shop/all` parse, and a body that forgot to refuse would drop or
-reinstall every schema on the bench. `fm apps add` and `fm tools enable`/`fm tools disable` use this:
+`fmx delete shop/all` and `fmx reset shop/all` parse, and a body that forgot to refuse would drop or
+reinstall every schema on the bench. `fmx apps add` and `fmx tools enable`/`fmx tools disable` use this:
 installing an app or toggling the admin-tools route is per-site work that legitimately fans out over
 every site the bench serves."""
 
@@ -197,7 +197,7 @@ BenchServedDomainArgument = Annotated[
 
 Same metavar, different callback. The `ssl` commands accept a domain belonging to no bench under
 `--standalone`, so theirs cannot require one; a command without that mode keeps the CWD fallback,
-the picker and the missing-bench refusal that every other bench argument has. `fm ngrok` uses it:
+the picker and the missing-bench refusal that every other bench argument has. `fmx ngrok` uses it:
 the tunnel rewrites the `Host:` header, and a host can be an alias, so the population is domains
 rather than sites."""
 
@@ -215,9 +215,9 @@ BenchDomainAllArgument = Annotated[
 
 Same callback and same completion: the difference is only which forms the command will act on, and
 that is enforced in each body. It is a separate alias so the USAGE LINE cannot claim a form the
-command refuses. `fm ssl add all` and `fm ssl remove all` are refused (a certificate per domain of
+command refuses. `fmx ssl add all` and `fmx ssl remove all` are refused (a certificate per domain of
 every bench crosses Let's Encrypt's rate limit, and dropping every certificate is a fleet-wide move
-to plain HTTP), while `fm ssl renew all` is the whole point of having it."""
+to plain HTTP), while `fmx ssl renew all` is the whole point of having it."""
 
 BenchOnlyAllArgument = Annotated[
     str | None,
@@ -228,7 +228,7 @@ BenchOnlyAllArgument = Annotated[
         callback=bench_domain_callback,
     ),
 ]
-"""`BENCH|all` for `fm ssl list`, which reports per BENCH and refuses a domain part.
+"""`BENCH|all` for `fmx ssl list`, which reports per BENCH and refuses a domain part.
 
 Carries the domain callback so a slashed value is still parsed and reported by the command rather
 than dying in the parser, but the metavar does not offer a form the command will not act on."""
@@ -240,9 +240,9 @@ JsonResultOption = Annotated[
 ]
 """A command's own `--json`: its RESULT, one document, on stdout.
 
-Not `fm --events json`, which replaces rendering everywhere with an event stream. Both spelled
+Not `fmx --events json`, which replaces rendering everywhere with an event stream. Both spelled
 `--json` made one token's POSITION decide which of two unrelated things you got. This one sits on
-the command, so `fm info mybench --json` parses; prose already goes to stderr, so stdout is
+the command, so `fmx info mybench --json` parses; prose already goes to stderr, so stdout is
 parseable without suppressing anything."""
 
 

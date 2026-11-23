@@ -65,7 +65,7 @@ class BenchNotFoundError(FileNotFoundError, BenchException):
             # The harder error of the two: a name that is WRONG has no obvious next step, while a
             # name that is absent already names one. Nothing here can guess the intended bench, so
             # it points at the command that lists them.
-            suggestions=["Run 'fm list' to see the benches on this host"],
+            suggestions=["Run 'fmx list' to see the benches on this host"],
         )
 
     # A name that does not exist is a wrong command line, not a failure of the work: the same
@@ -89,8 +89,8 @@ class BenchConfigNotFoundError(FileNotFoundError, BenchException):
         self.path = path
         self.message = (
             f"No bench config at {path}. The bench directory exists but is not fully created, "
-            f"which is what a failed 'fm create' leaves behind. Remove it with: "
-            f"fm delete {bench_name} --yes"
+            f"which is what a failed 'fmx create' leaves behind. Remove it with: "
+            f"fmx delete {bench_name} --yes"
         )
         # Chain explicitly, NOT via super(): see BenchNotFoundError above for why the MRO makes
         # `super().__init__` render a bogus "[Errno <bench name>]" prefix and drop `.details`.
@@ -159,8 +159,8 @@ class AdminToolsProbeUnavailable(BenchException):
         self.bench_name = bench_name
         self.message = (
             "Bench nginx is not running, so the admin tools cannot be served or checked. "
-            "Start it with 'fm restart <bench> --nginx --recreate' and check its logs "
-            "with 'fm logs <bench> --service nginx'."
+            "Start it with 'fmx restart <bench> --nginx --recreate' and check its logs "
+            "with 'fmx logs <bench> --service nginx'."
         )
         super().__init__(self.bench_name, self.message)
 

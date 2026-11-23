@@ -475,12 +475,12 @@ class TestRequestedRestoreRefuses:
     def test_the_mariadb_prompt_says_whose_database_it_is(self, tmp_path):
         orch, _manager, dump = self._restorer(tmp_path, external=False)
         orch._restore_db(SITE, dump, requested=True)
-        assert "fm's own mariadb container" in _warnings(orch)
+        assert "fmx's own mariadb container" in _warnings(orch)
 
     def test_the_external_prompt_still_says_fm_does_not_own_it(self, tmp_path):
         orch, _manager, dump = self._restorer(tmp_path, external=True)
         orch._restore_db(SITE, dump, requested=True)
-        assert "a database fm does not own" in _warnings(orch)
+        assert "a database fmx does not own" in _warnings(orch)
 
     def test_the_mariadb_table_count_is_read_from_the_server(self, tmp_path):
         """The number in the question has to be current, or it is false reassurance."""

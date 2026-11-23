@@ -60,6 +60,6 @@ def logs(
     # is worse, since it waits on a file nothing will append to.
     if not service and not bench.running:
         tail = "; --follow will wait on a file nothing is writing to" if follow else ""
-        output.warning(f"{bench.name} is not running, so this is the last run's log{tail}. Start it with 'fm start {bench.name}'.")
+        output.warning(f"{bench.name} is not running, so this is the last run's log{tail}. Start it with 'fmx start {bench.name}'.")
 
     bench.logs(follow, service)

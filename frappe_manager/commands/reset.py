@@ -50,9 +50,9 @@ def reset(
     """
     Destroy one site: drop its database and reinstall every app, losing all site data.
 
-    The address picks the site. fm reset BENCH resets the bench's own site; fm reset BENCH/SITE resets exactly SITE and leaves the bench's other sites alone.
+    The address picks the site. fmx reset BENCH resets the bench's own site; fmx reset BENCH/SITE resets exactly SITE and leaves the bench's other sites alone.
 
-    Only a site whose database is on the server fm owns can be reset. A site with its own \\[database] entry is refused, because that schema is not fm's to drop.
+    Only a site whose database is on the server fmx owns can be reset. A site with its own \\[database] entry is refused, because that schema is not fmx's to drop.
     """
 
     check_bench_migration_required(address)
@@ -75,7 +75,7 @@ def reset(
     external_db = bench.external_database_config(site)
     if external_db is not None:
         output.display_error(
-            f"Refusing to reset '{site}': its database '{external_db.name}' lives on '{external_db.host}', a server fm does not own. `bench reinstall` drops and recreates the schema, and that schema is not fm's to drop.",
+            f"Refusing to reset '{site}': its database '{external_db.name}' lives on '{external_db.host}', a server fmx does not own. `bench reinstall` drops and recreates the schema, and that schema is not fmx's to drop.",
         )
         raise typer.Exit(1)
 

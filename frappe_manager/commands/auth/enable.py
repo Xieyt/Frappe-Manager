@@ -29,7 +29,7 @@ from frappe_manager.utils.callbacks import bench_site_autocompletion_callback, b
 @example(
     "Protect one site of a bench",
     "{benchname}/b.example.com --web",
-    detail="That site's hostnames prompt with credentials of its own; the bench's other sites keep serving exactly as before. A site with no auth of its own follows the bench, so 'fm auth enable mybench --web' still covers every site.",
+    detail="That site's hostnames prompt with credentials of its own; the bench's other sites keep serving exactly as before. A site with no auth of its own follows the bench, so 'fmx auth enable mybench --web' still covers every site.",
     benchname="mybench",
 )
 @example(
@@ -104,7 +104,7 @@ def enable(
         list[str],
         typer.Option(
             "--allow-ip",
-            help="Address or CIDR that skips the prompt (repeatable; replaces the stored list). Behind a CDN this needs the edge trusted, see fm services trusted-proxies.",
+            help="Address or CIDR that skips the prompt (repeatable; replaces the stored list). Behind a CDN this needs the edge trusted, see fmx services trusted-proxies.",
             show_default=False,
             rich_help_panel=PANEL_EXEMPTIONS,
         ),
@@ -138,9 +138,9 @@ def enable(
     """
     Put an HTTP basic auth prompt in front of a bench: the site, the admin tools, or both.
 
-    --web and --tools select which surfaces this acts on, and naming one says nothing about the other: 'fm auth enable BENCH --web' leaves the admin tools exactly as they were. Naming neither acts on both. Credentials and allow lists are kept when a surface goes off, so re-enabling asks for nothing.
+    --web and --tools select which surfaces this acts on, and naming one says nothing about the other: 'fmx auth enable BENCH --web' leaves the admin tools exactly as they were. Naming neither acts on both. Credentials and allow lists are kept when a surface goes off, so re-enabling asks for nothing.
 
-    BENCH/SITE protects the web surface of one site, with credentials of its own, and leaves the bench's other sites serving as before. A site with no auth of its own follows the bench, so 'fm auth enable BENCH' still covers every site. --tools takes no site part: one Adminer and one Mailpit serve the whole bench, on every hostname it has.
+    BENCH/SITE protects the web surface of one site, with credentials of its own, and leaves the bench's other sites serving as before. A site with no auth of its own follows the bench, so 'fmx auth enable BENCH' still covers every site. --tools takes no site part: one Adminer and one Mailpit serve the whole bench, on every hostname it has.
 
     Basic auth sends credentials base64-encoded, not encrypted, so on a bench without TLS they are effectively cleartext: protecting the web surface there needs --insecure. The certificate checked is the one for the hostname you named.
     """

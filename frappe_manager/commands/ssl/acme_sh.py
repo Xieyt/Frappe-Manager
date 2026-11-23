@@ -23,17 +23,17 @@ from .helpers import get_output_handler
 @example(
     "Force a renewal acme.sh's own way",
     "--renew -d example.com --force",
-    detail="Bypasses fm's not-due check and its bookkeeping. fm ssl renew --force is the supported route.",
+    detail="Bypasses fmx's not-due check and its bookkeeping. fmx ssl renew --force is the supported route.",
 )
 def acmesh_passthrough(
     ctx: typer.Context,
 ):
     """
-    Run the bundled acme.sh directly, against fm's certificate home.
+    Run the bundled acme.sh directly, against fmx's certificate home.
 
-    An escape hatch for inspection and recovery. fm does not see what you change this way, so use fm ssl add, renew and remove for normal work.
+    An escape hatch for inspection and recovery. fmx does not see what you change this way, so use fmx ssl add, renew and remove for normal work.
 
-    acme.sh is installed the first time fm ssl add issues a Let's Encrypt certificate, and this command refuses to run until then. An fm ssl add --dev certificate comes from fm's own CA and does not install it.
+    acme.sh is installed the first time fmx ssl add issues a Let's Encrypt certificate, and this command refuses to run until then. An fmx ssl add --dev certificate comes from fmx's own CA and does not install it.
     """
     args = ctx.args
 
@@ -49,7 +49,7 @@ def acmesh_passthrough(
         output.display_error("acme.sh is not installed yet")
         # print, not info: this is the one thing to do about the error just displayed, and before
         # `-v` reached the renderer it never appeared at all.
-        output.print("Run 'fm ssl add <benchname>/<domain>' to install acme.sh first", emoji_code="")
+        output.print("Run 'fmx ssl add <benchname>/<domain>' to install acme.sh first", emoji_code="")
         raise typer.Exit(1)
 
     cmd = [str(acmesh_bin), "--home", str(acmesh_home)]

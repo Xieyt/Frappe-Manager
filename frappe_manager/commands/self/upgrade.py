@@ -10,7 +10,7 @@ from frappe_manager.utils.helpers import get_current_fm_version, install_package
 
 
 @example(
-    "Upgrade fm to the latest release",
+    "Upgrade fmx to the latest release",
     "",
 )
 @example(
@@ -21,9 +21,9 @@ def upgrade(
     ctx: typer.Context,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Upgrade without asking for confirmation.")] = False,
 ):
-    """Upgrade fm to the latest release published on PyPI.
+    """Upgrade fmx to the latest release published on PyPI.
 
-    An install already ahead of PyPI, such as a dev or pre-release build, is reported as up to date and left alone: fm is never downgraded under benches whose on-disk state a newer fm wrote.
+    An install already ahead of PyPI, such as a dev or pre-release build, is reported as up to date and left alone: fmx is never downgraded under benches whose on-disk state a newer fmx wrote.
     """
     import requests
 
@@ -53,7 +53,7 @@ def upgrade(
             if continue_update == "yes":
                 install_package("frappe-manager", latest_version)
         else:
-            output.print(f"fm is already up to date (v{fm_version})")
+            output.print(f"fmx is already up to date (v{fm_version})")
     except Exception as e:
         output = get_global_output_handler()
         # error() re-raises `e` itself; a trailing `raise typer.Exit(1)` here would be dead

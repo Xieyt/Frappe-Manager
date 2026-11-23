@@ -154,7 +154,7 @@ def test_an_image_without_fmx_is_not_reported_as_a_drain_timeout(cli):
     ):
         orchestrator.drain_workers.side_effect = DrainUnavailable(
             "Could not drain RQ workers: /opt/uv-tools/fmx/bin/python failed to run in the frappe "
-            "container (no such file or directory). The image may predate fmx -- 'fm self update-images' "
+            "container (no such file or directory). The image may predate fmx -- 'fmx self update-images' "
             "installs one that supports draining."
         )
         result = runner.invoke(cli, ["restart", "x.localhost"])

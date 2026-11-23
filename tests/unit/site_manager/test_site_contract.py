@@ -425,7 +425,7 @@ class TestGetObject:
             Bench.get_object("half.localhost", MagicMock(), benches_path=tmp_path)
 
         assert "half.localhost/bench_config.toml" in str(excinfo.value.path)
-        assert "fm delete half.localhost --yes" in excinfo.value.message
+        assert "fmx delete half.localhost --yes" in excinfo.value.message
 
     def test_a_missing_bench_directory_is_still_a_different_error(self, tmp_path):
         """Not-a-bench and half-a-bench are different findings and must not collapse into one."""

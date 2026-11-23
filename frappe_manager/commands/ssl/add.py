@@ -47,7 +47,7 @@ def _refuse_http01_on_a_moved_proxy(ctx, challenge, dev: bool, custom: bool) -> 
 @example(
     "Issue one when the domain has no public A record",
     "{benchname}/example.com --challenge dns01",
-    detail="DNS-01 needs provider credentials, see fm ssl dns-config.",
+    detail="DNS-01 needs provider credentials, see fmx ssl dns-config.",
     benchname="mybench",
 )
 @example(
@@ -68,7 +68,7 @@ def _refuse_http01_on_a_moved_proxy(ctx, challenge, dev: bool, custom: bool) -> 
 @example(
     "Import an operator-issued certificate",
     "{benchname}/example.com --custom --cert ./example.com.crt --key ./example.com.key",
-    detail="No issuance: fm copies the files in, links them into the global proxy, and restarts it. Add --ca to also trust a private CA for outbound self-calls once you run 'fm start BENCH' to apply the updated compose.",
+    detail="No issuance: fmx copies the files in, links them into the global proxy, and restarts it. Add --ca to also trust a private CA for outbound self-calls once you run 'fmx start BENCH' to apply the updated compose.",
     benchname="mybench",
 )
 @example(
@@ -80,7 +80,7 @@ def _refuse_http01_on_a_moved_proxy(ctx, challenge, dev: bool, custom: bool) -> 
 @example(
     "Authenticate DNS-01 against a second Cloudflare account",
     "{benchname}/example.com --challenge dns01 --dns-provider acct-b",
-    detail="acct-b is a label stored by fm ssl dns-config cloudflare --name acct-b, at either global or bench scope.",
+    detail="acct-b is a label stored by fmx ssl dns-config cloudflare --name acct-b, at either global or bench scope.",
     benchname="mybench",
 )
 def add_certificate(
@@ -98,7 +98,7 @@ def add_certificate(
         str | None,
         typer.Option(
             "--dns-provider",
-            help="Label of the \\[ssl.dns_providers] credential set that authenticates this domain, from fm ssl dns-config cloudflare --name. Omit for the default account. dns01 only.",
+            help="Label of the \\[ssl.dns_providers] credential set that authenticates this domain, from fmx ssl dns-config cloudflare --name. Omit for the default account. dns01 only.",
         ),
     ] = None,
     test_ca: Annotated[
@@ -119,7 +119,7 @@ def add_certificate(
         bool,
         typer.Option(
             "--dev",
-            help="Issue from fm's local CA, so no internet or public DNS is needed. Bench mode only.",
+            help="Issue from fmx's local CA, so no internet or public DNS is needed. Bench mode only.",
         ),
     ] = False,
     skip_dns_check: Annotated[
@@ -158,7 +158,7 @@ def add_certificate(
         Path | None,
         typer.Option(
             "--ca",
-            help="CA bundle file (PEM). Optional; when given, bench containers trust it for outbound self-calls once you run 'fm start BENCH' to apply the updated compose. --custom only.",
+            help="CA bundle file (PEM). Optional; when given, bench containers trust it for outbound self-calls once you run 'fmx start BENCH' to apply the updated compose. --custom only.",
             readable=False,
         ),
     ] = None,
@@ -170,7 +170,7 @@ def add_certificate(
     """
     Issue or import an SSL certificate for a domain and point nginx at it.
 
-    Bench mode takes a bench name and one of its configured domains (add new ones with fm domain add BENCH DOMAIN). Naming just the bench offers its domains to pick from. --standalone issues for an external Docker project instead.
+    Bench mode takes a bench name and one of its configured domains (add new ones with fmx domain add BENCH DOMAIN). Naming just the bench offers its domains to pick from. --standalone issues for an external Docker project instead.
     """
 
     if dev and standalone:
@@ -276,7 +276,7 @@ def add_certificate(
             output = get_output_handler(ctx)
             output.display_error(
                 "An external domain belongs to no bench, so --standalone takes a bare domain: "
-                f"use 'fm ssl add {domain} --standalone'."
+                f"use 'fmx ssl add {domain} --standalone'."
             )
             raise typer.Exit(2)
 

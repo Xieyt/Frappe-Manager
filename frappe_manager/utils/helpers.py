@@ -327,7 +327,7 @@ def build_install_package_command(package_name: str, version: str) -> list[str]:
             return [uv, "tool", "install", "--force", f"{package_name}=={version}"]
         if importlib.util.find_spec("pip") is None:
             raise FrappeManagerException(
-                f"Cannot update automatically: this fm was installed with 'uv tool install' and 'uv' is not on PATH. "
+                f"Cannot update automatically: this fmx was installed with 'uv tool install' and 'uv' is not on PATH. "
                 f"Install it (https://docs.astral.sh/uv/) and run: uv tool install --force {package_name}=={version}"
             )
     return [sys.executable, "-m", "pip", "install", f"{package_name}=={version}"]

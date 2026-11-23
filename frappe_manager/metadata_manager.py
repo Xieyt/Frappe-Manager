@@ -519,7 +519,7 @@ class FMConfigManager(BaseModel):
             warn_or_log(
                 "metadata_manager",
                 f"fm_config.toml has unrecognised key(s) {', '.join(all_unknown_keys)}; "
-                "check for a typo, since fm will not use them.",
+                "check for a typo, since fmx will not use them.",
             )
 
         return fm_config_instance

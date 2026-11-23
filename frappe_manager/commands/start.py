@@ -38,7 +38,7 @@ def start(
     ] = False,
     reconfigure_common_site_config: Annotated[
         bool,
-        typer.Option("--reconfigure-common-site-config", help="Rewrite common_site_config.json with fm's defaults."),
+        typer.Option("--reconfigure-common-site-config", help="Rewrite common_site_config.json with fmx's defaults."),
     ] = False,
     reconfigure_workers: Annotated[
         bool,
@@ -58,7 +58,7 @@ def start(
     """
     Start a bench's containers, admin tools and workers.
 
-    Every start refreshes the bench's own nginx config and its entry in the global proxy, so a bench that predates a change fm makes there heals by being started. It does NOT rewrite the supervisord config, common_site_config.json or the workers compose file: those are only regenerated when you ask, with --reconfigure-supervisor, --reconfigure-common-site-config or --reconfigure-workers, so an edit to bench_config.toml that touches them needs one of those flags or an fm update.
+    Every start refreshes the bench's own nginx config and its entry in the global proxy, so a bench that predates a change fmx makes there heals by being started. It does NOT rewrite the supervisord config, common_site_config.json or the workers compose file: those are only regenerated when you ask, with --reconfigure-supervisor, --reconfigure-common-site-config or --reconfigure-workers, so an edit to bench_config.toml that touches them needs one of those flags or an fmx update.
     """
 
     output = get_global_output_handler()
@@ -82,7 +82,7 @@ def start(
     if worker_scope_flags and not reconfigure_workers:
         output.display_error(
             f"{' and '.join(worker_scope_flags)} only apply with --reconfigure-workers, which is what "
-            "regenerates docker-compose.workers.yml; on its own fm start leaves the worker set exactly "
+            "regenerates docker-compose.workers.yml; on its own fmx start leaves the worker set exactly "
             "as it is already configured."
         )
         raise typer.Exit(code=2)

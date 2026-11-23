@@ -1365,7 +1365,7 @@ def test_list_benches_data_never_asks_for_worker_or_admin_tool_checks(tmp_path):
 def test_list_benches_view_returns_none_and_hints_at_create_when_empty(tmp_path):
     service = _service(tmp_path)
     assert service.list_benches_view() is None
-    assert "fm create <benchname>" in service.output.print.call_args.args[0]
+    assert "fmx create <benchname>" in service.output.print.call_args.args[0]
     service.output.stop.assert_called_once()
 
 

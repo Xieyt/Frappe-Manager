@@ -49,7 +49,7 @@ def _validate_domain_arguments(value: list[str]) -> list[str]:
 @example(
     "Add an alias domain to a bench's primary site",
     "{benchname} www.example.com",
-    detail="No certificate is issued yet; run fm ssl add afterwards.",
+    detail="No certificate is issued yet; run fmx ssl add afterwards.",
     benchname="mybench",
 )
 @example(
@@ -92,9 +92,9 @@ def add_domain(
 
     A bare BENCH attaches the aliases to its primary site; name a site with BENCH/SITE when the bench serves more than one. 'all' is refused here -- an alias belongs to one site.
 
-    The address is the SITE you are adding to, and the domains follow as arguments, because they do not exist yet to be named. Removal is the mirror: fm domain remove BENCH/DOMAIN takes the domain itself.
+    The address is the SITE you are adding to, and the domains follow as arguments, because they do not exist yet to be named. Removal is the mirror: fmx domain remove BENCH/DOMAIN takes the domain itself.
 
-    No certificate is issued for a new alias; run fm ssl add BENCH/DOMAIN afterwards.
+    No certificate is issued for a new alias; run fmx ssl add BENCH/DOMAIN afterwards.
     """
     output = get_global_output_handler()
     check_bench_migration_required(address)

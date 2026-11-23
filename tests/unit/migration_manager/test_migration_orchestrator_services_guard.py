@@ -37,7 +37,7 @@ from frappe_manager.services_manager.services_exceptions import (
 EXPECTED_WARNING = (
     "Warning: Could not verify/start global services. "
     "Migration may fail if services are not running. "
-    "Try manually: fm services start"
+    "Try manually: fmx services start"
 )
 
 

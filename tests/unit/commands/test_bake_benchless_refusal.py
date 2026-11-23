@@ -117,6 +117,6 @@ def test_image_runtime_bench_mode_bake_is_refused_before_any_overlay(cli, wired,
     flat = " ".join(result.output.split())
     assert result.exit_code != 0
     assert "image-runtime bench" in flat
-    assert "fm switch picked.localhost" in flat  # the supported way forward, naming the bench
+    assert "fmx switch picked.localhost" in flat  # the supported way forward, naming the bench
     overlay.assert_not_called()  # refused before anything is persisted to disk
     baked.assert_not_called()  # and before the build

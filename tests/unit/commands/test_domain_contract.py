@@ -245,7 +245,7 @@ class TestDomainRemove:
             world.remove(domain=None, address=f"{BENCH}/{BENCH}", args=["www.example.com"])
 
         assert "takes one address, the domain itself" in world.errors[0]
-        assert f"fm domain remove {BENCH}/www.example.com" in world.errors[0]
+        assert f"fmx domain remove {BENCH}/www.example.com" in world.errors[0]
         world.bench.update_alias_domains.assert_not_called()
 
     def test_a_flag_is_not_mistaken_for_a_domain(self, world):
@@ -327,7 +327,7 @@ class TestDomainRemoveWithACertificate:
             world.remove(domain="www.shop.com")
 
         said = " ".join(str(c) for c in [*world.output.display_error.call_args_list, *world.output.print.call_args_list])
-        assert f"fm ssl remove {BENCH}/www.shop.com" in said
+        assert f"fmx ssl remove {BENCH}/www.shop.com" in said
 
 
 class TestDomainRemoveProxyDropinCleanup:

@@ -174,7 +174,7 @@ def orphaned_database_error(bench: "Bench", outstanding: "list[tuple[SiteSchema,
     lines += [
         "",
         "Drop them by hand, then delete the bench again:",
-        f"  fm delete {bench.name} --yes --no-delete-fm-managed-db",
+        f"  fmx delete {bench.name} --yes --no-delete-fm-managed-db",
     ]
 
     return BenchException(bench.name, message="\n".join(lines))
@@ -447,7 +447,7 @@ class Bench:
         raise BenchException(
             self.name,
             message=f"bench_config.toml records {len(sites or {})} sites ({known}) and none is named after "
-            f"the bench, so fm cannot tell which one this command means. Name the site explicitly as "
+            f"the bench, so fmx cannot tell which one this command means. Name the site explicitly as "
             f"{self.name}/<site>, or repair \\[sites] so one entry matches the bench.",
         )
 
@@ -1674,7 +1674,7 @@ class Bench:
             # and never asked about, only reported, so manual cleanup is possible.
             self.output.effect(
                 f"[fm.info]{entry.site}[/fm.info]: schema '[bold]{entry.schema}[/bold]' on "
-                f"'[bold]{entry.external_host}[/bold]' left in place (fm does not own it)",
+                f"'[bold]{entry.external_host}[/bold]' left in place (fmx does not own it)",
                 changed=False,
             )
             return None
@@ -1722,7 +1722,7 @@ class Bench:
         for unmanaged in self.unmanaged_site_dirs():
             self.output.warning(
                 f"sites/{unmanaged}/ exists on disk but is not in bench_config.toml. "
-                f"fm will not touch its schema. Its name is in sites/{unmanaged}/site_config.json."
+                f"fmx will not touch its schema. Its name is in sites/{unmanaged}/site_config.json."
             )
 
         outstanding: list[tuple[SiteSchema, str]] = []
@@ -2035,7 +2035,7 @@ class Bench:
                     self.output.warning(
                         f"Removed a hand-written client_max_body_size ({removed}) for {domain} from "
                         "the shared proxy config; a second copy in the same context is fatal to nginx. "
-                        "Set it with `fm update --upload-limit` instead so fm manages it."
+                        "Set it with `fmx update --upload-limit` instead so fmx manages it."
                     )
                 if dropins.set(domain, "upload-limit", upload_limit_conf(size)):
                     changed = True
@@ -2230,7 +2230,7 @@ class Bench:
             # written and every request in the access log carries the proxy's address instead of
             # the client's -- which also defeats any rate limiting keyed on it.
             self.output.warning(
-                "Could not determine fm's frontend network subnet, so real client IPs are not being "
+                "Could not determine fmx's frontend network subnet, so real client IPs are not being "
                 "restored: access logs and rate limiting will see the proxy's address for every request."
             )
 
@@ -2260,7 +2260,7 @@ class Bench:
                 self.output.warning(
                     f"Per-site upload limit on {', '.join(overriding_upload)} is recorded but not "
                     "enforced yet: this bench's nginx conf predates one server block per site, so the "
-                    f"whole bench follows the bench's {self.bench_config.upload_limit} until 'fm migrate' "
+                    f"whole bench follows the bench's {self.bench_config.upload_limit} until 'fmx migrate' "
                     "re-renders the conf and applies it."
                 )
 
@@ -2285,7 +2285,7 @@ class Bench:
             overriding = [s for s in self.bench_config.site_names if (self.bench_config.sites or {}).get(s) and self.bench_config.sites[s].auth is not None]
             if overriding and auth.web is not None:
                 self.output.warning(
-                    rf"Per-site auth on {', '.join(overriding)} is recorded but not enforced yet: this bench's nginx conf predates one server block per site, so the whole bench follows \[auth]. Run 'fm migrate' to re-render the conf and apply it."
+                    rf"Per-site auth on {', '.join(overriding)} is recorded but not enforced yet: this bench's nginx conf predates one server block per site, so the whole bench follows \[auth]. Run 'fmx migrate' to re-render the conf and apply it."
                 )
         else:
             seen_bench = False

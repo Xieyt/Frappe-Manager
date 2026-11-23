@@ -34,7 +34,7 @@ def disable(
     """
     Turn off APM reporting for a bench.
 
-    The web process is recreated without the agent, and the provider's license key is removed from the compose file. Nothing on disk is deleted: the recorded key stays in bench_config.toml and the agent's config file keeps your tuning, so re-enabling needs no arguments. Sweep an orphaned agent config with fm prune.
+    The web process is recreated without the agent, and the provider's license key is removed from the compose file. Nothing on disk is deleted: the recorded key stays in bench_config.toml and the agent's config file keeps your tuning, so re-enabling needs no arguments. Sweep an orphaned agent config with fmx prune.
     """
 
     services_manager = ctx.obj["services"]

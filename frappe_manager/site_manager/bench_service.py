@@ -331,7 +331,7 @@ class BenchService:
             self.output.stop()
             self.output.print(
                 "Seems like you haven't created any sites yet. "
-                "To create a bench, use the command: 'fm create <benchname>'.",
+                "To create a bench, use the command: 'fmx create <benchname>'.",
                 emoji_code=":white_check_mark:",
             )
             return None

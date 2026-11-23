@@ -16,14 +16,14 @@ def _validate_port(output, flag: str, value: int) -> None:
 
 
 @example(
-    "Move fm off a port something else already owns",
+    "Move fmx off a port something else already owns",
     "--http 8080 --https 8443",
     detail="Run this before the first install on a host whose 80/443 are taken: it writes the setting without creating or starting anything.",
 )
 @example(
     "Keep the origin private behind a local front",
     "--http 8080 --https 8443 --bind 127.0.0.1",
-    detail="Only the front can then reach fm, so a forged X-Forwarded-Proto cannot arrive from anywhere else.",
+    detail="Only the front can then reach fmx, so a forged X-Forwarded-Proto cannot arrive from anywhere else.",
 )
 @example(
     "Go back to the standard ports",
@@ -53,13 +53,13 @@ def ports(
     ] = False,
 ):
     """
-    Publish the global proxy on different host ports, so fm can share a machine with another web server.
+    Publish the global proxy on different host ports, so fmx can share a machine with another web server.
 
-    Only the HOST side moves: the proxy keeps listening on 80 and 443 inside its container, because every bench resolves its own domains to that address and a site's server-side calls to itself would otherwise stop working. Redirects fm writes pick the new port up from one generated file.
+    Only the HOST side moves: the proxy keeps listening on 80 and 443 inside its container, because every bench resolves its own domains to that address and a site's server-side calls to itself would otherwise stop working. Redirects fmx writes pick the new port up from one generated file.
 
     On a host with no services yet this writes the setting and exits, creating nothing -- that is what makes it usable on a machine whose first install cannot get past a busy port. Where the stack already exists the ports are applied and the proxy is recreated, which is a brief outage for every bench on the host.
 
-    Let's Encrypt HTTP-01 needs port 80 reachable at the public name, so moving off 80 means using --challenge dns01, --dev or --custom for certificates fm issues.
+    Let's Encrypt HTTP-01 needs port 80 reachable at the public name, so moving off 80 means using --challenge dns01, --dev or --custom for certificates fmx issues.
     """
     output = get_global_output_handler()
 
@@ -112,7 +112,7 @@ def ports(
             _record_ports()
             services.compose_file_manager.write_to_file()
             output.effect(
-                f"Saved {target}; run 'fm services restart nginx-proxy --recreate' to apply it.", emoji_code=""
+                f"Saved {target}; run 'fmx services restart nginx-proxy --recreate' to apply it.", emoji_code=""
             )
             return
 
@@ -125,6 +125,6 @@ def ports(
 
     if http != 80:
         output.print(
-            "Port 80 is no longer fm's, so Let's Encrypt HTTP-01 cannot reach it: use --challenge dns01, --dev or --custom.",
+            "Port 80 is no longer fmx's, so Let's Encrypt HTTP-01 cannot reach it: use --challenge dns01, --dev or --custom.",
             emoji_code="",
         )

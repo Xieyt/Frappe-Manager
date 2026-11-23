@@ -17,7 +17,7 @@ from ..dns_helpers import _configure_dns_credentials, _remove_dns_credentials, _
 @example(
     "Store a second account under a label",
     "--api-token cf_ZyXwVu0987654321 --name acct-b",
-    detail="Labelled sets go to [ssl.dns_providers.acct-b]; bind one with fm ssl add BENCH/DOMAIN --challenge dns01 --dns-provider acct-b.",
+    detail="Labelled sets go to [ssl.dns_providers.acct-b]; bind one with fmx ssl add BENCH/DOMAIN --challenge dns01 --dns-provider acct-b.",
 )
 @example(
     "Override the token for one bench",
@@ -87,7 +87,7 @@ def dns_config_cloudflare(
 
     Credentials are global; pass a bench name to override them for that bench alone. An API token needs Zone > DNS > Edit, created at https://dash.cloudflare.com/profile/api-tokens
 
-    A --name stores the credentials as a labelled set, so one host or bench can hold several Cloudflare accounts (or several least-privilege tokens) at once. A certificate picks one with fm ssl add --dns-provider LABEL; certificates that name no label keep using the unlabelled default.
+    A --name stores the credentials as a labelled set, so one host or bench can hold several Cloudflare accounts (or several least-privilege tokens) at once. A certificate picks one with fmx ssl add --dns-provider LABEL; certificates that name no label keep using the unlabelled default.
     """
     provider_name = DNS_PROVIDER.cloudflare.value
 

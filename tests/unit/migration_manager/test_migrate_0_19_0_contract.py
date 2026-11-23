@@ -1771,7 +1771,7 @@ class TestDuplicatedComposeRunBlocks:
     @pytest.mark.parametrize("message", ['network "fm" could not be found', 'NETWORK "fm" NOT FOUND'])
     def test_network_error_matching_is_case_insensitive(self, migration, bench, message):
         bench.compose.run.side_effect = RuntimeError(message)
-        with pytest.raises(Exception, match="Try: fm services start"):
+        with pytest.raises(Exception, match="Try: fmx services start"):
             migration._setup_python_with_uv(bench, "3.11")
 
     def test_non_network_error_is_re_raised_unchanged_by_python_setup(self, migration, bench):
@@ -2165,7 +2165,7 @@ class TestRestartServices:
 
         warnings = [c.args[0] for c in migration.output.warning.call_args_list]
         assert "Service restart (force-recreate) failed: boom" in warnings
-        assert "Please restart services manually: fm restart test-bench" in warnings
+        assert "Please restart services manually: fmx restart test-bench" in warnings
 
     def test_worker_restart_failure_is_swallowed_too(self, migration, bench):
         bench.workers_running = True

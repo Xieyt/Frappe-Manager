@@ -562,7 +562,7 @@ def test_the_tag_era_file_reproduces_the_original_failure_without_the_step(tmp_p
     path = tmp_path / "bench_config.toml"
     path.write_text(BASE + f'\n[sites."{SITE}"]\n' + TAG_HISTORY)
 
-    with pytest.raises(BenchException, match="fm migrate"):
+    with pytest.raises(BenchException, match="fmx migrate"):
         BenchConfig.import_from_toml(path)
 
 

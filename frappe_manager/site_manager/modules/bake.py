@@ -123,9 +123,9 @@ class BakeManager:
             return None, None
         if "," in platform:
             raise BakeError(
-                f"build.platform={platform} names more than one platform. fm loads the built "
+                f"build.platform={platform} names more than one platform. fmx loads the built "
                 f"image into the local daemon so the pre-flight boot check and a same-host "
-                f"fm switch can find it, and docker cannot load a multi-platform manifest "
+                f"fmx switch can find it, and docker cannot load a multi-platform manifest "
                 f"list. Bake one platform at a time, or push a manifest list yourself from a "
                 f"container-driver buildx builder.",
             )
@@ -166,10 +166,10 @@ class BakeManager:
         ref = ImageRef.parse(repo)
         if ref.is_pinned:
             raise BakeError(
-                f"top-level image must be a bare repository, not {repo!r}: fm bake generates its "
+                f"top-level image must be a bare repository, not {repo!r}: fmx bake generates its "
                 f"own tag from a timestamp and git sha, so a value already carrying a ':tag' or "
                 f"'@digest' would silently produce '{repo}:<timestamp>-<sha>'. Drop the tag/digest, "
-                f"or pass a full reference to fm bake's --app-image instead.",
+                f"or pass a full reference to fmx bake's --app-image instead.",
             )
         timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
         return f"{repo}:{timestamp}-{self._git_short_sha()}"
@@ -649,7 +649,7 @@ class BakeManager:
             run_command_with_exit_code(["docker", "buildx", "version"], stream=False, capture_output=True)
         except Exception as e:
             raise BakeError(
-                "docker buildx is not available, and fm builds images with it. It ships with "
+                "docker buildx is not available, and fmx builds images with it. It ships with "
                 "current Docker Engine and Docker Desktop; on a slim install add the "
                 "docker-buildx-plugin package.",
             ) from e

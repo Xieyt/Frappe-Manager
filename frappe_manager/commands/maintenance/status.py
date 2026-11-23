@@ -166,7 +166,7 @@ def status(
         elif row["custom_vhost"]:
             # Answer first, and in words an operator reading "is my site down" actually
             # understands: not fm's internal "custom vhost config" jargon.
-            card.fact(row["domain"], "off [fm.muted](this domain already has nginx config fm did not write)[/fm.muted]")
+            card.fact(row["domain"], "off [fm.muted](this domain already has nginx config fmx did not write)[/fm.muted]")
         else:
             card.fact(row["domain"], "off")
     output.print_data(card)

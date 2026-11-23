@@ -32,7 +32,7 @@ class LetsencryptSSLCertificate(SSLCertificate):
     )
     delegation_cname: str | None = Field(
         None,
-        description="Zone that _acme-challenge is delegated to, passed to acme.sh as --challenge-alias. Set by `fm ssl add --cname`.",
+        description="Zone that _acme-challenge is delegated to, passed to acme.sh as --challenge-alias. Set by `fmx ssl add --cname`.",
     )
 
 

@@ -613,8 +613,8 @@ class BenchSiteManager:
             raise BenchOperationException(
                 bench_name=self.bench_name,
                 message=f"Refusing to reset {target}: its database '{database_config.name}' lives on "
-                f"'{database_config.host}', a server fm does not own. `bench reinstall` drops and recreates the "
-                f"schema, and that schema is not fm's to drop.",
+                f"'{database_config.host}', a server fmx does not own. `bench reinstall` drops and recreates the "
+                f"schema, and that schema is not fmx's to drop.",
             )
 
         # Only mariadb sites get here, so there is no per-site MYSQL_HOME to carry: `_site_env()`

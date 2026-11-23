@@ -210,7 +210,7 @@ class TestSuggestionsReachTheOperator:
 
         error = BenchNotFoundError("nosuch", Path("/benches/nosuch"))
 
-        assert error.suggestions == ["Run 'fm list' to see the benches on this host"]
+        assert error.suggestions == ["Run 'fmx list' to see the benches on this host"]
 
     def test_an_exception_with_no_suggestions_renders_none(self):
         """The handler loops over this, so a class that offers nothing must offer an empty list
