@@ -245,6 +245,8 @@ fmx ssl renew mybench/mybench.local --force
 
 `--dev` is bench mode only and cannot be combined with `--standalone`.
 
+To untrust it again, `fmx ssl ca remove` pulls the CA out of every store that has it; `fmx ssl ca status` shows which ones currently do, and `fmx ssl ca install` puts it back. Removal rebuilds the Debian and Ubuntu system bundle as part of clearing the CA, so no dangling link to the deleted anchor is left behind in `/etc/ssl/certs`. See [`fmx ssl ca`](../commands/ssl.md#fmx-ssl-ca) for the full command.
+
 ---
 
 ## Behind an external TLS terminator {#behind-proxy}

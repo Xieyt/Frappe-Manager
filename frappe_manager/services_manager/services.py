@@ -375,7 +375,11 @@ class ServicesManager:
             fm_config.export_to_toml()
 
     def entrypoint_checks(self, start=False):
-        if not self.path.exists():
+        # A directory with no compose file is NOT an install: `fmx self uninstall` leaves one behind
+        # whenever nginx-proxy's root-owned cache dirs defeat the removal, and the next `fmx create`
+        # then refused with "global services has taken a down" instead of provisioning. `create()`
+        # is mkdir-exist_ok throughout, so re-running it over the husk is safe.
+        if not self.path.exists() or not self.compose_path.exists():
             # Everything from here to a running stack is ONE transaction. Creating the directory
             # used to be guarded alone, and `compose up` was a separate call outside the try --
             # true when the rollback was written, false since `start=` was folded in. So every

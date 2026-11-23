@@ -5,6 +5,7 @@ the way `fm prune` and `fm delete` already work. A teardown that discovers its t
 deleting them cannot show an operator what they are about to lose.
 """
 
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -44,10 +45,26 @@ class Scope(str, Enum):
     trust = "trust"
 
 
+def _needs_sudo(path: Path) -> bool:
+    """A directory fmx cannot write cannot be emptied: rmtree stops at the first unlink. Bind
+    mounts the containers created are root-owned -- nginx-proxy's cache, mariadb's datadir."""
+    if not path.is_dir():
+        return not os.access(path.parent, os.W_OK | os.X_OK)
+    if not os.access(path, os.W_OK | os.X_OK):
+        return True
+    for root, dirs, _ in os.walk(path):
+        for name in dirs:
+            child = Path(root, name)
+            if not child.is_symlink() and not os.access(child, os.W_OK | os.X_OK):
+                return True
+    return False
+
+
 @dataclass(frozen=True)
 class PathEntry:
     path: Path
     size: int
+    privileged: bool = False
 
 
 @dataclass
@@ -112,9 +129,16 @@ def _bench_paths(benches: list[str], incomplete: list[str]) -> list[PathEntry]:
     if not CLI_BENCHES_DIRECTORY.exists():
         return []
 
-    entries = [PathEntry(CLI_BENCHES_DIRECTORY / name, dir_size(CLI_BENCHES_DIRECTORY / name)) for name in benches + incomplete]
+    entries = [
+        PathEntry(
+            CLI_BENCHES_DIRECTORY / name,
+            dir_size(CLI_BENCHES_DIRECTORY / name),
+            _needs_sudo(CLI_BENCHES_DIRECTORY / name),
+        )
+        for name in benches + incomplete
+    ]
     residue = dir_size(CLI_BENCHES_DIRECTORY) - sum(entry.size for entry in entries)
-    entries.append(PathEntry(CLI_BENCHES_DIRECTORY, max(residue, 0)))
+    entries.append(PathEntry(CLI_BENCHES_DIRECTORY, max(residue, 0), _needs_sudo(CLI_BENCHES_DIRECTORY)))
     return entries
 
 
@@ -149,10 +173,15 @@ def plan_teardown(docker, scopes: set[Scope], *, keep_backups: bool, include_ima
             volumes = set(docker.volume_ls())
             plan.volumes += [name for name in GLOBAL_VOLUMES if name in volumes]
         if CLI_SERVICES_DIRECTORY.exists():
-            plan.paths.append(PathEntry(CLI_SERVICES_DIRECTORY, dir_size(CLI_SERVICES_DIRECTORY)))
+            plan.paths.append(
+                PathEntry(CLI_SERVICES_DIRECTORY, dir_size(CLI_SERVICES_DIRECTORY), _needs_sudo(CLI_SERVICES_DIRECTORY))
+            )
 
     if Scope.host in scopes:
-        plan.paths += [PathEntry(path, dir_size(path) if path.is_dir() else path.stat().st_size) for path in _host_paths(keep_backups)]
+        plan.paths += [
+            PathEntry(path, dir_size(path) if path.is_dir() else path.stat().st_size, _needs_sudo(path))
+            for path in _host_paths(keep_backups)
+        ]
         if include_images and docker is not None:
             candidates = _fm_images(docker)
             held = _images_held_by_foreign_containers(docker, candidates, set(plan.containers))

@@ -281,8 +281,36 @@ class TestTrustStoreManagerRemoveLinuxFile:
                 MagicMock(returncode=0, stderr=""),
                 MagicMock(returncode=1, stderr="update-ca-certificates: permission denied"),
             ]
-            with pytest.raises(RuntimeError, match="update-ca-certificates failed"):
+            with pytest.raises(RuntimeError, match="update-ca-certificates --fresh failed"):
                 mgr._remove_linux_file(dest)
+
+    def test_debian_refresh_is_fresh_so_no_dangling_symlink_is_left_in_etc_ssl_certs(self, tmp_path):
+        """A plain update-ca-certificates leaves /etc/ssl/certs links pointing at the deleted anchor."""
+        dest = tmp_path / "fm-dev-ca.crt"
+        fake_stores = ((dest, "Debian/Ubuntu CA store", ["update-ca-certificates"]),)
+        mgr = make_manager()
+        with (
+            patch("frappe_manager.ssl_manager.trust_store_manager.LINUX_CA_STORES", fake_stores),
+            patch("frappe_manager.ssl_manager.trust_store_manager.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            mgr._remove_linux_file(dest)
+
+        assert mock_run.call_args_list[-1][0][0] == ["sudo", "update-ca-certificates", "--fresh"]
+
+    def test_rhel_refresh_is_left_alone(self, tmp_path):
+        """--fresh is a Debian-only flag; update-ca-trust rejects it."""
+        dest = tmp_path / "fm-dev-ca.crt"
+        fake_stores = ((dest, "RHEL/Fedora CA store", ["update-ca-trust", "extract"]),)
+        mgr = make_manager()
+        with (
+            patch("frappe_manager.ssl_manager.trust_store_manager.LINUX_CA_STORES", fake_stores),
+            patch("frappe_manager.ssl_manager.trust_store_manager.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            mgr._remove_linux_file(dest)
+
+        assert mock_run.call_args_list[-1][0][0] == ["sudo", "update-ca-trust", "extract"]
 
 
 @pytest.mark.unit

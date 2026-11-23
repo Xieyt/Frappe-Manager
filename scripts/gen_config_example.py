@@ -214,7 +214,7 @@ def fm_config_example() -> str:
     lines += _comment(
         "DNS-01 credential sets shared by every bench on this host, keyed by a free-form label. A "
         "bench-level set with the same label wins. Bind a certificate to one with "
-        "`fmx ssl add <bench> <domain> --dns-provider <label>`."
+        "`fmx ssl add <bench>/<domain> --dns-provider <label>`."
     )
     lines += _table_block("ssl.dns_providers.<label>", DNSProviderConfig)
     return "\n".join(lines).rstrip() + "\n"

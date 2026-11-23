@@ -455,6 +455,12 @@ class TrustStoreManager:
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or "could not remove the anchor file")
 
+        # `--fresh` on the Debian path: a plain `update-ca-certificates` rebuilds the bundle but
+        # leaves /etc/ssl/certs/fm-dev-ca.pem and its hash symlink pointing at the file just
+        # deleted (measured: 2 dangling links after a remove, 0 with --fresh).
+        if refresh == ["update-ca-certificates"]:
+            refresh = [*refresh, "--fresh"]
+
         # The file is already gone; a failing refresh leaves the OS bundle still containing the
         # CA, so it is a real failure and must be reported as one.
         result = subprocess.run(["sudo", *refresh], capture_output=True, text=True, check=False)  # noqa: S603

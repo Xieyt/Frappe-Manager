@@ -20,6 +20,16 @@ fmx migrate all
 
 The first updates the CLI. The second brings fmx's own config and the global services up to match it. The third brings your benches up to match those. `fmx migrate` refuses to run while the global services are behind, so do not skip a step. Details: [Upgrading fmx](getting-started/installation.md#upgrading-fmx).
 
+### How do I remove fmx completely from a host?
+
+```bash
+fmx self uninstall
+```
+
+The plan comes first: every bench, the shared services, the images fmx pulled or built, and its dev CA in the host's trust stores, each with a size, before anything is touched. A typed confirmation follows; `--dry-run` shows the plan without asking, `-y`/`--yes` skips the confirmation, and `--only` narrows the run to one or more of `benches`, `services`, `host`, `trust`. fmx's own package stays installed; the command that removes it prints at the end.
+
+Expect a password prompt. Some of what the containers leave behind, nginx-proxy's cache among them, is owned by root, and fmx marks that path `(needs sudo)` in the plan and runs `sudo rm -rf` on it to clear it. Without sudo rights, being in the docker group is enough: fmx deletes the path instead from inside a throwaway root container mounted on only that path's parent, the same access the group already grants. A path neither clears is reported with the manual command to finish it, and whatever is left will not stop the next `fmx create` from rebuilding what it needs.
+
 ### Can I run multiple benches on the same machine?
 
 Yes. Each bench gets its own containers, workspace, apps and database schema. What is shared: a MariaDB server (`mariadb`) and a Postgres server (`postgres`), each running only while some bench on the host uses that engine, and one nginx proxy holding ports 80 and 443, which routes to the right bench by domain. `fmx list` shows them all.

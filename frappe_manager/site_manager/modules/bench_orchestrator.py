@@ -1597,7 +1597,7 @@ class BenchOrchestrator:
         """Add or remove alternate hostnames for ONE site, without restarting services.
 
         SSL certificates are NOT generated for a new alias; the caller is told to run
-        `fm ssl add <bench> <domain>`.
+        `fmx ssl add <bench>/<domain>`.
 
         `site` defaults to the bench's primary site. That default is a SELECTION, so it is allowed
         to fail on a bench where no site is named after the bench: attaching an alias to a guessed

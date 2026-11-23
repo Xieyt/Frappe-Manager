@@ -32,11 +32,7 @@ from frappe_manager.docker.docker_exceptions import DockerException
 from frappe_manager.docker.subprocess_output import SubprocessOutput
 from frappe_manager.output_manager.rich_output import RichOutputHandler
 from frappe_manager.services_manager.services import ServicesManager
-from frappe_manager.services_manager.services_exceptions import (
-    ServicesComposeNotExist,
-    ServicesException,
-    ServicesNotCreated,
-)
+from frappe_manager.services_manager.services_exceptions import ServicesException, ServicesNotCreated
 from frappe_manager.utils.helpers import get_template_path
 
 SERVICES_MODULE = "frappe_manager.services_manager.services"
@@ -268,6 +264,20 @@ def test_a_missing_services_directory_triggers_a_clean_creation_and_an_image_pul
     manager.docker_client.compose.pull.assert_called_once_with(stream=False)
 
 
+def test_a_services_directory_with_no_compose_file_is_provisioned_rather_than_refused(tmp_path):
+    """What `fm self uninstall` leaves when root-owned bind mounts defeat the removal: the next
+    command must build the stack, not refuse with 'global services has taken a down'."""
+    services_path = tmp_path / "services"
+    (services_path / "nginx-proxy" / "cache").mkdir(parents=True)
+    manager = make_manager(services_path)
+    maria, info = _patch_database_manager()
+    with maria, info, mock.patch.object(ServicesManager, "create") as create:
+        create.side_effect = lambda **_: write_compose(services_path)
+        manager.entrypoint_checks()
+
+    create.assert_called_once_with(clean_install=True)
+
+
 def test_creation_without_start_never_brings_the_stack_up(tmp_path):
     services_path = tmp_path / "services"
     manager = make_manager(services_path)
@@ -346,18 +356,6 @@ def test_an_existing_services_directory_is_never_recreated(tmp_path):
     create.assert_not_called()
     manager.docker_client.compose.pull.assert_not_called()
 
-
-# --- entrypoint_checks: missing compose file ---
-
-
-def test_a_services_directory_without_a_compose_file_is_a_hard_error(tmp_path):
-    tmp_path.joinpath("marker").write_text("")
-    manager = make_manager(tmp_path)
-    maria, info = _patch_database_manager()
-    with maria, info, pytest.raises(ServicesComposeNotExist) as excinfo:
-        manager.entrypoint_checks()
-
-    assert str(manager.compose_path) in str(excinfo.value)
 
 
 # --- entrypoint_checks: start branch ---
