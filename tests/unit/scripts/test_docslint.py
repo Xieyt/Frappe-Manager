@@ -169,6 +169,17 @@ class TestVendoredTreesAreIgnored:
         assert "--real-fmx-flag" in flags
         assert "--someone-elses-flag" not in flags
 
+    def test_the_flag_inventory_includes_short_forms_like_dash_p(self, dl, tmp_path, monkeypatch):
+        """The host CLI shares fmx's own name and some command names (`restart`, `start`,
+        `stop`) with it, so a doc quoting a container command's short flag through a shell
+        example needs that flag known too, not just the long ones."""
+        src = tmp_path / "fmx"
+        (src / "fmx").mkdir(parents=True)
+        (src / "fmx" / "start.py").write_text('opt = "--process"\nshort = "-p"\n')
+        monkeypatch.setattr(dl, "FMX_SRC", src)
+
+        assert "-p" in dl.fmx_flags()
+
 
 class TestAnchors:
     def test_an_explicit_id_is_an_anchor(self, dl):
@@ -232,6 +243,103 @@ class TestLinks:
         self._page("See [home](./).\n")
 
         assert dl.check_links() == ([], [])
+
+
+class TestFmxCommandInvocations:
+    """check_message_commands / check_doc_commands validate `fmx <chain>`, not `fm <chain>`:
+    the binary renamed, so these have to recognise the name operators are actually told to
+    type. The spec is hand-built rather than `fm_command_spec()`'s live app, same reasoning
+    as `TestFlagsExist` passing its own `real` set: fast, and isolated from CLI changes.
+    """
+
+    SPEC = {
+        (): {"flags": {}, "max_pos": 0, "allow_extra": False, "group": True},
+        ("restart",): {"flags": {"--drain": False}, "max_pos": 1, "allow_extra": False, "group": False},
+    }
+
+    def test_an_fmx_invocation_with_an_unknown_flag_is_caught_in_docs(self, dl, tmp_path):
+        problems = dl.check_doc_commands(_doc(tmp_path, "`fmx restart --ghost`\n"), self.SPEC)
+
+        assert any("--ghost" in p for p in problems)
+
+    def test_an_fmx_invocation_with_a_real_flag_passes_in_docs(self, dl, tmp_path):
+        assert dl.check_doc_commands(_doc(tmp_path, "`fmx restart --drain`\n"), self.SPEC) == []
+
+    def test_the_old_name_fm_is_not_validated_here_anymore(self, dl, tmp_path):
+        """`fm restart --ghost` is left alone by this check: flagging the retired name itself
+        is `check_stale_fm_docs`'s job, not this one's."""
+        assert dl.check_doc_commands(_doc(tmp_path, "`fm restart --ghost`\n"), self.SPEC) == []
+
+    def test_a_container_tool_flag_on_a_shared_command_name_is_not_a_false_positive(self, dl, tmp_path):
+        """The host CLI's new name collides with the in-container service manager's, which
+        already had its own `restart`/`start`/`stop`. A doc line quoting that tool's own flag
+        through a shell command (`fmx restart --migrate`) must not be told the host `restart`
+        does not own it."""
+        problems = dl.check_doc_commands(
+            _doc(tmp_path, "`fmx restart --migrate`\n"), self.SPEC, container_flags=frozenset({"--migrate"})
+        )
+
+        assert problems == []
+
+    def test_an_fmx_invocation_with_an_unknown_flag_is_caught_in_messages(self, dl, tmp_path, monkeypatch):
+        monkeypatch.setattr(dl, "source_strings", lambda: [(tmp_path / "x.py", "Run 'fmx restart --ghost' now.")])
+
+        problems = dl.check_message_commands(self.SPEC)
+
+        assert any("--ghost" in p for p in problems)
+
+    def test_a_container_tool_flag_is_allowed_through_in_messages(self, dl, tmp_path, monkeypatch):
+        monkeypatch.setattr(dl, "source_strings", lambda: [(tmp_path / "x.py", "Run 'fmx restart --migrate' now.")])
+
+        problems = dl.check_message_commands(self.SPEC, container_flags=frozenset({"--migrate"}))
+
+        assert problems == []
+
+
+class TestStaleFmName:
+    """A doc or a message that still spells out `fm <command>` is telling someone to type the
+    retired name: `check_stale_fm_docs`/`check_stale_fm_messages` catch that drift class."""
+
+    SPEC = {
+        (): {"flags": {}, "max_pos": 0, "allow_extra": False, "group": True},
+        ("create",): {"flags": {}, "max_pos": 1, "allow_extra": False, "group": False},
+    }
+
+    def test_a_planted_fm_create_in_a_doc_is_flagged_as_stale(self, dl, tmp_path):
+        problems = dl.check_stale_fm_docs(_doc(tmp_path, "Run `fm create mybench`.\n"), self.SPEC)
+
+        assert any("fm create" in p for p in problems)
+
+    def test_fmx_create_in_a_doc_is_not_flagged(self, dl, tmp_path):
+        assert dl.check_stale_fm_docs(_doc(tmp_path, "Run `fmx create mybench`.\n"), self.SPEC) == []
+
+    def test_an_ordinary_sentence_starting_with_fm_is_not_flagged(self, dl, tmp_path):
+        """"fm will" has no real command after it, so it reads as prose, not an invocation."""
+        assert dl.check_stale_fm_docs(_doc(tmp_path, "fm will not do that.\n"), self.SPEC) == []
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "Edit `fm_config.toml` by hand.\n",
+            "Tail `fm.log` for details.\n",
+            "The `# fm:auth` marker owns that block.\n",
+            "The `# fm:maintenance` fragment is managed.\n",
+        ],
+    )
+    def test_identifiers_that_merely_start_with_fm_are_not_flagged(self, dl, tmp_path, line):
+        assert dl.check_stale_fm_docs(_doc(tmp_path, line), self.SPEC) == []
+
+    def test_a_planted_fm_create_in_a_message_is_flagged_as_stale(self, dl, tmp_path, monkeypatch):
+        monkeypatch.setattr(dl, "source_strings", lambda: [(tmp_path / "x.py", "Run 'fm create mybench' now.")])
+
+        problems = dl.check_stale_fm_messages(self.SPEC)
+
+        assert any("fm create" in p for p in problems)
+
+    def test_fmx_create_in_a_message_is_not_flagged(self, dl, tmp_path, monkeypatch):
+        monkeypatch.setattr(dl, "source_strings", lambda: [(tmp_path / "x.py", "Run 'fmx create mybench' now.")])
+
+        assert dl.check_stale_fm_messages(self.SPEC) == []
 
 
 class TestCannotSilentlyPass:
