@@ -1,6 +1,6 @@
 # Process locks
 
-fm processes on one host coordinate through lock files under `~/frappe/locks/`, so two of them can no longer corrupt a host or a bench by running blind to each other. The mechanism is the operating system's `flock`: a hold vanishes the instant its process exits or dies, however it dies, so there are no stale locks to clean up, ever; and acquisition never waits, so the losing side is refused instantly with a sentence naming what is running.
+fmx processes on one host coordinate through lock files under `~/frappe/locks/`, so two of them can no longer corrupt a host or a bench by running blind to each other. The mechanism is the operating system's `flock`: a hold vanishes the instant its process exits or dies, however it dies, so there are no stale locks to clean up, ever; and acquisition never waits, so the losing side is refused instantly with a sentence naming what is running.
 
 Day to day you will not notice any of this. Locks only speak up when two operations genuinely collide, and then one of them gets a message instead of both getting a corrupted state.
 
@@ -11,12 +11,12 @@ One file for the whole host, held two ways:
 | Who | Hold | Meaning |
 |---|---|---|
 | every ordinary command | shared | "don't migrate under me while I run" |
-| `fm migrate`, `fm services migrate`, the gate's inline "Update now" | exclusive | "I am rewriting fm's state; everyone out" |
+| `fmx migrate`, `fmx services migrate`, the gate's inline "Update now" | exclusive | "I am rewriting fmx's state; everyone out" |
 
 Shared holds never contend with each other, so any number of ordinary commands run together exactly as before. The refusals appear only around migrations:
 
 ```
-⛔ fm is busy: bake (pid 4242) is running on this host. Let it finish, then re-run.        # migration during a bake
+⛔ fmx is busy: bake (pid 4242) is running on this host. Let it finish, then re-run.        # migration during a bake
 ⛔ migration (pid 4242) is in progress on this host; wait for it to finish and retry.      # any command during a migration
 ```
 
@@ -28,7 +28,7 @@ One file per bench, so bench A's operations never affect bench B:
 
 | Who | Hold | Meaning |
 |---|---|---|
-| `fm bake BENCH` | shared | "long read in progress; don't mutate this bench under me" |
+| `fmx bake BENCH` | shared | "long read in progress; don't mutate this bench under me" |
 | `switch`, `restart`, `delete`, `reset`, `update`, `create`, `prune` | exclusive | "mutating this bench; everyone out" |
 | `logs`, `info`, `shell`, other quick reads | none | fencing them would be noise |
 
@@ -46,8 +46,8 @@ The observation commands (`list`, `info`, `logs`, `services info`, `ssl list`, `
 
 ## Limits, stated plainly
 
-- The locks cover **fm-vs-fm on this host**: not other machines, and not hand-run `docker` commands.
+- The locks cover **fmx-vs-fmx on this host**: not other machines, and not hand-run `docker` commands.
 - The name written into a lock file is diagnostic; with several *shared* holders it carries the most recent one. The lock itself is always exact.
-- `fm shell` and `fm compose` release their hold when they hand off to docker (the fm process is replaced), so an idle shell left open overnight never blocks a migration; the flip side is that the interactive session itself is not protected from one.
+- `fmx shell` and `fmx compose` release their hold when they hand off to docker (the fmx process is replaced), so an idle shell left open overnight never blocks a migration; the flip side is that the interactive session itself is not protected from one.
 
 **See also:** [Migrations reference](migrations.md), [Architecture reference](architecture.md)

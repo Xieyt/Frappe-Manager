@@ -1,4 +1,4 @@
-# `fm list`
+# `fmx list`
 
 List all benches with status, runtime, installed apps and deploy state.
 
@@ -7,7 +7,7 @@ A bench whose config will not load is reported as a warning and left out of the 
 **Usage**:
 
 ```console
-$ fm list [OPTIONS]
+$ fmx list [OPTIONS]
 ```
 
 **Options**:
@@ -21,19 +21,19 @@ $ fm list [OPTIONS]
 ### List every bench
 
 ```bash
-fm list
+fmx list
 ```
 
 ### Copy or pipe bench paths
 
 ```bash
-fm list --paths
+fmx list --paths
 ```
 
 ### Script over the inventory
 
-fm list --json | jq -r '.result[] | select(.status == "active") | .name'
+fmx list --json | jq -r '.result[] | select(.status == "active") | .name'
 
 ```bash
-fm list --json
+fmx list --json
 ```

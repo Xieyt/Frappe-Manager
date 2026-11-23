@@ -1,6 +1,6 @@
 # Reference
 
-Lookup, not learning. These pages are written to be searched and deep-linked rather than read front to back. For the mental model start at [How fm works](../concepts/index.md); for workflows see the [Guides](../guides/index.md) and [Deployment](../deploy/index.md).
+Lookup, not learning. These pages are written to be searched and deep-linked rather than read front to back. For the mental model start at [How fmx works](../concepts/index.md); for workflows see the [Guides](../guides/index.md) and [Deployment](../deploy/index.md).
 
 <div class="grid cards" markdown>
 
@@ -14,13 +14,13 @@ Lookup, not learning. These pages are written to be searched and deep-linked rat
 
     ---
 
-    Where every log lives, what `fm.log` and `fm logs` each show you, the JSON access log both nginx hops share, the console verbosity flags, and how to rotate the logs nothing rotates for you.
+    Where every log lives, what `fm.log` and `fmx logs` each show you, the JSON access log both nginx hops share, the console verbosity flags, and how to rotate the logs nothing rotates for you.
 
 -   :material-database-arrow-up:{ .lg .middle } **[Migrations](migrations.md)**
 
     ---
 
-    How the two migration tiers behave: why `fm migrate` refuses a stale services tier, why a stale bench is refused rather than used, what `--on-failure` decides, and which backups can be skipped.
+    How the two migration tiers behave: why `fmx migrate` refuses a stale services tier, why a stale bench is refused rather than used, what `--on-failure` decides, and which backups can be skipped.
 
 -   :material-history:{ .lg .middle } **[Migration history](migration-history.md)**
 
@@ -32,13 +32,13 @@ Lookup, not learning. These pages are written to be searched and deep-linked rat
 
     ---
 
-    How fm processes on one host keep out of each other's way: the host-wide migration lock, the per-bench lock behind `switch` and `bake` refusals, and why observation commands are never fenced.
+    How fmx processes on one host keep out of each other's way: the host-wide migration lock, the per-bench lock behind `switch` and `bake` refusals, and why observation commands are never fenced.
 
--   :material-file-edit:{ .lg .middle } **[What fm writes](state-changes.md)**
+-   :material-file-edit:{ .lg .middle } **[What fmx writes](state-changes.md)**
 
     ---
 
-    Which files fm regenerates without asking, which ones it shares with you through markers, and which are yours. Also when a write actually takes effect, since a reload, a restart and a recreate apply different things.
+    Which files fmx regenerates without asking, which ones it shares with you through markers, and which are yours. Also when a write actually takes effect, since a reload, a restart and a recreate apply different things.
 
 -   :material-sitemap:{ .lg .middle } **[Architecture](architecture.md)**
 

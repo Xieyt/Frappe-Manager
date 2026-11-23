@@ -1,23 +1,23 @@
 # Environments: dev vs prod
 
-The environment is the **second axis** of a bench: it controls **how the web process runs** (`dev` uses Frappe's auto-reloading development server, `prod` uses Gunicorn), plus the convenience defaults that come with each (restart policy at create time, developer mode). Admin tools are a separate, create-time default of their own: off on every environment; see [below](#4-admin-tools-mailpit-and-adminer).
+Environment decides how the web process runs: `dev` serves through Frappe's auto-reloading dev server, `prod` through Gunicorn. It also sets a few defaults that come bundled with each, restart policy and developer mode. Admin tools are their own create-time default, off either way; see [below](#4-admin-tools-mailpit-and-adminer).
 
 !!! note "Runtime comes first"
-    The environment does not decide where your code lives; that's the [runtime (mount vs image)](runtimes.md). A `prod` bench can still be fully editable (`mount`), and an immutable `image` bench can run `dev`. Read [Concepts](index.md) first if you haven't.
+    Environment does not decide where your code lives; that's the [runtime (mount vs image)](runtimes.md). A `prod` bench can still be fully editable (`mount`), and an immutable `image` bench can run `dev`. Read [Concepts](index.md) first if you haven't.
 
-Running `dev` on a public server exposes debug tools, serves single-threaded, and won't restart after crashes. Switch such benches to `prod`.
+Running `dev` on a public server is asking for trouble: it exposes debug tools, serves one request at a time, and won't come back after a crash. Switch such benches to `prod`.
 
 ## Switching environments
 
 ```bash
 # Create a production bench
-fm create mybench --environment prod
+fmx create mybench --environment prod
 
 # Switch existing bench to production
-fm update mybench --environment prod
+fmx update mybench --environment prod
 
 # Switch back to development
-fm update mybench --environment dev
+fmx update mybench --environment dev
 ```
 
 !!! warning "What gets restarted"
@@ -48,9 +48,9 @@ bench serve --host 0.0.0.0 --port 80   # Werkzeug development server
 bench watch                            # asset rebuild watcher
 ```
 
-`--host` and `--port` are `bench serve`'s own options; fm supplies `0.0.0.0:80`, and falls back to `--port 80` alone on bench releases that do not accept `--host`. Single-threaded, one request at a time, and supervisord is told not to restart either process if it dies.
+`--host` and `--port` are `bench serve`'s own options; fmx supplies `0.0.0.0:80`, and falls back to `--port 80` alone on bench releases that do not accept `--host`. Single-threaded, one request at a time, and supervisord is told not to restart either process if it dies.
 
-**Production (`prod`):** supervisord runs a generated wrapper, `workspace/frappe-bench/config/fm-web-server.sh`, which execs Gunicorn with the arguments fm computed:
+**Production (`prod`):** supervisord runs a generated wrapper, `workspace/frappe-bench/config/fm-web-server.sh`, which execs Gunicorn with the arguments fmx computed:
 
 ```text
 gunicorn -b 0.0.0.0:80 -w <workers> --worker-class=gthread --threads <threads>
@@ -59,25 +59,25 @@ gunicorn -b 0.0.0.0:80 -w <workers> --worker-class=gthread --threads <threads>
          frappe.app:application --preload
 ```
 
-Every option on that line is **Gunicorn's own**, not an fm flag; fm only picks the values. It sizes `-w` from CPU count and RAM, `--threads` from CPU count, sets `--max-requests 1000` with a jitter of 10% of that, and takes `-t` from `http_timeout` (120 by default). See [Web serving and concurrency](web-serving.md) for the sizing formula and the `common_site_config.json` keys that override each value.
+Every option on that line is **Gunicorn's own**, not an fmx flag; fmx only picks the values. It sizes `-w` from CPU count and RAM, `--threads` from CPU count, sets `--max-requests 1000` with a jitter of 10% of that, and takes `-t` from `http_timeout` (120 by default). See [Web serving and concurrency](web-serving.md) for the sizing formula and the `common_site_config.json` keys that override each value.
 
 !!! warning "`--preload` rules out an in-place code reload"
-    fm always passes `--preload`, so Gunicorn imports `frappe.app` in the master process before forking workers. A HUP to the master therefore does not pick up changed Python, and restarting the web process takes the whole tier down for as long as the master needs to come back. Prod is not a place to edit code: ship it as an image with `fm bake` and `fm switch`, or work on a `dev` bench.
+    fmx always passes `--preload`, so Gunicorn imports `frappe.app` in the master process before forking workers. A HUP to the master therefore does not pick up changed Python, and restarting the web process takes the whole tier down for as long as the master needs to come back. Prod is not a place to edit code: ship it as an image with `fmx bake` and `fmx switch`, or work on a `dev` bench.
 
 ---
 
 ### 2. Restart policy
 
-The Docker restart policy is a **per-bench setting** (`restart_policy` in `bench_config.toml`), applied to the `frappe` container, workers, and all bench services. The environment only picks the *default at create time*: a `dev` bench's containers stay down after a crash or host reboot (run `fm start mybench` manually), while a `prod` bench's containers auto-restart unless you explicitly stopped them with `fm stop`. Accepted values and defaults: [`restart_policy` reference](../reference/configuration.md#restart-policy).
+The Docker restart policy is a **per-bench setting** (`restart_policy` in `bench_config.toml`), applied to the `frappe` container, workers, and all bench services. Environment only picks the *default at create time*: a `dev` bench's containers stay down after a crash or host reboot (run `fmx start mybench` manually), while a `prod` bench's containers auto-restart unless you explicitly stopped them with `fmx stop`. Accepted values and defaults: [`restart_policy` reference](../reference/configuration.md#restart-policy).
 
 Change it any time, independently of the environment:
 
 ```bash
-fm update mybench --restart-policy unless-stopped   # no | always | on-failure | unless-stopped
+fmx update mybench --restart-policy unless-stopped   # no | always | on-failure | unless-stopped
 ```
 
 !!! warning "Switching environments does not change the restart policy"
-    `fm update mybench --environment prod` switches the serving mode but keeps the bench's existing restart policy. A bench created as `dev` keeps policy `no` until you set `--restart-policy unless-stopped` yourself. FM warns if you set policy `no` on a production bench.
+    `fmx update mybench --environment prod` switches the serving mode but keeps the bench's existing restart policy. A bench created as `dev` keeps policy `no` until you set `--restart-policy unless-stopped` yourself. FM warns if you set policy `no` on a production bench.
 
 ---
 
@@ -95,13 +95,13 @@ You can toggle `developer_mode` **independently** of the environment:
 
 ```bash
 # Enable developer mode in production (not recommended)
-fm update mybench --developer-mode enable
+fmx update mybench --developer-mode enable
 
 # Disable developer mode in development (rare)
-fm update mybench --developer-mode disable
+fmx update mybench --developer-mode disable
 ```
 
-`--developer-mode` is a mount-runtime option. An `image` bench bakes developer mode into the image, so `fm update` refuses the flag there; runtime is fixed at create time, so use a mount bench instead, seeding it from the same release with `fm create NAME --apps-from REPO:TAG` if you want the same code.
+`--developer-mode` is a mount-runtime option, with one asymmetry on an `image` bench: `--developer-mode enable` is refused outright, because image runtime bakes developer mode in and there's nothing left to turn on. `--developer-mode disable` goes through fine, it just reports "already disabled," since `fmx create` sets developer mode off on every image bench to begin with. Runtime is fixed at create time, so if you actually want developer mode on, use a mount bench; seed it from the same release with `fmx create NAME --apps-from REPO:TAG` if you want the same code.
 
 !!! info "Environment vs developer mode"
     **Environment** (`dev`/`prod`) controls the web server type and restart policy. **Developer mode** controls Frappe's debug features. They're related but independent: you can run prod environment with developer mode enabled, though this isn't recommended for production servers.
@@ -115,13 +115,13 @@ fm update mybench --developer-mode disable
 | **Mailpit** | Email testing (catches all outgoing emails) | `http://mybench.localhost/mailpit` |
 | **Adminer** | Database web UI | `http://mybench.localhost/adminer` |
 
-Off by default on both `dev` and `prod` benches: Adminer is a full database console routed on the bench's own hostname, and a dev bench is not always a laptop, so `fm create` never turns it on for you, not even with `--environment dev`. This is a **create-time default** (existing benches keep whatever `admin_tools` they recorded); see the [`admin_tools` reference](../reference/configuration.md#admin-tools).
+Both are off by default, on `dev` and `prod` alike. Adminer is a full database console routed on the bench's own hostname, and a dev bench isn't always a laptop, so `fmx create` never turns it on for you, not even with `--environment dev`. This is a **create-time default**; existing benches keep whatever `admin_tools` they recorded. See the [`admin_tools` reference](../reference/configuration.md#admin-tools).
 
 Turn them on explicitly:
 
 ```bash
-fm tools enable mybench
-fm tools disable mybench
+fmx tools enable mybench
+fmx tools disable mybench
 ```
 
 See [Admin tools](../guides/admin-tools.md) for details.
@@ -139,13 +139,13 @@ Stream logs from the CLI:
 
 ```bash
 # Show frappe server logs
-fm logs mybench
+fmx logs mybench
 
 # Follow logs in real-time
-fm logs mybench --follow
+fmx logs mybench --follow
 
 # Logs from a specific container
-fm logs mybench --service nginx
+fmx logs mybench --service nginx
 ```
 
 ---
@@ -155,7 +155,7 @@ fm logs mybench --service nginx
 If your apps declare dev dependencies in `pyproject.toml` under `[tool.bench.dev-dependencies]`, you can sync them at start time:
 
 ```bash
-fm start mybench --sync-dev-packages
+fmx start mybench --sync-dev-packages
 ```
 
 | Environment | Effect |
@@ -167,7 +167,7 @@ fm start mybench --sync-dev-packages
 
 ## When to use each environment
 
-Use `dev` on your own machine, where you are editing app code and want the asset watcher and browser tracebacks; enable the admin tools with `fm tools enable` if you want Mailpit and Adminer too. Use `prod` anywhere the bench is reachable by other people: multi-worker serving, containers that come back after a crash or reboot, and no debug surface.
+Use `dev` on your own machine, while you're editing app code and want the asset watcher and browser tracebacks; add `fmx tools enable` if you want Mailpit and Adminer too. Use `prod` anywhere the bench is reachable by other people: multi-worker serving, containers that come back after a crash or reboot, and no debug surface.
 
 !!! tip "Staging servers"
     For staging that mirrors production, run `prod` with `--developer-mode enable` if you need detailed error tracebacks during testing.
@@ -179,18 +179,18 @@ Use `dev` on your own machine, where you are editing app code and want the asset
 Only the `prod` web process can report to New Relic APM: the agent is wired into the Gunicorn wrapper, and a `dev` bench's `bench serve` never sees it.
 
 ```bash
-fm telemetry enable mybench newrelic --license-key YOUR_INGEST_KEY
-fm telemetry status mybench
-fm telemetry disable mybench newrelic
+fmx telemetry enable mybench newrelic --license-key YOUR_INGEST_KEY
+fmx telemetry status mybench
+fmx telemetry disable mybench newrelic
 ```
 
-Enabling wraps the web process with the New Relic agent; fm recreates the frappe container to apply it, because a container keeps the environment it was created with. Works on both runtimes. A license key is required the first time, after which `fm telemetry enable mybench newrelic` on its own reuses the stored one; pass `--license-key` again to rotate it. The stored values live under [`[telemetry.newrelic]`](../reference/configuration.md#telemetry-newrelic) in `bench_config.toml`, and the key reaches the agent through the container environment rather than being written into `newrelic.ini`, so rotating it is one command.
+Enabling wraps the web process with the New Relic agent; fmx recreates the frappe container to apply it, because a container keeps the environment it was created with. Works on both runtimes. A license key is required the first time; after that, `fmx telemetry enable mybench newrelic` on its own reuses the stored one, and passing `--license-key` again rotates it. The stored values live under [`[telemetry.newrelic]`](../reference/configuration.md#telemetry-newrelic) in `bench_config.toml`, and the key reaches the agent through the container environment rather than being written into `newrelic.ini`, so rotating it is one command.
 
-Disabling stops the wrapping and drops the key from the compose file. Nothing on disk is deleted: the recorded key stays in `bench_config.toml` and `config/newrelic.ini` keeps any tuning you added, so re-enabling needs no arguments. That file is seeded once and then yours; fm never rewrites it unless you ask with `--force-config`.
+Disabling stops the wrapping and drops the key from the compose file. Nothing on disk is deleted: the recorded key stays in `bench_config.toml`, and `config/newrelic.ini` keeps any tuning you added, so re-enabling needs no arguments. That file is seeded once and then yours; fmx never rewrites it unless you ask with `--force-config`.
 
-`fm telemetry status` reports `reporting` only when the bench has both the enabled flag and a stored key, because either one alone silently sends nothing.
+`fmx telemetry status` reports `reporting` only when the bench has both the enabled flag and a stored key, because either one alone silently sends nothing.
 
-A bench can also start out monitored by passing the table in a create-time config: `fm create mybench --config 'telemetry.newrelic={enabled=true,license_key="KEY"}'`. There are no monitoring flags on `fm create`; APM is a subsystem with its own lifecycle, so it lives on `fm telemetry`.
+A bench can also start out monitored by passing the table in a create-time config: `fmx create mybench --config 'telemetry.newrelic={enabled=true,license_key="KEY"}'`. There are no monitoring flags on `fmx create` itself; APM is a subsystem with its own lifecycle, so it lives on `fmx telemetry`.
 
 ---
 
@@ -201,4 +201,3 @@ A bench can also start out monitored by passing the table in a create-time confi
     - [Admin tools](../guides/admin-tools.md): Mailpit and Adminer details
     - [Web serving and concurrency](web-serving.md): Gunicorn workers and threads
     - [HTTPS certificates](../guides/ssl.md): secure production benches with HTTPS
-

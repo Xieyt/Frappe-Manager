@@ -9,11 +9,11 @@ Every bench registers its domains with the shared **nginx-proxy** (one per machi
 `*.localhost` names resolve to `127.0.0.1` automatically on modern systems, so a bench named `mybench.localhost` works in the browser with zero DNS setup.
 
 ```bash
-fm create mybench            # http://mybench.localhost just works
-fm create shop.example.com   # any domain works; DNS is your job (see below)
+fmx create mybench            # http://mybench.localhost just works
+fmx create shop.example.com   # any domain works; DNS is your job (see below)
 ```
 
-A domain with no certificate is served over plain HTTP only. Once it has one, fm writes a per-domain redirect that turns a plain-HTTP request into a 301 to HTTPS, except for internal `/api/method/frappe.realtime.*` calls, which stay on HTTP because Node's `fetch` drops the `Cookie` header across a protocol redirect.
+A domain with no certificate is served over plain HTTP only. Once it has one, fmx writes a per-domain redirect that turns a plain-HTTP request into a 301 to HTTPS, except for internal `/api/method/frappe.realtime.*` calls, which stay on HTTP because Node's `fetch` drops the `Cookie` header across a protocol redirect.
 
 ## Alias domains
 
@@ -21,37 +21,37 @@ A bench can serve additional domains alongside its primary name:
 
 ```bash
 # at create time
-fm create mybench --alias-domains www.example.com,api.example.com
+fmx create mybench --alias-domains www.example.com,api.example.com
 
 # on an existing bench
-fm domain add mybench shop.example.com
-fm domain remove mybench/shop.example.com
-fm domain list mybench
+fmx domain add mybench shop.example.com
+fmx domain remove mybench/shop.example.com
+fmx domain list mybench
 ```
 
 - Aliases are registered with the proxy and land on the same site.
-- `fm domain list mybench` prints every site's primary domain and its aliases, one per line.
-- fm validates that no other bench on the machine claims the same domain (`--allow-domain-conflicts` skips the check; not recommended).
-- HTTPS for aliases: certificates are per-domain; see the [HTTPS certificates](ssl.md).
+- `fmx domain list mybench` prints every site's primary domain and its aliases, one per line.
+- fmx checks that no other bench on the machine already claims the domain. `--allow-domain-conflicts` skips that check; not recommended.
+- Certificates are per-domain, so an alias needs its own: see [HTTPS certificates](ssl.md).
 - Aliases are stored as [`alias_domains`](../reference/configuration.md#alias-domains) in `bench_config.toml`.
 
 ## Making a domain resolve
 
 | Where the bench runs | What you need |
 |---|---|
-| your machine, `*.localhost` name | nothing (resolves automatically) |
+| your machine, `*.localhost` name | nothing, resolves automatically |
 | your machine, real domain name | an `/etc/hosts` entry: `127.0.0.1 shop.example.com` |
-| a server | real DNS: point an `A`/`AAAA` (or `CNAME`) record at the server, then `fm ssl add` for HTTPS |
+| a server | real DNS: point an `A`/`AAAA` (or `CNAME`) record at the server, then `fmx ssl add` for HTTPS |
 
 ## Exposing a local bench to the internet
 
 For webhooks, mobile testing, or an OAuth provider that will not accept `http://mybench.localhost` as a redirect URI, tunnel the bench through ngrok:
 
 ```bash
-fm ngrok mybench --auth-token YOUR_TOKEN --save-token   # first run: save the token
-fm ngrok mybench                                        # later runs reuse it
+fmx ngrok mybench --auth-token YOUR_TOKEN --save-token   # first run: save the token
+fmx ngrok mybench                                        # later runs reuse it
 ```
 
-The token can also come from `NGROK_AUTHTOKEN` or fm's config, and `fm ngrok` asks whether to save a new one when neither `--save-token` nor `--no-save-token` is passed.
+The token can also come from `NGROK_AUTHTOKEN` or fmx's config, and `fmx ngrok` asks whether to save a new one when neither `--save-token` nor `--no-save-token` is passed.
 
-The tunnel lives only while the command runs, and without a paid ngrok plan the URL changes on every run, so anything registered with a third party (a Google OAuth redirect URI, a webhook endpoint) has to be updated each time. It is a development convenience, not a deployment mechanism: to serve a bench publicly, use a server with real DNS and the [Hosting guide](hosting.md) or the [Deployment guide](../deploy/index.md).
+The tunnel lives only while the command runs, and without a paid ngrok plan the URL changes on every run. Anything registered with a third party, a Google OAuth redirect URI, a webhook endpoint, has to be updated each time. Treat it as a development convenience, not a deployment mechanism: to serve a bench publicly, use a server with real DNS and the [Hosting guide](hosting.md) or the [Deployment guide](../deploy/index.md).

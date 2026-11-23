@@ -2,9 +2,9 @@
 
 Frappe Manager issues and installs Let's Encrypt certificates for your benches using either the HTTP-01 challenge (the default) or DNS-01 through Cloudflare. It can also mint locally-trusted certificates from its own CA for development, import a certificate you already have with `--custom`, and front external Docker projects that share its proxy network.
 
-## What `fm ssl add` does
+## What `fmx ssl add` does
 
-With no mode flag, `fm ssl add` issues from Let's Encrypt:
+With no mode flag, `fmx ssl add` issues from Let's Encrypt:
 
 1. Installs acme.sh on first use into `~/frappe/services/nginx-proxy/ssl/acmesh/.acme.sh/`.
 2. Runs the ACME challenge against Let's Encrypt. For HTTP-01, acme.sh drops the validation file into the bench's nginx webroot, which is served at `/.well-known/acme-challenge/`. For DNS-01, acme.sh creates and then removes a `_acme-challenge` TXT record through the Cloudflare API.
@@ -12,10 +12,10 @@ With no mode flag, `fm ssl add` issues from Let's Encrypt:
 4. Writes a `vhostd/<domain>` snippet that redirects HTTP to HTTPS, then restarts nginx-proxy.
 5. Records the certificate in the bench's `bench_config.toml`. When the domain is the site's own name, it also sets that site's `host_name` to `https://<domain>`; a certificate for an alias leaves `host_name` alone, because a site's name is its canonical domain and an alias is an alternate for it: Frappe builds emails, password resets and links from `host_name`, so writing the alias there would silently rename the site.
 
-`--dev` ([below](#local-development-certificates-dev)) and `--custom` ([below](#custom-certificates)) replace the first three steps: `--dev` signs a certificate from fm's local CA, and `--custom` validates and copies files you supply, into `ssl/dev/<domain>/` and `ssl/custom/<domain>/` respectively. The symlink, redirect, restart and config steps are identical in every mode.
+`--dev` ([below](#local-development-certificates-dev)) and `--custom` ([below](#custom-certificates)) replace the first three steps: `--dev` signs a certificate from fmx's local CA, and `--custom` validates and copies files you supply, into `ssl/dev/<domain>/` and `ssl/custom/<domain>/` respectively. The symlink, redirect, restart and config steps are identical in every mode.
 
 !!! warning "Nothing renews on its own"
-    fm installs no cron job, timer, or daemon. `fm ssl renew` only runs when you run it. Set up the cron job in [Renewals](#renewals) the same day you issue your first certificate.
+    fmx installs no cron job, timer, or daemon. `fmx ssl renew` only runs when you run it. Set up the cron job in [Renewals](#renewals) the same day you issue your first certificate.
 
 ## Challenge types
 
@@ -28,19 +28,19 @@ With no mode flag, `fm ssl add` issues from Let's Encrypt:
 | **Supported DNS providers** | N/A | Cloudflare |
 | **Setup complexity** | Simple (default) | Requires API credentials |
 
-Neither applies to local development: `--dev` issues a locally-trusted certificate from fm's own CA, with no internet, public DNS, or open port (see [below](#local-development-certificates-dev)).
+Neither applies to local development: `--dev` issues a locally-trusted certificate from fmx's own CA, with no internet, public DNS, or open port (see [below](#local-development-certificates-dev)).
 
 !!! note "HTTP-01 and a password prompt coexist; maintenance mode does not"
-    `fm auth` puts an HTTP basic auth prompt in front of a bench, but the bench nginx serves `/.well-known/acme-challenge/` with `auth_basic off`, so issuance and renewal are never blocked by it. `fm maintenance` is different: it exempts nothing by default, so if a renewal falls due while the maintenance page is up, allow the path explicitly with `fm maintenance <bench> --allow-path '/.well-known/acme-challenge/*'`.
+    `fmx auth` puts an HTTP basic auth prompt in front of a bench, but the bench nginx serves `/.well-known/acme-challenge/` with `auth_basic off`, so issuance and renewal are never blocked by it. `fmx maintenance` is different: it exempts nothing by default, so if a renewal falls due while the maintenance page is up, allow the path explicitly with `fmx maintenance <bench> --allow-path '/.well-known/acme-challenge/*'`.
 
 ---
 
 ## Before you start
 
-**Both challenge types:** the domain must already be configured on the bench. `fm ssl add` only accepts the bench's own name or one of its alias domains, and refuses anything else. Add an alias first:
+**Both challenge types:** the domain must already be configured on the bench. `fmx ssl add` only accepts the bench's own name or one of its alias domains, and refuses anything else. Add an alias first:
 
 ```bash
-fm domain add mybench example.com
+fmx domain add mybench example.com
 ```
 
 ### HTTP-01 checklist
@@ -53,7 +53,7 @@ fm domain add mybench example.com
 
 - [ ] Cloudflare manages the DNS zone for the domain
 - [ ] You have a Cloudflare API Token scoped to **Zone > DNS > Edit** for that zone
-- [ ] The token is saved with `fm ssl dns-config cloudflare`
+- [ ] The token is saved with `fmx ssl dns-config cloudflare`
 
 !!! warning "Rehearse first"
     `--test-ca` issues against the Let's Encrypt **staging** CA and keeps nothing: no certificate is installed, no symlink or `vhostd` redirect is written, and nginx is not restarted. It does still reach the staging endpoint and register an account there, so it is a network operation, not an offline check. Use it to burn mistakes on staging instead of your [production rate limit](https://letsencrypt.org/docs/rate-limits/) (50 certificates per registered domain per week, 5 per identical set of names per week).
@@ -63,23 +63,23 @@ fm domain add mybench example.com
 ## HTTP-01 setup
 
 ```bash
-fm ssl add mybench/example.com --test-ca
+fmx ssl add mybench/example.com --test-ca
 ```
 
 A successful rehearsal ends with `Certificate generated successfully (staging)` followed by the skipped-step lines (symlinks, redirect config, nginx restart, config save). Then issue for real:
 
 ```bash
-fm ssl add mybench/example.com
+fmx ssl add mybench/example.com
 ```
 
 Verify:
 
 ```bash
-fm ssl list mybench
+fmx ssl list mybench
 curl -I https://example.com
 ```
 
-`fm ssl list mybench` also shows configured domains that have no certificate yet, which is the fastest way to spot an alias you forgot to secure.
+`fmx ssl list mybench` also shows configured domains that have no certificate yet, which is the fastest way to spot an alias you forgot to secure.
 
 ---
 
@@ -92,41 +92,53 @@ curl -I https://example.com
 3. Restrict **Zone Resources** to the zones you issue for, and copy the token before leaving the page
 
 !!! tip "API Token, not Global API Key"
-    The Global API Key grants full account access and cannot be scoped. fm accepts it (`--api-key` together with `--email`) but the token is the safer credential and needs no email.
+    The Global API Key grants full account access and cannot be scoped. fmx accepts it (`--api-key` together with `--email`) but the token is the safer credential and needs no email.
 
 ### 2. Save credentials
 
 ```bash
 # Global default: used by every bench that stores nothing of its own
-fm ssl dns-config cloudflare --api-token YOUR_TOKEN
+fmx ssl dns-config cloudflare --api-token YOUR_TOKEN
 
 # Per-bench default, which wins over the global one
-fm ssl dns-config cloudflare mybench --api-token DIFFERENT_TOKEN
+fmx ssl dns-config cloudflare mybench --api-token DIFFERENT_TOKEN
 
 # A second Cloudflare account, stored under a label
-fm ssl dns-config cloudflare --name client-zones --api-token OTHER_TOKEN
+fmx ssl dns-config cloudflare --name client-zones --api-token OTHER_TOKEN
 
 # Inspect what is stored (secrets masked, writes nothing)
-fm ssl dns-config cloudflare --show
+fmx ssl dns-config cloudflare --show
+
+# Drop a stored credential set
+fmx ssl dns-config cloudflare --remove --name client-zones
 ```
 
 Without `--name`, the credentials land under the label `cloudflare`: in `[ssl.dns_providers.cloudflare]` of `~/frappe/fm_config.toml` globally, or of that bench's `bench_config.toml` when you pass a bench name, and the bench entry wins over the global one. That label is the default: it is what a certificate uses when it names none.
 
 With `--name`, the credentials land in `[ssl.dns_providers.<label>]` instead, at the global scope or the bench scope depending on whether you passed a bench name, and only a certificate that names that label uses them. Both scopes take the identical table, so a label means the same thing in either file. Labels are how one bench holds certificates for two separate Cloudflare accounts, or for two least-privilege tokens of the same account. Full field list and resolution order: [DNS providers](../reference/configuration.md#dns-providers).
 
+`--remove` deletes a stored set, and refuses to guess which one when a scope holds more than one:
+
+| Invocation | Effect |
+|---|---|
+| `--remove --name LABEL` | Deletes that labelled set at the chosen scope, leaves every other label alone |
+| `--remove`, exactly one set stored at that scope | Removes it |
+| `--remove`, several sets stored at that scope | Refuses and lists them: name the one you meant with `--name` |
+| `--remove`, nothing stored at that scope | Warns and changes nothing |
+
 ### 3. Issue
 
 ```bash
-fm ssl add mybench/example.com --challenge dns01 --test-ca
-fm ssl add mybench/example.com --challenge dns01
+fmx ssl add mybench/example.com --challenge dns01 --test-ca
+fmx ssl add mybench/example.com --challenge dns01
 
 # Authenticate this domain against a labelled credential set
-fm ssl add mybench/client.example.com --challenge dns01 --dns-provider client-zones
+fmx ssl add mybench/client.example.com --challenge dns01 --dns-provider client-zones
 ```
 
-`--dns-provider` records the label on the certificate, so every later renewal reaches for the same account. Omit it and the certificate uses the default pair described above. The flag applies to DNS-01 only, and `fm ssl add` resolves the label before it changes anything, so a typo is refused on the spot instead of halfway through issuance. A label stored at neither scope is an error at renewal too: fm refuses rather than authenticating against whichever other account happens to be configured.
+`--dns-provider` records the label on the certificate, so every later renewal reaches for the same account. Omit it and the certificate uses the default pair described above. The flag applies to DNS-01 only, and `fmx ssl add` resolves the label before it changes anything, so a typo is refused on the spot instead of halfway through issuance. A label stored at neither scope is an error at renewal too: fmx refuses rather than authenticating against whichever other account happens to be configured.
 
-To see what a domain will actually use, `fm ssl list mybench` shows a **dns provider** fact on each DNS-01 certificate: `default` for the unlabelled account, the label for a certificate that names one, and `missing` when the label resolves to nothing at either scope. Certificates that do not use DNS-01 omit the fact rather than filling it in.
+To see what a domain will actually use, `fmx ssl list mybench` shows a **dns provider** fact on each DNS-01 certificate: `default` for the unlabelled account, the label for a certificate that names one, and `missing` when the label resolves to nothing at either scope. Certificates that do not use DNS-01 omit the fact rather than filling it in.
 
 acme.sh adds `_acme-challenge.example.com`, waits for propagation on its own, validates, then deletes the record. Propagation is usually well under a minute on Cloudflare; if a run fails on a missing TXT record, retry.
 
@@ -135,8 +147,8 @@ acme.sh adds `_acme-challenge.example.com`, waits for propagation on its own, va
 DNS-01 is the only challenge type that can cover a wildcard. The wildcard has to be a configured domain of the bench first:
 
 ```bash
-fm domain add mybench '*.example.com'
-fm ssl add 'mybench/*.example.com' --challenge dns01
+fmx domain add mybench '*.example.com'
+fmx ssl add 'mybench/*.example.com' --challenge dns01
 ```
 
 !!! note
@@ -144,7 +156,7 @@ fm ssl add 'mybench/*.example.com' --challenge dns01
 
 ### 5. CNAME delegation
 
-If your zone lives outside Cloudflare, delegate only the challenge record. `--cname` takes the **delegated zone**, not the full record name: fm passes it to acme.sh as `--challenge-alias`, and acme.sh writes into `_acme-challenge.<delegated zone>`.
+If your zone lives outside Cloudflare, delegate only the challenge record. `--cname` takes the **delegated zone**, not the full record name: fmx passes it to acme.sh as `--challenge-alias`, and acme.sh writes into `_acme-challenge.<delegated zone>`.
 
 Add this to your primary DNS:
 
@@ -152,25 +164,25 @@ Add this to your primary DNS:
 _acme-challenge.example.com. CNAME _acme-challenge.acme.example.net.
 ```
 
-Then issue against the delegated zone, whose credentials are the ones that must be saved with `fm ssl dns-config`:
+Then issue against the delegated zone, whose credentials are the ones that must be saved with `fmx ssl dns-config`:
 
 ```bash
-fm ssl add mybench/example.com --challenge dns01 --cname acme.example.net
+fmx ssl add mybench/example.com --challenge dns01 --cname acme.example.net
 ```
 
 ---
 
 ## Standalone mode
 
-`--standalone` secures a domain served by an external Docker project rather than a bench. fm writes a server block into `~/frappe/services/nginx-proxy/confd/<domain>.conf` so the ACME challenge can be answered and TLS terminated even before a backend exists, and records the domain in `external_domains.toml`.
+`--standalone` secures a domain served by an external Docker project rather than a bench. fmx writes a server block into `~/frappe/services/nginx-proxy/confd/<domain>.conf` so the ACME challenge can be answered and TLS terminated even before a backend exists, and records the domain in `external_domains.toml`.
 
 ```bash
-fm ssl add example.com --standalone
+fmx ssl add example.com --standalone
 ```
 
-`list`, `renew` and `remove` take `--standalone` the same way, and `fm ssl list all` covers external domains and every bench at once.
+`list`, `renew` and `remove` take `--standalone` the same way, and `fmx ssl list all` covers external domains and every bench at once.
 
-Connect the backend by giving its container the nginx-proxy environment variables and joining fm's proxy network:
+Connect the backend by giving its container the nginx-proxy environment variables and joining fmx's proxy network:
 
 ```yaml
 services:
@@ -195,38 +207,40 @@ Until that is in place the domain answers `503 Backend Not Connected` over HTTPS
 ## Bring your own certificate (`--custom`) {#custom-certificates}
 
 ```bash
-fm ssl add mybench/example.com --custom --cert ./example.com.crt --key ./example.com.key
+fmx ssl add mybench/example.com --custom --cert ./example.com.crt --key ./example.com.key
 ```
 
-`--custom` imports a certificate you already have instead of issuing one: no ACME account, no challenge, no call to Let's Encrypt. fm validates the files, copies their bytes into `~/frappe/services/nginx-proxy/ssl/custom/<domain>/`, symlinks them into the proxy's `certs/` directory, writes the `vhostd/<domain>` HTTP to HTTPS redirect, records `ssl_type = "custom"` in the bench's `bench_config.toml`, and updates the site's `host_name` under the same rule as an issued certificate: `https://<domain>` when the domain is the site's own name, untouched when it is an alias.
+`--custom` imports a certificate you already have instead of issuing one: no ACME account, no challenge, no call to Let's Encrypt. fmx validates the files, copies their bytes into `~/frappe/services/nginx-proxy/ssl/custom/<domain>/`, symlinks them into the proxy's `certs/` directory, writes the `vhostd/<domain>` HTTP to HTTPS redirect, records `ssl_type = "custom"` in the bench's `bench_config.toml`, and updates the site's `host_name` under the same rule as an issued certificate: `https://<domain>` when the domain is the site's own name, untouched when it is an alias.
 
-Give `--cert` the full chain (leaf first, then intermediates) in PEM: fm copies the bytes verbatim, and nginx serves exactly what you supply. `--key` must be the matching private key, also PEM and unencrypted; decrypt a password-protected key first.
+Give `--cert` the full chain (leaf first, then intermediates) in PEM: fmx copies the bytes verbatim, and nginx serves exactly what you supply. `--key` must be the matching private key, also PEM and unencrypted; decrypt a password-protected key first.
 
-The import is refused when a file is missing or unreadable, when it does not parse as PEM, when the key does not match the certificate's public key, when the certificate does not cover the domain (SAN is checked first, then CN as the pre-SAN fallback), or when the certificate has already expired. A certificate with fewer than 30 days left imports with a warning, because fm cannot renew it for you.
+The import is refused when a file is missing or unreadable, when it does not parse as PEM, when the key does not match the certificate's public key, when the certificate does not cover the domain (SAN is checked first, then CN as the pre-SAN fallback), or when the certificate has already expired. A certificate with fewer than 30 days left imports with a warning, because fmx cannot renew it for you.
 
 `--custom` is bench mode only, like `--dev`, and the domain must already be configured on the bench (see [Before you start](#before-you-start)). It cannot be combined with `--dev`, `--standalone`, `--test-ca`, `--cname`, `--dns-provider`, or an explicitly passed `--challenge`, and `--cert`/`--key`/`--ca` are refused without `--custom`.
 
-!!! warning "fm will not rotate this certificate"
-    Renewal stays your job. `fm ssl renew` reports a custom certificate and changes nothing, at any age: fm keeps only the imported bytes, not the paths to your original files, and it never re-issues a certificate it did not create. When you have a replacement, run `fm ssl add BENCH/DOMAIN --custom` again with the new files. Expiry shows up in `fm ssl list` like any other certificate, so put the date in whatever calendar your issuer's renewals already live in.
+!!! warning "fmx will not rotate this certificate"
+    Renewal stays your job. `fmx ssl renew` reports a custom certificate and changes nothing, at any age: fmx keeps only the imported bytes, not the paths to your original files, and it never re-issues a certificate it did not create. When you have a replacement, run `fmx ssl add BENCH/DOMAIN --custom` again with the new files. Expiry shows up in `fmx ssl list` like any other certificate, so put the date in whatever calendar your issuer's renewals already live in.
 
 ### Private CAs (`--ca`)
 
-If the certificate chains to a private CA rather than a public root, pass the CA bundle with `--ca`. fm stores it beside the certificate as `ca.pem` and mounts it into the bench's frappe, socketio, schedule and worker containers, with `NODE_EXTRA_CA_CERTS` and `REQUESTS_CA_BUNDLE` pointing at it, so server-side HTTPS calls to the bench's own domain (PDF rendering, OAuth callbacks, `get_url` fetches) trust it. This is the same mechanism `--dev` already uses for fm's local CA, and a bench holding both trusts a combined bundle. The import rewrites the bench's compose files on the spot and tells you to run `fm start BENCH`, which recreates only the services whose definition changed; the trust is live from that point, and a batch of imports needs just one `fm start` at the end. A publicly-trusted certificate needs no `--ca` at all.
+If the certificate chains to a private CA rather than a public root, pass the CA bundle with `--ca`. fmx stores it beside the certificate as `ca.pem` and mounts it into the bench's frappe, socketio, schedule and worker containers, with `NODE_EXTRA_CA_CERTS` and `REQUESTS_CA_BUNDLE` pointing at it, so server-side HTTPS calls to the bench's own domain (PDF rendering, OAuth callbacks, `get_url` fetches) trust it. This is the same mechanism `--dev` already uses for fmx's local CA, and a bench holding both trusts a combined bundle.
+
+The import rewrites the bench's compose files on the spot and tells you to run `fmx start BENCH`, which recreates only the services whose definition changed; the trust is live from that point, and a batch of imports needs just one `fmx start` at the end. A publicly-trusted certificate needs no `--ca` at all.
 
 ---
 
 ## Local development certificates (`--dev`) {#local-development-certificates-dev}
 
 ```bash
-fm ssl add mybench/mybench.local --dev
+fmx ssl add mybench/mybench.local --dev
 ```
 
-`--dev` skips Let's Encrypt entirely: no internet, public DNS, or open ports. On first use fm generates a CA under `~/frappe/services/nginx-proxy/ssl/dev/ca/` and installs it into the host trust store (macOS login keychain, the Linux system CA store, plus Firefox and Chrome NSS databases when `certutil` is present) so browsers accept the leaf certificate.
+`--dev` skips Let's Encrypt entirely: no internet, public DNS, or open ports. On first use fmx generates a CA under `~/frappe/services/nginx-proxy/ssl/dev/ca/` and installs it into the host trust store (macOS login keychain, the Linux system CA store, plus Firefox and Chrome NSS databases when `certutil` is present) so browsers accept the leaf certificate.
 
 Leaf certificates are valid for 397 days, so they never fall inside the 30-day renewal window during normal use. To re-issue one from the same CA, force it:
 
 ```bash
-fm ssl renew mybench/mybench.local --force
+fmx ssl renew mybench/mybench.local --force
 ```
 
 `--dev` is bench mode only and cannot be combined with `--standalone`.
@@ -235,57 +249,59 @@ fm ssl renew mybench/mybench.local --force
 
 ## Behind an external TLS terminator {#behind-proxy}
 
-Whether something in front of fm terminates TLS (Cloudflare's proxied orange-cloud mode, or a load balancer of your own) is a fact about the host, not about one certificate, so it does not belong on `fm ssl add`. Configure it once for the whole host instead:
+Whether something in front of fmx terminates TLS (Cloudflare's proxied orange-cloud mode, or a load balancer of your own) is a fact about the host, not about one certificate, so it does not belong on `fmx ssl add`. Configure it once for the whole host instead:
 
 ```bash
-fm services trusted-proxies set --cdn cloudflare
+fmx services trusted-proxies set --cdn cloudflare
 ```
 
-See [Running fm behind something else](hosting.md#running-fm-behind-something-else) for every deployment shape and the full command reference. The rest of this section is what the setting fixes on a certificate and what it does not.
+See [Running fmx behind something else](hosting.md#running-fmx-behind-something-else) for every deployment shape and the full command reference. The rest of this section is what the setting fixes on a certificate and what it does not.
 
-Without a trusted set, fm's HTTP to HTTPS redirect keys on its own connection scheme. Behind a Flexible-style edge that connection is always plain HTTP, so every request answers 301 and the browser reports a redirect loop. Trusting the front fixes the redirect, and it also fixes the request-scoped things that depend on gunicorn believing the forwarded scheme: the post-login redirect, the session cookie's Secure flag, and the endpoints OAuth advertises.
+Without a trusted set, fmx's HTTP to HTTPS redirect keys on its own connection scheme. Behind a Flexible-style edge that connection is always plain HTTP, so every request answers 301 and the browser reports a redirect loop. Trusting the front fixes the redirect, and it also fixes the request-scoped things that depend on gunicorn believing the forwarded scheme: the post-login redirect, the session cookie's Secure flag, and the endpoints OAuth advertises.
 
 !!! warning "The origin still needs its own certificate"
-    The front holds the public certificate, but Frappe records its own address as `https://<domain>` and fm points that domain at its own listener inside the bench containers, so every server-side self-call the bench makes to itself (PDF rendering, OAuth callbacks, `get_url` fetches) still asks fm's own listener for TLS. With no fm-side certificate those calls fail while visitors see nothing wrong. `fm ssl add BENCH/DOMAIN --dev` gives the domain a locally-trusted certificate for exactly this: self-calls never leave the host, so they never needed a publicly-trusted one.
+    The front holds the public certificate, but Frappe records its own address as `https://<domain>` and fmx points that domain at its own listener inside the bench containers, so every server-side self-call the bench makes to itself (PDF rendering, OAuth callbacks, `get_url` fetches) still asks fmx's own listener for TLS. With no fmx-side certificate those calls fail while visitors see nothing wrong. `fmx ssl add BENCH/DOMAIN --dev` gives the domain a locally-trusted certificate for exactly this: self-calls never leave the host, so they never needed a publicly-trusted one.
 
 !!! warning "A forged header still reaches gunicorn directly"
-    Trusting the front makes fm's own redirect unforgeable, but the proxy still relays whatever `X-Forwarded-Proto` a request carries on to gunicorn, and fm cannot rewrite that header itself: a location that overrides one `proxy_set_header` replaces the base image's whole inherited set rather than adding to it, and re-declaring that set by hand is a fork that drifts on every image update. The trust is safe for traffic that actually came through the front, since fm only believes the header from a trusted peer, but a request that reaches fm directly still carries whatever scheme it claims, and gunicorn believes it. Closing that path is the operator's job: `fm services ports --bind 127.0.0.1` makes the front the only address that can reach fm, or put fm behind a firewall rule to the same effect.
+    Trusting the front makes fmx's own redirect unforgeable, but the proxy still relays whatever `X-Forwarded-Proto` a request carries on to gunicorn, and fmx cannot rewrite that header itself: a location that overrides one `proxy_set_header` replaces the base image's whole inherited set rather than adding to it, and re-declaring that set by hand is a fork that drifts on every image update. The trust is safe for traffic that actually came through the front, since fmx only believes the header from a trusted peer, but a request that reaches fmx directly still carries whatever scheme it claims, and gunicorn believes it.
+
+    Closing that path is the operator's job: `fmx services ports --bind 127.0.0.1` makes the front the only address that can reach fmx, or put fmx behind a firewall rule to the same effect.
 
 ### The Cloudflare hint
 
-fm checks where the domain resolves when you run `fm ssl add`. A domain inside Cloudflare's published ranges with no trusted proxies configured gets a hint that `fm services trusted-proxies set --cdn cloudflare` may be wanted. It is advisory: nothing blocks, and when DNS cannot answer within a few seconds fm says nothing rather than guessing.
+fmx checks where the domain resolves when you run `fmx ssl add`. A domain inside Cloudflare's published ranges with no trusted proxies configured gets a hint that `fmx services trusted-proxies set --cdn cloudflare` may be wanted. It is advisory: nothing blocks, and when DNS cannot answer within a few seconds fmx says nothing rather than guessing.
 
-Real client IPs are the other half of sitting behind an edge, and the same command supplies them: run `fm services trusted-proxies set` so logs, `fm auth enable --allow-ip` and frappe's rate limiting see the visitor rather than the edge ([Hosting guide](hosting.md#running-fm-behind-something-else)).
+Real client IPs are the other half of sitting behind an edge, and the same command supplies them: run `fmx services trusted-proxies set` so logs, `fmx auth enable --allow-ip` and frappe's rate limiting see the visitor rather than the edge ([Hosting guide](hosting.md#running-fmx-behind-something-else)).
 
 ---
 
 ## Renewals {#renewals}
 
-Let's Encrypt certificates are valid for 90 days. fm treats a certificate as due when fewer than 30 days remain; one that is not due is reported and left alone unless you pass `--force`.
+Let's Encrypt certificates are valid for 90 days. fmx treats a certificate as due when fewer than 30 days remain; one that is not due is reported and left alone unless you pass `--force`.
 
-A custom certificate is never renewed: `fm ssl renew` answers with a reminder to re-import and changes nothing, whatever its age (see [Bring your own certificate](#custom-certificates)).
+A custom certificate is never renewed: `fmx ssl renew` answers with a reminder to re-import and changes nothing, whatever its age (see [Bring your own certificate](#custom-certificates)).
 
 ```bash
-fm ssl renew mybench                        # every certificate on one bench
-fm ssl renew all                            # every bench
+fmx ssl renew mybench                        # every certificate on one bench
+fmx ssl renew all                            # every bench
 ```
 
 Renewal resolves a DNS-01 certificate's credentials afresh every time, from the `dns_provider` label recorded on the certificate, so rotating a Cloudflare token means re-saving it under the same label and nothing else.
 
-Because fm ships no scheduler, add the cron job yourself:
+Because fmx ships no scheduler, add the cron job yourself:
 
 ```bash
 crontab -e
 ```
 
 ```
-0 3 * * * fm ssl renew all
+0 3 * * * fmx ssl renew all
 ```
 
 Running it daily is safe: certificates that are not due are skipped. Certificate lifetimes are also shrinking under the CA/Browser Forum schedule adopted in 2025 (200 days from March 2026, 100 from March 2027, 47 from March 2029), so manual renewal will stop being practical.
 
 !!! tip "Check the cron environment"
-    Cron runs with a minimal `PATH`. Use the absolute path to `fm` in the crontab entry, or set `PATH` at the top of the crontab, otherwise the job fails silently every night.
+    Cron runs with a minimal `PATH`. Use the absolute path to `fmx` in the crontab entry, or set `PATH` at the top of the crontab, otherwise the job fails silently every night.
 
 ---
 
@@ -305,17 +321,17 @@ openssl s_client -connect example.com:443 -servername example.com < /dev/null 2>
   | grep -E "^(depth|verify|subject|issuer)"
 
 # Are the containers up?
-fm list
+fmx list
 ```
 
 ### HTTP-01 failures
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Domain 'example.com' is not configured for bench 'mybench'` | The domain is neither the bench name nor an alias | `fm domain add mybench example.com`, then retry |
+| `Domain 'example.com' is not configured for bench 'mybench'` | The domain is neither the bench name nor an alias | `fmx domain add mybench example.com`, then retry |
 | Connection refused on port 80 | Firewall or security group | Open port 80 to the internet |
 | Connect timeout | A record points elsewhere | Correct the A record and wait for the TTL to expire |
-| Let's Encrypt gets an unexpected response from `/.well-known/acme-challenge/` | Another web server is answering port 80 | Stop or move it; only fm's nginx-proxy should own port 80 |
+| Let's Encrypt gets an unexpected response from `/.well-known/acme-challenge/` | Another web server is answering port 80 | Stop or move it; only fmx's nginx-proxy should own port 80 |
 | Rate limit refusal | More than 5 certificates for the same name set this week | Wait, and use `--test-ca` while experimenting |
 
 ### DNS-01 failures
@@ -324,27 +340,27 @@ fm list
 |---|---|---|
 | acme.sh reports the TXT record is missing | The Cloudflare API call did not take effect, or a stale record from a failed run is still in the zone | Delete leftover `_acme-challenge.example.com` TXT records in the Cloudflare dashboard, then retry |
 | Cloudflare rejects the request | Token lacks **Zone > DNS > Edit**, or was scoped to a different zone | Recreate the token from the **Edit zone DNS** template and re-save it |
-| `Failed to get DNS credentials` | No credentials stored for this bench or globally | `fm ssl dns-config cloudflare --show` to confirm, then re-save |
+| `Failed to get DNS credentials` | No credentials stored for this bench or globally | `fmx ssl dns-config cloudflare --show` to confirm, then re-save |
 | Delegation validation fails with `--cname` | The `_acme-challenge` CNAME is missing or points at the wrong target | Expected target is `_acme-challenge.<value of --cname>`; fix the record, or poll with `--wait-for-dns` in standalone mode |
-| `DNS provider 'acct-b' is not configured` | The certificate's `dns_provider` label is stored at neither bench nor global scope | `fm ssl dns-config cloudflare --show` lists every label it can see; store the missing one with `--name acct-b`, or re-issue the certificate against a label that exists |
+| `DNS provider 'acct-b' is not configured` | The certificate's `dns_provider` label is stored at neither bench nor global scope | `fmx ssl dns-config cloudflare --show` lists every label it can see; store the missing one with `--name acct-b`, or re-issue the certificate against a label that exists |
 
 ### Certificate errors in the browser
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `NET::ERR_CERT_DATE_INVALID` | Expired, because nothing renewed it | `fm ssl renew mybench`, then fix the cron job |
-| `NET::ERR_CERT_COMMON_NAME_INVALID` | The name you visited is not in the certificate | `fm ssl list mybench` to see which domains are covered; a wildcard does not cover the apex |
-| A `--dev` certificate is untrusted in Firefox or Chrome, but fine in `curl` | The CA reached the system store but `certutil` was missing, so the NSS databases were skipped | Install `libnss3-tools` (Debian/Ubuntu) or `nss-tools` (Fedora), delete `~/frappe/services/nginx-proxy/ssl/dev/ca/.installed`, then re-run `fm ssl add ... --dev` |
+| `NET::ERR_CERT_DATE_INVALID` | Expired, because nothing renewed it | `fmx ssl renew mybench`, then fix the cron job |
+| `NET::ERR_CERT_COMMON_NAME_INVALID` | The name you visited is not in the certificate | `fmx ssl list mybench` to see which domains are covered; a wildcard does not cover the apex |
+| A `--dev` certificate is untrusted in Firefox or Chrome, but fine in `curl` | The CA reached the system store but `certutil` was missing, so the NSS databases were skipped | Install `libnss3-tools` (Debian/Ubuntu) or `nss-tools` (Fedora), delete `~/frappe/services/nginx-proxy/ssl/dev/ca/.installed`, then re-run `fmx ssl add ... --dev` |
 | Clock skew warning | Host clock is wrong | `sudo timedatectl set-ntp true` |
-| `ERR_TOO_MANY_REDIRECTS` behind Cloudflare | The domain is proxied (orange-clouded) but the host has no trusted proxies configured, so fm's redirect keys on a connection scheme that is always http | `fm services trusted-proxies set --cdn cloudflare` ([details](#behind-proxy)) |
+| `ERR_TOO_MANY_REDIRECTS` behind Cloudflare | The domain is proxied (orange-clouded) but the host has no trusted proxies configured, so fmx's redirect keys on a connection scheme that is always http | `fmx services trusted-proxies set --cdn cloudflare` ([details](#behind-proxy)) |
 
 ### Renewal failures
 
 | Symptom | Fix |
 |---|---|
-| Cron ran but nothing renewed | Confirm `fm` resolves in the cron environment; run the same command by hand to see the real error |
-| A renewal fails where issuance worked | Inspect acme.sh's own view of the certificate: `fm ssl acme-sh --info -d example.com` |
-| Cloudflare credentials were rotated | Re-save with `fm ssl dns-config cloudflare --api-token NEW_TOKEN`, then `fm ssl renew mybench --force` |
+| Cron ran but nothing renewed | Confirm `fmx` resolves in the cron environment; run the same command by hand to see the real error |
+| A renewal fails where issuance worked | Inspect acme.sh's own view of the certificate: `fmx ssl acme-sh --info -d example.com` |
+| Cloudflare credentials were rotated | Re-save with `fmx ssl dns-config cloudflare --api-token NEW_TOKEN`, then `fmx ssl renew mybench --force` |
 
 ---
 
@@ -355,7 +371,7 @@ Everything lives under the global nginx-proxy service directory:
 | Path | Purpose |
 |------|---------|
 | `~/frappe/services/nginx-proxy/ssl/acmesh/.acme.sh/` | acme.sh installation and its own certificate database |
-| `~/frappe/services/nginx-proxy/ssl/acmesh/<domain>/fullchain.pem` | Certificate chain fm installs |
+| `~/frappe/services/nginx-proxy/ssl/acmesh/<domain>/fullchain.pem` | Certificate chain fmx installs |
 | `~/frappe/services/nginx-proxy/ssl/acmesh/<domain>/key.pem` | Private key |
 | `~/frappe/services/nginx-proxy/ssl/dev/ca/` | Local dev CA (`rootCA.pem`, `rootCA-key.pem`, `.installed` sentinel) |
 | `~/frappe/services/nginx-proxy/ssl/dev/<domain>/` | Dev leaf certificate and key |
@@ -370,13 +386,13 @@ Everything lives under the global nginx-proxy service directory:
 
 ## Security notes
 
-- **Credentials.** Cloudflare credentials sit in plain text under `[ssl.dns_providers]`: globally in `~/frappe/fm_config.toml`, per bench in that bench's `bench_config.toml`. Restrict permissions (`chmod 600 ~/frappe/fm_config.toml`) and delete a set with `fm ssl dns-config cloudflare --remove` when it is no longer needed. Name it with `--remove --name LABEL` whenever the scope holds more than one set; a bare `--remove` removes the only set stored there and otherwise refuses rather than guessing which you meant. Key reference: [DNS providers](../reference/configuration.md#dns-providers).
+- **Credentials.** Cloudflare credentials sit in plain text under `[ssl.dns_providers]`: globally in `~/frappe/fm_config.toml`, per bench in that bench's `bench_config.toml`. Restrict permissions (`chmod 600 ~/frappe/fm_config.toml`) and delete a set with `fmx ssl dns-config cloudflare --remove` when it is no longer needed. Name it with `--remove --name LABEL` whenever the scope holds more than one set; a bare `--remove` removes the only set stored there and otherwise refuses rather than guessing which you meant. Key reference: [DNS providers](../reference/configuration.md#dns-providers).
 - **Token scope.** A per-zone API Token can be revoked in isolation; the Global API Key cannot.
 
 ---
 
 !!! info "See also"
-    - [fm ssl command reference](../commands/ssl.md): every flag and subcommand
-    - [Cloudflare DNS config reference](../commands/ssl-dns-config-cloudflare.md)
+    - [fmx ssl command reference](../commands/ssl.md): every flag and subcommand
+    - [Cloudflare DNS config: `fmx ssl dns-config cloudflare`](../commands/ssl.md#fmx-ssl-dns-config-cloudflare)
     - [Environments](../concepts/environments.md): prod and dev differences
     - [Configuration reference](../reference/configuration.md#ssl-certificates): how certificates are recorded in `bench_config.toml`

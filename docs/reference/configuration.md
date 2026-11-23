@@ -5,15 +5,15 @@ Frappe Manager stores settings in TOML configuration files at two scopes:
 - **Global**: `~/frappe/fm_config.toml`, machine-wide settings (ngrok tokens, DNS credentials, logging)
 - **Per-bench**: `~/frappe/sites/<benchname>/bench_config.toml`, bench-specific settings (environment, SSL, upload limits)
 
-Changes take effect on next `fm start` or service restart.
+Changes take effect on next `fmx start` or service restart.
 
-!!! warning "Use `fm update` commands for safe editing"
-    These files are managed by FM. Manual edits may be overwritten or cause validation errors. Use `fm update` commands whenever possible.
+!!! warning "Use `fmx update` commands for safe editing"
+    These files are managed by fmx. Manual edits may be overwritten or cause validation errors. Use `fmx update` commands whenever possible.
 
 !!! tip "Annotated examples, generated from the schema"
-    Every key with its description and default, in one file per scope: [`bench_config.example.toml`](bench_config.example.toml) and [`fm_config.example.toml`](fm_config.example.toml). Both are generated from the models by `just config-example` and a test fails if they fall behind, so they cannot describe a key fm no longer reads. Every line is commented out: they are references, not starting files, since fm writes both files itself.
+    Every key with its description and default, in one file per scope: [`bench_config.example.toml`](bench_config.example.toml) and [`fm_config.example.toml`](fm_config.example.toml). Both are generated from the models by `just config-example` and a test fails if they fall behind, so they cannot describe a key fmx no longer reads. Every line is commented out: they are references, not starting files, since fmx writes both files itself.
 
-    Comments you add to a real config file are preserved when fm saves it, so notes about why a value was chosen survive `fm update` and `fm migrate`.
+    Comments you add to a real config file are preserved when fmx saves it, so notes about why a value was chosen survive `fmx update` and `fmx migrate`.
 
 ---
 
@@ -21,7 +21,7 @@ Changes take effect on next `fm start` or service restart.
 
 ### Global config (`fm_config.toml`) {#global-config-example}
 
-Minimal example showing common settings:
+The settings an operator actually touches, in one file:
 
 ```toml
 ngrok_auth_token = "2abc..."
@@ -45,7 +45,7 @@ api_token = "def456..."
 
 ### Bench config (`bench_config.toml`) {#bench-config-example}
 
-Minimal example showing common settings:
+The settings an operator actually touches, in one file:
 
 ```toml
 name = "mybench.localhost"
@@ -86,11 +86,11 @@ version = "1.0.0"
 
 ## Global configuration
 
-Settings in `~/frappe/fm_config.toml` apply to all benches and FM operations.
+Settings in `~/frappe/fm_config.toml` apply to all benches and fmx operations.
 
 ### `version` (retired) {#version}
 
-Older releases kept a top-level `version` key recording the FM version that last wrote the file. It carried no meaning of its own and is retired: FM removes it on the next write, and the migration state below is the only version key. A leftover `version` line in an old file is harmless.
+Older releases kept a top-level `version` key recording the fmx version that last wrote the file. It carried no meaning of its own and is retired: fmx removes it on the next write, and the migration state below is the only version key. A leftover `version` line in an old file is harmless.
 
 ---
 
@@ -100,13 +100,13 @@ Older releases kept a top-level `version` key recording the FM version that last
 **Type:** `string | null`  
 **File key:** `ngrok_auth_token`
 
-Saved ngrok authentication token for persistent tunneling. Written by `fm ngrok --save-token`.
+Saved ngrok authentication token for persistent tunneling. Written by `fmx ngrok --save-token`.
 
 ```toml
 ngrok_auth_token = "2abc..."
 ```
 
-**See also:** [fm ngrok command](../commands/ngrok.md)
+**See also:** [fmx ngrok command](../commands/ngrok.md)
 
 ---
 
@@ -116,7 +116,7 @@ ngrok_auth_token = "2abc..."
 **Type:** `boolean`  
 **File key:** `[validation]` → `enforce_domain_uniqueness`
 
-When `true`, FM prevents creating multiple benches with the same domain. When `false`, allows domain conflicts (use with caution: causes nginx proxy conflicts).
+When `true`, fmx prevents creating multiple benches with the same domain. When `false`, allows domain conflicts (use with caution: causes nginx proxy conflicts).
 
 ```toml
 [validation]
@@ -167,9 +167,9 @@ api_token = "token-for-the-client-account"
 
 **Fields, and the resolution order across both scopes:** [DNS providers](#dns-providers), which documents the identical bench-scoped table.
 
-**Set via:** `fm ssl dns-config cloudflare --api-token TOKEN` writes the `cloudflare` label; `fm ssl dns-config cloudflare --name client-zones --api-token TOKEN` writes any other.
+**Set via:** `fmx ssl dns-config cloudflare --api-token TOKEN` writes the `cloudflare` label; `fmx ssl dns-config cloudflare --name client-zones --api-token TOKEN` writes any other.
 
-**See also:** [DNS providers](#dns-providers), [SSL guide: DNS-01 setup](../guides/ssl.md#dns-01-cloudflare-api-token), [fm ssl dns-config cloudflare](../commands/ssl-dns-config-cloudflare.md)
+**See also:** [DNS providers](#dns-providers), [SSL guide: DNS-01 setup](../guides/ssl.md#dns-01-cloudflare-api-token), [fmx ssl dns-config cloudflare](../commands/ssl.md#fmx-ssl-dns-config-cloudflare)
 
 ---
 
@@ -178,7 +178,7 @@ api_token = "token-for-the-client-account"
 **Defaults:** `theme = "default"`, `style = "rail"`, `colors = {}`  
 **File key:** `[output]` → `theme` / `style` / `colors`
 
-Terminal output appearance for the `fm` CLI.
+Terminal output appearance for the `fmx` CLI.
 
 ```toml
 [output]
@@ -193,12 +193,18 @@ style = "rail"             # rail | box | flat | ascii
 
 ---
 
-### `network.subnet_cidr`, `network.proxy_ip` {#network}
+### `network.subnet_cidr`, `network.proxy_ip`, `network.backend_subnet_cidr` {#network}
 
 **Default:** `null` (auto-managed)  
-**File key:** `[network]` → `subnet_cidr` / `proxy_ip`
+**File key:** `[network]` → `subnet_cidr` / `proxy_ip` / `backend_subnet_cidr`
 
-Static addressing for the global frontend Docker network: `subnet_cidr` is the CIDR of `fm-frontend-network` (e.g. `10.1.0.0/16`), `proxy_ip` the fixed IP of `nginx-proxy` on it. Normally written by FM; only set manually if the default subnet collides with your LAN.
+Static addressing for fmx's two shared Docker networks, picked once on the first `fmx services` setup and reused on every run after that:
+
+- `subnet_cidr`: CIDR of the frontend network, `fm-frontend-network` (e.g. `10.1.0.0/16`), the one every bench's nginx and the global proxy share
+- `proxy_ip`: fixed IP of `nginx-proxy` on that network
+- `backend_subnet_cidr`: CIDR of the backend network, `fm-backend-network` (e.g. `10.2.0.0/16`), which carries bench-to-database traffic
+
+Both subnets are chosen the same way: fmx checks what Docker already has in use on the host and picks a free `/16` out of `10.0.0.0/8`, preferring `10.1.0.0/16` for the frontend. Once a value is recorded here it is never reassigned, because the networks already exist at those addresses and every container is attached to them. Set one by hand only if fmx's chosen subnet collides with something on your LAN.
 
 ---
 
@@ -220,9 +226,9 @@ https_port = 8443
 bind       = "127.0.0.1"
 ```
 
-**Written by:** `fm services ports --http <port> --https <port> [--bind <addr>] [--yes]`. On a host with no services stack yet it only writes the setting and creates nothing; on a live host it patches the running compose file's publish mapping and recreates the proxy container instead, a brief outage for every bench on the host, so it asks before doing so (`--yes` skips the prompt). Not meant to be hand-edited on a live host: changing a published port here has no effect until the proxy container is recreated, which only `fm services ports` does.
+**Written by:** `fmx services ports --http <port> --https <port> [--bind <addr>] [--yes]`. On a host with no services stack yet it only writes the setting and creates nothing; on a live host it patches the running compose file's publish mapping and recreates the proxy container instead, a brief outage for every bench on the host, so it asks before doing so (`--yes` skips the prompt). Not meant to be hand-edited on a live host: changing a published port here has no effect until the proxy container is recreated, which only `fmx services ports` does.
 
-**See also:** [fm services command reference](../commands/services.md)
+**See also:** [fmx services command reference](../commands/services.md)
 
 ---
 
@@ -231,7 +237,7 @@ bind       = "127.0.0.1"
 **Defaults:** `keep_backup_sessions = 3`, `keep_log_archives = 3`, `rotate_logs_over = "10M"`
 **File key:** `[prune]`
 
-Retention for the disk-hygiene commands, [`fm prune`](../commands/prune.md) and [`fm services prune`](../commands/services.md#fm-services-prune). Nothing in FM cleans up on its own: these values only take effect when one of those commands runs. A bench's own `[prune]` table (below) overrides per key; command flags override both for one run.
+Retention for the disk-hygiene commands, [`fmx prune`](../commands/prune.md) and [`fmx services prune`](../commands/services.md#fmx-services-prune). Nothing in fmx cleans up on its own: these values only take effect when one of those commands runs. A bench's own `[prune]` table (below) overrides per key; command flags override both for one run.
 
 ```toml
 [prune]
@@ -246,7 +252,7 @@ rotate_logs_over     = "10M"  # only log files larger than this get rotated
 
 **File key:** `[schema]` → `version`
 
-FM version the global services & configuration were last migrated to, stamped by `fm services migrate` (the same key name the per-bench ledger uses in `bench_config.toml`). Do not edit. fm reads `[schema].version`; it still accepts the older `[migration_state]` table and the `migrated_to` / `system_migrated_to` key spellings on read, rewriting them to the new names on the next migration.
+fmx version the global services & configuration were last migrated to, stamped by `fmx services migrate` (the same key name the per-bench ledger uses in `bench_config.toml`). Do not edit. fmx reads `[schema].version`; it still accepts the older `[migration_state]` table and the `migrated_to` / `system_migrated_to` key spellings on read, rewriting them to the new names on the next migration.
 
 ```toml
 [schema]
@@ -293,11 +299,11 @@ developer_mode = true
 ```
 
 !!! warning "Refused on image runtime"
-    `developer_mode = true` cannot be combined with `runtime = "image"`. DocType authoring writes app *source* files, and standard doctypes only sync files into the database, never back, so those writes would land in the container's ephemeral layer and be lost on the next deploy. `fm create` rejects both the flag and a config overlay that sets it. Runtime is fixed at create time, so an image bench cannot gain developer mode: create a mount bench instead, seeding it from the same release with `fm create NAME --apps-from REPO:TAG` if you want the same code.
+    `developer_mode = true` cannot be combined with `runtime = "image"`. DocType authoring writes app *source* files, and standard doctypes only sync files into the database, never back, so those writes would land in the container's ephemeral layer and be lost on the next deploy. `fmx create` rejects both the flag and a config overlay that sets it. Runtime is fixed at create time, so an image bench cannot gain developer mode: create a mount bench instead, seeding it from the same release with `fmx create NAME --apps-from REPO:TAG` if you want the same code.
 
-**Change via:** `fm update BENCH --developer-mode enable|disable` (needs an editable workspace: mount runtime)
+**Change via:** `fmx update BENCH --developer-mode enable|disable` (needs an editable workspace: mount runtime)
 
-**See also:** [Environments guide](../concepts/environments.md), [fm update command](../commands/update.md)
+**See also:** [Environments guide](../concepts/environments.md), [fmx update command](../commands/update.md)
 
 ---
 
@@ -307,7 +313,7 @@ developer_mode = true
 **Type:** `boolean`  
 **File key:** `admin_tools`
 
-Enable Mailpit (email testing) and Adminer (database UI) containers. Off by default: Adminer is a full database console routed on the bench's own hostname, and a dev bench is not always a laptop, so `fm create` never turns it on for you, even with `--environment dev`. Routing only: enabling this does not protect the tools, `fm auth enable BENCH --tools` does, as a separate step.
+Enable Mailpit (email testing) and Adminer (database UI) containers. Off by default: Adminer is a full database console routed on the bench's own hostname, and a dev bench is not always a laptop, so `fmx create` never turns it on for you, even with `--environment dev`. Routing only: enabling this does not protect the tools, `fmx auth enable BENCH --tools` does, as a separate step.
 
 ```toml
 admin_tools = true
@@ -318,7 +324,7 @@ admin_tools = true
 - Mailpit: `http://<benchname>/mailpit/`
 - Adminer: `http://<benchname>/adminer/`
 
-**Change via:** `fm tools enable|disable BENCH`
+**Change via:** `fmx tools enable|disable BENCH`
 
 **See also:** [`[auth]`](#auth), which puts a password prompt in front of these tools
 
@@ -344,9 +350,9 @@ environment = "prod"
 | Logs | `web.dev.log` (single file) | `web.log` + `web.error.log` (split) |
 
 !!! warning "Switching recreates only the frappe container"
-    `fm update -e` recreates the frappe web container alone: workers, nginx, Redis and MariaDB keep running. `developer_mode` is left exactly as it is, so the default in the table above applies at create time only; change it afterwards with `--developer-mode`. `admin_tools` is unrelated to environment entirely now; see [`admin_tools`](#admin-tools) and `fm tools enable|disable`.
+    `fmx update -e` recreates the frappe web container alone: workers, nginx, Redis and MariaDB keep running. `developer_mode` is left exactly as it is, so the default in the table above applies at create time only; change it afterwards with `--developer-mode`. `admin_tools` is unrelated to environment entirely now; see [`admin_tools`](#admin-tools) and `fmx tools enable|disable`.
 
-**Change via:** `fm update BENCH --environment dev|prod`
+**Change via:** `fmx update BENCH --environment dev|prod`
 
 **See also:** [Environments guide](../concepts/environments.md)
 
@@ -358,7 +364,7 @@ environment = "prod"
 **Type:** `string`  
 **File key:** `upload_limit`
 
-Maximum file upload size. The bench has to be running: `fm update` refuses a stopped one, because it writes and reloads every layer that enforces the limit.
+Maximum file upload size, bench-wide. A single site can set its own [`upload_limit`](#site-upload-limit) instead; this is the value every site without one falls back to. The bench has to be running: `fmx update` refuses a stopped one, because it writes and reloads every layer that enforces the limit.
 
 | Layer | What is written |
 |---|---|
@@ -373,20 +379,20 @@ Both nginx layers are reloaded in place, so nothing restarts and no container is
 upload_limit = "500M"
 ```
 
-!!! warning "`max_file_size` is fm's, inside a file that is otherwise yours"
-    `site_config.json` is Frappe's file and holds keys fm never touches, but `max_file_size` is not one of them: every `fm start` puts it back to match `upload_limit`, so an edit made there is reverted the next time the bench starts. fm says so when it happens. Change the limit with `fm update BENCH --upload-limit`, which writes all four layers at once.
+!!! warning "`max_file_size` is fmx's, inside a file that is otherwise yours"
+    `site_config.json` is Frappe's file and holds keys fmx never touches, but `max_file_size` is not one of them: every `fmx start` puts it back to match `upload_limit`, so an edit made there is reverted the next time the bench starts. fmx says so when it happens. Change the limit with `fmx update BENCH --upload-limit`, which writes all four layers at once.
 
     It is written for every site, not only the one named after the bench. Writing just that one left sites added later on Frappe's own default while both nginx layers advertised the bench's limit, so an upload under the bench limit but over Frappe's was accepted by nginx and then refused by the app.
 
 **Valid formats:** digits followed by `M` or `G`, case-insensitive (`50M`, `500M`, `1G`), stored uppercased. The units are binary, so `100M` becomes `104857600` bytes. Bare byte counts and a `K` suffix are rejected even though nginx itself accepts them.
 
-**Change via:** `fm update BENCH --upload-limit 500M`
+**Change via:** `fmx update BENCH --upload-limit 500M`
 
 !!! info "There is no compose variable for this"
-    The bench's nginx service used to also carry a `CLIENT_MAX_BODY_SIZE` environment variable, described as the value the proxy reads. It was read by nothing: the pinned `jwilder/nginx-proxy` template contains no `client_max_body_size`, and neither does any fm template. Because `fm update --upload-limit` does not re-render compose, that copy also went stale the moment the limit changed. It is no longer written, and it is removed from a bench's compose file the next time anything regenerates it.
+    The bench's nginx service used to also carry a `CLIENT_MAX_BODY_SIZE` environment variable, described as the value the proxy reads. It was read by nothing: the pinned `jwilder/nginx-proxy` template contains no `client_max_body_size`, and neither does any fmx template. Because `fmx update --upload-limit` does not re-render compose, that copy also went stale the moment the limit changed. It is no longer written, and it is removed from a bench's compose file the next time anything regenerates it.
 
 !!! tip
-    Avoid editing proxy or nginx files by hand; `fm update` writes every layer consistently and reloads nginx for you. Frappe's own **System Settings, Max Attachment Size** can still impose a lower limit from inside the application.
+    Avoid editing proxy or nginx files by hand; `fmx update` writes every layer consistently and reloads nginx for you. Frappe's own **System Settings, Max Attachment Size** can still impose a lower limit from inside the application.
 
 ---
 
@@ -409,7 +415,7 @@ restart_policy = "unless-stopped"
 | `on-failure` | Restart only on crash (exit code ≠ 0) |
 | `unless-stopped` | Restart unless manually stopped (**recommended for prod**) |
 
-**Change via:** `fm update BENCH --restart-policy unless-stopped`
+**Change via:** `fmx update BENCH --restart-policy unless-stopped`
 
 ---
 
@@ -420,10 +426,10 @@ restart_policy = "unless-stopped"
 **File key:** `[sites."<site>"]`
 
 The sites this bench serves. One table per site, keyed by the site's own name, which is not
-necessarily the bench's: `fm create shop` makes a bench called `shop` serving a site called
+necessarily the bench's: `fmx create shop` makes a bench called `shop` serving a site called
 `shop.localhost`.
 
-This table is the record of which sites exist. fm acts on what is written here and never on what
+This table is the record of which sites exist. fmx acts on what is written here and never on what
 it merely finds on disk, which is why a site created by hand with `bench new-site` is reported
 rather than adopted.
 
@@ -434,10 +440,10 @@ alias_domains = ["www.mybench.com", "alt.mybench.com"]
 [sites."shop.example.com"]
 ```
 
-An entry with no keys is a complete record: it says the bench serves that site on the fm-managed
+An entry with no keys is a complete record: it says the bench serves that site on the fmx-managed
 `mariadb` container with no aliases.
 
-**Change via:** `fm create BENCH/SITE` to add one, `fm delete BENCH/SITE` to remove one.
+**Change via:** `fmx create BENCH/SITE` to add one, `fmx delete BENCH/SITE` to remove one.
 
 ---
 
@@ -457,41 +463,60 @@ alias_domains = ["www.mybench.com", "alt.mybench.com"]
 !!! warning "Per site, not per bench"
     This key belongs to a site's table. A bench serving several sites has to say which one an
     alias reaches, because a hostname routes to exactly one schema. Written at the TOP LEVEL of
-    `bench_config.toml` it does nothing: the alias simply does not exist, though fm now warns
-    about the unrecognised key rather than loading it in silence. `fm migrate` moves a top-level
+    `bench_config.toml` it does nothing: the alias simply does not exist, though fmx now warns
+    about the unrecognised key rather than loading it in silence. `fmx migrate` moves a top-level
     list from an older bench under its primary site.
 
-**Change via:** `fm domain add BENCH www.example.com,alt.example.com` / `fm domain remove BENCH/www.example.com`
+**Change via:** `fmx domain add BENCH www.example.com,alt.example.com` / `fmx domain remove BENCH/www.example.com`
 
-**See also:** [fm ssl add command](../commands/ssl.md)
+**See also:** [fmx ssl add command](../commands/ssl.md)
+
+---
+
+### `[sites."<site>"].upload_limit` {#site-upload-limit}
+
+**Default:** (absent, falls back to the bench's [`upload_limit`](#upload-limit))  
+**Type:** `string | null`  
+**File key:** `upload_limit`, inside that site's table
+
+Maximum upload size for just THIS site's hostnames, overriding the bench default. Same format as the bench-level key: digits followed by `M` or `G`.
+
+```toml
+[sites."shop.example.com"]
+upload_limit = "200M"
+```
+
+Written to the same three places as the bench-level key, scoped to the one site: that site's `max_file_size` in `site_config.json`, the proxy's per-domain `vhost.d/<domain>` fragment for each of its domains (including its [`alias_domains`](#alias-domains)), and the bench's own nginx conf. A bench-level `fmx update BENCH --upload-limit` leaves a site that set its own alone; `fmx info BENCH` marks which sites carry an override of their own versus inheriting the bench default.
+
+**Change via:** `fmx update BENCH/SITE --upload-limit 200M`
 
 ---
 
 ### Which site a bench-scoped command means {#primary-site}
 
-`fm shell BENCH`, `fm switch BENCH`, `fm ssl add BENCH/DOMAIN` and every other command that names
+`fmx shell BENCH`, `fmx switch BENCH`, `fmx ssl add BENCH/DOMAIN` and every other command that names
 a bench without naming a site has to pick one. That site is called the bench's PRIMARY, and it is
 not stored in `bench_config.toml`: it is resolved, in this order.
 
 1. **`default_site` from `common_site_config.json`**, when it names a site the bench records.
    This is Frappe's own answer to the same question, the one `bench use <site>` writes and the one
-   a bare `bench` command inside the container obeys. fm writes it when it creates a bench's first
-   site, and `fm migrate` fills it in for a bench that predates that.
+   a bare `bench` command inside the container obeys. fmx writes it when it creates a bench's first
+   site, and `fmx migrate` fills it in for a bench that predates that.
 2. **The site named after the bench**, in either spelling: `shop` for a bench called `shop`, or
    `shop.localhost` for one whose name is not already a hostname. This is the relationship
-   `fm create shop` establishes.
+   `fmx create shop` establishes.
 3. **The only site there is**, when the bench serves exactly one.
 4. Otherwise **no primary**, and a bench-scoped command refuses rather than guess. Address the
-   site explicitly: `fm shell BENCH/SITE`.
+   site explicitly: `fmx shell BENCH/SITE`.
 
 A site whose `sites/<site>/site_config.json` is missing is skipped by every rule above, including
-the first. Frappe cannot open such a site, so choosing it would give fm a primary that no command
-could act on. `fm info` lists those entries under `missing`.
+the first. Frappe cannot open such a site, so choosing it would give fmx a primary that no command
+could act on. `fmx info` lists those entries under `missing`.
 
 !!! info "`bench use` moves it"
-    Because rule 1 reads Frappe's file, running `bench use other.localhost` inside `fm shell`
-    changes which site fm's bench-scoped commands mean, too. That is deliberate: one question, one
-    answer, one place to write it. Run `fm info BENCH` to see which site fm currently resolves
+    Because rule 1 reads Frappe's file, running `bench use other.localhost` inside `fmx shell`
+    changes which site fmx's bench-scoped commands mean, too. That is deliberate: one question, one
+    answer, one place to write it. Run `fmx info BENCH` to see which site fmx currently resolves
     to, marked `● primary`.
 
 **See also:** [`[sites."<site>"]`](#sites)
@@ -504,14 +529,14 @@ could act on. `fm info` lists those entries under `missing`.
 **Type:** `string`  
 **File key:** `db_name`
 
-Schema this bench's site uses on the fm-managed `mariadb` container. Generated at creation as `fm_<name>_<16 hex chars>`, where `<name>` is the bench name with every `.` and `-` replaced by `_`.
+Schema this bench's site uses on the fmx-managed `mariadb` container. Generated at creation as `fm_<name>_<16 hex chars>`, where `<name>` is the bench name with every `.` and `-` replaced by `_`.
 
 ```toml
 db_name = "fm_mybench_localhost_9f4c1a77d0e35b62"
 ```
 
 !!! danger "Do not modify manually"
-    Changing this value points the bench at a schema that does not exist. FM expects the database name to match this field exactly.
+    Changing this value points the bench at a schema that does not exist. fmx expects the database name to match this field exactly.
 
 !!! info "Unused on an external database"
     A site with a [`[sites."<site>".database]`](#sites-database) entry lives on that server, under `[database]` `name`. `db_name` is still generated and stored, but nothing reads it for that site.
@@ -520,21 +545,22 @@ db_name = "fm_mybench_localhost_9f4c1a77d0e35b62"
 
 ### `github_token` {#github-token}
 
-**Default:** `null`  
-**Type:** `string | null`  
-**File key:** `github_token`
+**Type:** `string | null`, create-time input only, never written to `bench_config.toml`
 
-GitHub Personal Access Token for cloning private app repositories.
+GitHub Personal Access Token for cloning a private app repository. This is a command-line input, not a config key: fmx reads it for the `fmx create` run that needs it and never persists it, the same way it refuses to persist `db_admin_password` and `db_password`. A token copied into the file would outlive the command that needed it and sit readable by anything that can read the bench's config, with no way for fmx to notice it had been revoked.
 
-```toml
-github_token = "ghp_..."
+Supply it per run, or export it so every run in the shell picks it up without retyping it:
+
+```bash
+export GITHUB_TOKEN=ghp_...
+fmx create BENCH --apps myorg/private-app
 ```
 
 **Required permissions:** `repo` (full control of private repositories)
 
-**Set via:** `fm create BENCH --github-token ghp_...` or the `GITHUB_TOKEN` environment variable
+**Set via:** `fmx create BENCH --github-token ghp_...` or the `GITHUB_TOKEN` environment variable
 
-**See also:** [fm create command](../commands/create.md)
+**See also:** [fmx create command](../commands/create.md)
 
 ---
 
@@ -550,7 +576,7 @@ Python version override. Auto-detected on creation from the frappe app's `pyproj
 python_version = "3.13"
 ```
 
-**Set via:** `fm create BENCH --python 3.13` or `fm update BENCH --python 3.13`
+**Set via:** `fmx create BENCH --python 3.13` or `fmx update BENCH --python 3.13`
 
 ---
 
@@ -566,7 +592,7 @@ Node.js version override. Auto-detected on creation from the frappe app's `packa
 node_version = "20"
 ```
 
-**Set via:** `fm create BENCH --node 20` or `fm update BENCH --node 20`
+**Set via:** `fmx create BENCH --node 20` or `fmx update BENCH --node 20`
 
 ---
 
@@ -575,21 +601,27 @@ node_version = "20"
 **Default:** both surfaces open, admin tools included  
 **File key:** `[auth]`
 
-HTTP basic auth for the bench's two nginx surfaces: `web` (frappe and socketio, every path bar the admin tools) and `tools` (`/adminer/` and `/mailpit/`). One credential pair serves both, and the bench nginx enforces both.
+HTTP basic auth for the bench's two nginx surfaces: `web` (frappe and socketio, every path bar the admin tools) and `tools` (`/adminer/` and `/mailpit/`). The two surfaces have separate credentials: `tools_user`/`tools_password` guard the admin tools, falling back to `user`/`password` when unset, which is what every bench does until you set tools credentials explicitly. The bench nginx enforces both surfaces.
 
 This table is what every site of the bench follows. A single site can override the web half with a `[sites."<name>".auth]` table of its own, described below.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `user` | `admin` | basic auth username shared by both surfaces |
-| `password` | generated | basic auth password; minted on first enable |
+| `user` | `admin` | basic auth username for the web surface, and the tools surface's fallback |
+| `password` | generated | basic auth password for the web surface, and the tools surface's fallback; minted on first enable |
 | `web` | `false` | prompt on the frappe and socketio surface |
 | `tools` | `false` | prompt on the admin tools paths |
+| `tools_user` | falls back to `user` | basic auth username for the admin tools only |
+| `tools_password` | falls back to `password` | basic auth password for the admin tools only |
 | `allow_ips` | `[]` | addresses or CIDRs that skip the prompt |
 | `allow_paths` | `[]` | path prefixes served without a prompt, web surface only |
 
+#### Separate credentials for the admin tools {#auth-tools-credentials}
+
+`tools_user` and `tools_password` exist so the admin tools can carry their own login, distinct from the one that guards frappe and socketio. Neither is required: leave them unset and the tools surface uses `user`/`password`, which is what every bench did before these two fields existed. Set only `tools_password` to keep the same username on both surfaces with a different password, or set both for a fully separate tools login.
+
 !!! info "Why `tools` no longer defaults true"
-    Protection is something `fm auth` records, never something a model default claimed for you. The old `true` meant every bench's config stated its admin tools were guarded whether or not anyone had asked, which then needed something to mint a password later just to keep that claim true. Nothing mints one while rendering nginx config any more: `fm auth enable BENCH --tools` is the only thing that creates a tools password now, in its own run, and `fm tools enable` warns when it has routed a surface that call has not protected.
+    Protection is something `fmx auth` records, never something a model default claimed for you. The old `true` meant every bench's config stated its admin tools were guarded whether or not anyone had asked, which then needed something to mint a password later just to keep that claim true. Nothing mints one while rendering nginx config any more: `fmx auth enable BENCH --tools` is the only thing that creates a tools password now, in its own run, and `fmx tools enable` warns when it has routed a surface that call has not protected.
 
 ```toml
 [auth]
@@ -599,13 +631,17 @@ web = true
 tools = true
 allow_ips = ["203.0.113.0/24"]
 allow_paths = ["/api/method/payment_webhook"]
+
+# optional: a separate login for the admin tools, instead of reusing user/password above
+tools_user = "ops"
+tools_password = "tools-secret"
 ```
 
-**Change via:** `fm auth enable BENCH --web --tools`; `fm auth status BENCH` reports the current state.
+**Change via:** `fmx auth enable BENCH --web --tools` turns both surfaces on with one shared credential. Name a surface to give it its own: `fmx auth enable BENCH --tools --user ops --password -` sets `tools_user`/`tools_password` without touching the web surface's `user`/`password`. `fmx auth status BENCH` reports the current state.
 
 #### Per-site auth {#site-auth}
 
-`[sites."<name>".auth]` gives one site its own prompt and its own credentials, and leaves the bench's other sites serving exactly as before. It carries the same keys as `[auth]` except `tools`, which is bench-wide: there is one Adminer and one Mailpit per bench and both answer on every hostname it serves, so protecting them for one site would leave the same tools reachable unprotected on its neighbours. A site with no `auth` table of its own follows the bench's.
+`[sites."<name>".auth]` gives one site its own prompt and its own credentials, and leaves the bench's other sites serving exactly as before. It carries the same keys as `[auth]` except `tools`, `tools_user` and `tools_password`, which are bench-wide: there is one Adminer and one Mailpit per bench and both answer on every hostname it serves, so protecting them for one site would leave the same tools reachable unprotected on its neighbours. A site with no `auth` table of its own follows the bench's.
 
 ```toml
 [auth]
@@ -618,11 +654,11 @@ user = "customer"
 password = "site-secret"
 ```
 
-**Change via:** `fm auth enable BENCH/SITE --web`; `fm auth status BENCH/SITE` reports whether that site has its own auth or inherits the bench's.
+**Change via:** `fmx auth enable BENCH/SITE --web`; `fmx auth status BENCH/SITE` reports whether that site has its own auth or inherits the bench's.
 
 On disk each site's directives land in `configs/nginx/conf/custom/<site>/auth.conf`, which the bench nginx includes from that site's server block only. Basic auth is a server-context directive, so this is what makes a per-site prompt possible at all.
 
-A bench whose nginx conf predates per-site server blocks cannot serve this: the conf is rendered once at the nginx container's first boot, so it reflects whatever image created the bench. `fm auth enable BENCH/SITE` is refused there rather than recording an override nginx would never read, and a `[sites."<name>".auth]` table already on disk is reported as not enforced while the whole bench follows `[auth]`. Update the bench's nginx image, then `fm restart BENCH --nginx --recreate`.
+A bench whose nginx conf predates per-site server blocks cannot serve this: the conf is rendered once at the nginx container's first boot, so it reflects whatever image created the bench. `fmx auth enable BENCH/SITE` is refused there rather than recording an override nginx would never read, and a `[sites."<name>".auth]` table already on disk is reported as not enforced while the whole bench follows `[auth]`. Update the bench's nginx image, then `fmx restart BENCH --nginx --recreate`.
 
 #### Per-site admin tools {#site-admin-tools}
 
@@ -637,9 +673,9 @@ admin_tools = true
 serve_admin_tools = false
 ```
 
-**Change via:** `fm tools disable BENCH/SITE`. The same command without a site part addresses the bench and starts or stops the containers instead.
+**Change via:** `fmx tools disable BENCH/SITE`. The same command without a site part addresses the bench and starts or stops the containers instead.
 
-A site with no route carries no `location ^~ /adminer/` in its server block at all, so the request falls through to Frappe. That is a reduction rather than a second lock: every hostname reaches the same container pair, so a per-site password would be a bypass, which is why `fm auth` refuses a site part for `--tools`.
+A site with no route carries no `location ^~ /adminer/` in its server block at all, so the request falls through to Frappe. That is a reduction rather than a second lock: every hostname reaches the same container pair, so a per-site password would be a bypass, which is why `fmx auth` refuses a site part for `--tools`.
 
 !!! warning "Stored in plaintext"
     The password is stored unencrypted in the TOML file, and basic auth sends it base64-encoded on every request. Restrict file permissions and only enable a surface on a bench with TLS:
@@ -679,24 +715,24 @@ ssl_type = "custom"
 **Certificate fields:**
 
 - `domain`: hostname this certificate covers
-- `ssl_type`: `"letsencrypt"`, `"dev"` for a certificate from FM's local CA (`fm ssl add --dev`), or `"custom"` for an operator-supplied certificate imported by `fm ssl add --custom`. `"disable"` is accepted on read and means no certificate; FM never writes such an entry, it drops the domain from the array instead
+- `ssl_type`: `"letsencrypt"`, `"dev"` for a certificate from fmx's local CA (`fmx ssl add --dev`), or `"custom"` for an operator-supplied certificate imported by `fmx ssl add --custom`. `"disable"` is accepted on read and means no certificate; fmx never writes such an entry, it drops the domain from the array instead
 - `challenge_type`: `"http01"` or `"dns01"`, Let's Encrypt only. Absent, it defaults to `"http01"`
 - `acme_client`: always `"acme.sh"`, Let's Encrypt entries only
-- `dns_provider`: label of the [`[ssl.dns_providers]`](#dns-providers) entry that authenticates this domain's DNS-01 challenge, written by `fm ssl add --dns-provider`. Absent means the label `cloudflare`. A label that exists at neither scope is an error, not a fallback
-- `delegation_cname`: delegated zone for `_acme-challenge`, written by `fm ssl add --cname`
-- `hsts`: the `Strict-Transport-Security` header value the global proxy sends for every domain the bench serves, or `"off"` (the default), which sends no such header at all. Any other value is sent verbatim on every HTTPS response for the domain, error responses included. FM applies it where TLS actually terminates: a marked `# fm:hsts` block in the proxy's `vhost.d/<domain>` file, which also strips the header the bench's own nginx image hardcodes, so `"off"` genuinely means absent. The block is written on `fm start`, at bench creation and on site add, so an existing bench picks up a change on its next start, with no image rebuild. There is no flag for it; set it here. Only the primary domain's certificate is consulted
+- `dns_provider`: label of the [`[ssl.dns_providers]`](#dns-providers) entry that authenticates this domain's DNS-01 challenge, written by `fmx ssl add --dns-provider`. Absent means the label `cloudflare`. A label that exists at neither scope is an error, not a fallback
+- `delegation_cname`: delegated zone for `_acme-challenge`, written by `fmx ssl add --cname`
+- `hsts`: the `Strict-Transport-Security` header value the global proxy sends for every domain the bench serves, or `"off"` (the default), which sends no such header at all. Any other value is sent verbatim on every HTTPS response for the domain, error responses included. fmx applies it where TLS actually terminates: a marked `# fm:hsts` block in the proxy's `vhost.d/<domain>` file, which also strips the header the bench's own nginx image hardcodes, so `"off"` genuinely means absent. The block is written on `fmx start`, at bench creation and on site add, so an existing bench picks up a change on its next start, with no image rebuild. There is no flag for it; set it here. Only the primary domain's certificate is consulted
 - `enabled`: `true` by default. `false` leaves the entry in the file but makes issuance and renewal a no-op for that domain. No flag writes it
 
 !!! note "Browsers may still hold a pin from before `hsts` worked"
-    Until v1.0.0 every bench sent `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` on HTTPS responses regardless of this setting, because the bench nginx image hardcoded it and nothing stripped it at the proxy. A browser that visited an fm-served site over HTTPS in that era cached a two-year HTTPS-only pin for the domain and its subdomains. The fix stops new pins; it cannot retract one already issued: those visitors keep being forced to HTTPS until the pin expires or is cleared per browser (`chrome://net-internals/#hsts` in Chrome and Edge, "Forget About This Site" in Firefox).
+    Until v1.0.0 every bench sent `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` on HTTPS responses regardless of this setting, because the bench nginx image hardcoded it and nothing stripped it at the proxy. A browser that visited an fmx-served site over HTTPS in that era cached a two-year HTTPS-only pin for the domain and its subdomains. The fix stops new pins; it cannot retract one already issued: those visitors keep being forced to HTTPS until the pin expires or is cleared per browser (`chrome://net-internals/#hsts` in Chrome and Edge, "Forget About This Site" in Firefox).
 
-A `custom` entry records only the domain, the type and the shared flags above: the imported bytes live under `~/frappe/services/nginx-proxy/ssl/custom/<domain>/`, and FM keeps no record of the original `--cert`/`--key`/`--ca` paths. `fm ssl renew` never renews one, because FM does not rotate a certificate it did not issue; re-run `fm ssl add BENCH/DOMAIN --custom` with the replacement files instead. The [HTTPS certificates](../guides/ssl.md#custom-certificates) covers the import and its validation.
+A `custom` entry records only the domain, the type and the shared flags above: the imported bytes live under `~/frappe/services/nginx-proxy/ssl/custom/<domain>/`, and fmx keeps no record of the original `--cert`/`--key`/`--ca` paths. `fmx ssl renew` never renews one, because fmx does not rotate a certificate it did not issue; re-run `fmx ssl add BENCH/DOMAIN --custom` with the replacement files instead. The [HTTPS certificates](../guides/ssl.md#custom-certificates) covers the import and its validation.
 
-That is the whole entry, and an unrecognised key in one is an error. A certificate never holds a credential: DNS-01 credentials are resolved from [`[ssl.dns_providers]`](#dns-providers) at issuance and again at every renewal. Earlier releases copied the global token onto every certificate, which put a secret in this world readable file and kept it working after `fm ssl dns-config cloudflare --remove` had reported success; the 1.0.0 migration moves any such copy into `[ssl.dns_providers]` and deletes it from the certificate.
+That is the whole entry, and an unrecognised key in one is an error. A certificate never holds a credential: DNS-01 credentials are resolved from [`[ssl.dns_providers]`](#dns-providers) at issuance and again at every renewal. Earlier releases copied the global token onto every certificate, which put a secret in this world readable file and kept it working after `fmx ssl dns-config cloudflare --remove` had reported success; the 1.0.0 migration moves any such copy into `[ssl.dns_providers]` and deletes it from the certificate.
 
-**Managed by:** `fm ssl add`, `fm ssl remove`, `fm ssl renew`, `fm ssl list`
+**Managed by:** `fmx ssl add`, `fmx ssl remove`, `fmx ssl renew`, `fmx ssl list`
 
-**See also:** [HTTPS certificates](../guides/ssl.md), [fm ssl commands](../commands/ssl.md)
+**See also:** [HTTPS certificates](../guides/ssl.md), [fmx ssl commands](../commands/ssl.md)
 
 ---
 
@@ -757,7 +793,7 @@ There is no third tier. A machine set up before 1.0.0 kept its default Cloudflar
 
 A named label is never quietly substituted. If a certificate sets `dns_provider = "client-zones"` and no `client-zones` entry exists at either scope, issuance and renewal fail. Falling back would authenticate against whichever account happened to be configured and report success, which is the one outcome worth failing over.
 
-**Set via:** `fm ssl dns-config cloudflare BENCH --name client-zones --api-token TOKEN`, or the same command without `BENCH` to store the label globally. Drop `--name` to write the `cloudflare` label instead. The [command reference](../commands/ssl-dns-config-cloudflare.md) has the full scope matrix.
+**Set via:** `fmx ssl dns-config cloudflare BENCH --name client-zones --api-token TOKEN`, or the same command without `BENCH` to store the label globally. Drop `--name` to write the `cloudflare` label instead. The [command reference](../commands/ssl.md#fmx-ssl-dns-config-cloudflare) has the full scope matrix.
 
 **See also:** [`ssl.dns_providers` in the global file](#global-dns-providers), [HTTPS certificates](../guides/ssl.md)
 
@@ -774,9 +810,9 @@ Bench runtime model:
 | Runtime | Behavior |
 |---|---|
 | `mount` | App code lives in `workspace/frappe-bench/` on the host and is live-mounted into the containers. Editable; the default for development. |
-| `image` | App code is baked into an immutable image (built by `fm bake`); the workspace holds only sites/config. Deploys happen by switching image tags. |
+| `image` | App code is baked into an immutable image (built by `fmx bake`); the workspace holds only sites/config. Deploys happen by switching image tags. |
 
-**Change via:** `fm create --runtime`, at create time only. `fm update` does not accept `--runtime`, and there is no command that changes a bench's runtime afterwards; see [Runtimes](../concepts/runtimes.md) for what to do instead.
+**Change via:** `fmx create --runtime`, at create time only. `fmx update` does not accept `--runtime`, and there is no command that changes a bench's runtime afterwards; see [Runtimes](../concepts/runtimes.md) for what to do instead.
 
 **See also:** [Deployment](../deploy/index.md)
 
@@ -789,72 +825,73 @@ Bench runtime model:
 
 | Key | Applies to | Meaning |
 |---|---|---|
-| `image` | image runtime | App image repository, the pre-built app image the bench runs. Set by `fm create --runtime image --app-image <repo:tag>`, which persists the repo half here, and by `fm bake --app-image`, which bakes into it. FM manages the `:tag` separately through [`[deployments].current.app_image`](#deployments), rewritten by `fm switch` on every deploy, so this key is the repo and never the running image |
-| `base_image` | mount runtime | The base frappe image (`repo:tag`) the frappe/socketio/schedule/workers containers **run from**, under your editable workspace. Set by `fm create --app-image`, and static once set: nothing rewrites it. Not the same key as [`[build].base_image`](#deploy-tables), which is what a bake builds from |
-| `apps_from` | mount runtime | Provenance record: the baked image the workspace was seeded from at create (`fm create --apps-from`). Read once at create and never again, unlike `base_image`, which the containers run from at every start |
+| `image` | image runtime | App image repository, the pre-built app image the bench runs. Set by `fmx create --runtime image --app-image <repo:tag>`, which persists the repo half here, and by `fmx bake --app-image`, which bakes into it. fmx manages the `:tag` separately through [`[deployments].current.app_image`](#deployments), rewritten by `fmx switch` on every deploy, so this key is the repo and never the running image |
+| `base_image` | mount runtime | The base frappe image (`repo:tag`) the frappe/socketio/schedule/workers containers **run from**, under your editable workspace. Set by `fmx create --app-image`, and static once set: nothing rewrites it. Not the same key as [`[build].base_image`](#deploy-tables), which is what a bake builds from |
+| `apps_from` | mount runtime | Provenance record: the baked image the workspace was seeded from at create (`fmx create --apps-from`). Read once at create and never again, unlike `base_image`, which the containers run from at every start |
 
 ---
 
 ### `[switch]`, `[build]` {#deploy-tables}
 
-Every key that drives the bake/switch pipeline (`fm bake`, `fm switch`, `fm prune`). For what the pipeline does with them, see the [Deployment overview](../deploy/index.md).
+Every key that drives the bake/switch pipeline (`fmx bake`, `fmx switch`, `fmx prune`). For what the pipeline does with them, see the [Deployment overview](../deploy/index.md).
 
-**`[build]`** (read by `fm bake`):
+**`[build]`** (read by `fmx bake`):
 
 | Key | Default | Meaning |
 |---|---|---|
-| `source` | `"provision"` | `provision` = clone + install fresh (reproducible); `workspace` = snapshot the bench's on-disk workspace, which needs a real bench (a standalone `fm bake` rejects it) |
-| `base_image` | fm's published base (`ghcr.io/rtcamp/frappe-manager-frappe:v<fm version>`) | the image the runtime Dockerfile **builds from** during a bake, and the image the provisioning containers run. Set by `fm bake --base-image`. Not the same key as the top-level [`base_image`](#images), which is what a mount bench's containers run from |
+| `source` | `"provision"` | `provision` = clone + install fresh (reproducible); `workspace` = snapshot the bench's on-disk workspace, which needs a real bench (a standalone `fmx bake` rejects it) |
+| `base_image` | fmx's published base (`ghcr.io/rtcamp/frappe-manager-frappe:v<fmx version>`) | the image the runtime Dockerfile **builds from** during a bake, and the image the provisioning containers run. Set by `fmx bake --base-image`. Not the same key as the top-level [`base_image`](#images), which is what a mount bench's containers run from |
 | `python_version` | the bench's create-time / auto-detected version | Python toolchain (uv) baked into the image |
 | `node_version` | the bench's create-time / auto-detected version | Node toolchain (fnm) baked into the image |
 | `platform` | native / auto-detected | target architecture (see [Platforms](../deploy/transports.md#platforms-cpu-architectures)) |
 | `include` | `[]` | extra host paths baked in (`src` or `src:dest`) |
-| `push` | `false` | push the built image pair to the registry after building. `fm bake --push` / `--no-push` overrides it either way. A bake that does not push still loads the image into the local daemon, so a same-host `fm switch` needs no registry |
+| `push` | `false` | push the built image pair to the registry after building. `fmx bake --push` / `--no-push` overrides it either way. A bake that does not push still loads the image into the local daemon, so a same-host `fmx switch` needs no registry |
 
-**`[switch]`** (read by `fm switch`):
+**`[switch]`** (read by `fmx switch`):
 
 | Key | Default | Meaning |
 |---|---|---|
 | `migrate` | `true` | `true` / `false`: run `bench migrate` during the deploy, once per site the bench serves (there is no detect-it-for-me mode; see the note below) |
 | `migrate_timeout` | `300` | seconds the one-shot migrate may run before it is killed, applied per site (`0` disables the budget) |
 | `migrate_command` | (none) | custom migrate command override; run once exactly as written, since it replaces the site selector too |
+| `startup_timeout` | `300` | seconds a newly started frappe container may take to answer before the deploy's health gate calls it failed; a boot budget, not a per-request timeout |
 | `maintenance_mode` | `true` | show the maintenance page during schema-changing steps |
 | `maintenance_mode_phases` | `["migrate"]` | `[]` asserts a backward-compatible migration (enables rolling with migrate) |
 | `backup_db` | `true` | `true` / `false` / `"auto"` (dump only when a schema step runs); one dump per site, since each site has its own schema |
 | `rollback_image` | `true` | auto-rollback to the previous tag on a failed health gate |
 | `rollback_db` | `false` | also restore the dumps when the deploy fails (failed migrate, or alongside the image rollback; requires `backup_db`). Every site is restored, and a deploy aborts up front if any site's dump could not be taken |
 | `install_apps` | `true` | during finalize, install apps the new image carries that a site does not have yet, computed per site from its own `bench list-apps` (the image is asked directly, so it works on any switch) |
-| `keep_releases` | `7` | retention used by `fm prune` |
+| `keep_releases` | `7` | retention used by `fmx prune` |
 | `common_site_config` | (none) | keys merged into `common_site_config.json` during finalize |
 | `site_config` | (none) | keys merged into every site's `site_config.json` during finalize |
-| `hooks` | (none) | switch hooks: phase `before/after_migrate`, `before/after_restart` and the terminal `after_switch` (container + `host.*` variants); see [Switch hooks](../deploy/index.md#switch-hooks) |
+| `hooks` | (none) | switch hooks, one table per phase: `before_migrate`, `after_migrate`, `before_restart`, `after_restart`, and the terminal `after_switch`. Each runs in the container, and each has a `host.*` variant that runs on the host; see [Switch hooks](../deploy/index.md#switch-hooks) |
 
 !!! info "Why `migrate` has no detect-it-for-me mode"
-    The key is `true` or `false`. fm cannot work out for you whether a given deploy needs a schema step: a DocType field change ships with no patch and no app version bump, so probing the new image for pending patches and app-version drift reports "clean" while `bench migrate` would still run `sync_schema` and alter the table. A mode that can silently skip a schema change it could not see is worse than no mode, so it was removed rather than patched.
+    The key is `true` or `false`. fmx cannot work out for you whether a given deploy needs a schema step: a DocType field change ships with no patch and no app version bump, so probing the new image for pending patches and app-version drift reports "clean" while `bench migrate` would still run `sync_schema` and alter the table. A mode that can silently skip a schema change it could not see is worse than no mode, so it was removed rather than patched.
 
     If what you wanted was to skip the maintenance window on migrations that turn out to be cheap, keep `migrate = true` and set `maintenance_mode_phases = []`. That is the supported way to assert a migration is backward compatible: the maintenance page stays down and the deploy becomes eligible for the [rolling web swap](../deploy/index.md#the-rolling-web-swap).
 
     A bench file that still carries the removed `"auto"` value for this key fails validation. Set it to `true` or `false`.
 
 !!! info "There is no `[registry]` table"
-    Registry authentication is docker's. Run `docker login` once on each machine that pushes or pulls, or add a login step in CI: `~/.docker/config.json` stores credentials per registry and supports credential helpers (osxkeychain, `pass`, `ecr-login`) that fm cannot reach. The registry host is already part of the [`image`](#images) ref. The table existed until 1.0.0 and did nothing but run `docker login` for you; a bench that still carries it loads fine, and the 1.0.0 migration strips it.
+    Registry authentication is docker's. Run `docker login` once on each machine that pushes or pulls, or add a login step in CI: `~/.docker/config.json` stores credentials per registry and supports credential helpers (osxkeychain, `pass`, `ecr-login`) that fmx cannot reach. The registry host is already part of the [`image`](#images) ref. The table existed until 1.0.0 and did nothing but run `docker login` for you; a bench that still carries it loads fine, and the 1.0.0 migration strips it.
 
 !!! warning "An unknown key is reported, not obeyed"
-    `[switch]`, `[build]`, `[workers]`, `[telemetry]`, `[database]`, `[redis]` and the nested provider tables accept keys they do not define and keep them in the file, then name them on load: `Bench '<name>': bench_config.toml has unrecognised key(s) <keys>; check for a typo, since fm will not use them.` A misspelled key is therefore never silently dropped, but it is also never interpreted, so the setting you meant to change stays at its default until you fix the spelling. A bench that is behind on migrations is warned about nothing, because `fm migrate` is about to relocate or strip those keys itself.
+    `[switch]`, `[build]`, `[workers]`, `[telemetry]`, `[database]`, `[redis]` and the nested provider tables accept keys they do not define and keep them in the file, then name them on load: `Bench '<name>': bench_config.toml has unrecognised key(s) <keys>; check for a typo, since fmx will not use them.` A misspelled key is therefore never silently dropped, but it is also never interpreted, so the setting you meant to change stays at its default until you fix the spelling. A bench that is behind on migrations is warned about nothing, because `fmx migrate` is about to relocate or strip those keys itself.
 
-    This is deliberate, and it is a safety property rather than laxity. Rejecting an unrecognised key would mean a bench fm refuses to load, and `fm list`, `fm bake` and `fm switch` skip the migration gate: one file carrying a key from a newer fm, or a table a migration has not reached yet, would take `fm list` down for every bench on the host.
+    This is deliberate, and it is a safety property rather than laxity. Rejecting an unrecognised key would mean a bench fmx refuses to load, and `fmx list`, `fmx bake` and `fmx switch` skip the migration gate: one file carrying a key from a newer fmx, or a table a migration has not reached yet, would take `fmx list` down for every bench on the host.
 
-    `[ssl]` carries one deliberately narrow exception. Keys fm itself used to write into a `[[ssl.certificates]]` entry (`api_token`, `api_key`, `email`, `preferred_challenge`, `status`, `cert_path`, `key_path`, `issued_date`, `last_renewal_attempt`, `toml_exclude`) are dropped on read instead of rejected, and the 1.0.0 migration removes them from the file. They are ignored, never interpreted, so a retired key cannot change what fm does. Rejecting them would mean a bench fm cannot load until it is migrated, and `fm list`, `fm bake` and `fm switch` skip the migration gate: one un-migrated file would take `fm list` down for every bench on the host.
+    `[ssl]` carries one deliberately narrow exception. Keys fmx itself used to write into a `[[ssl.certificates]]` entry (`api_token`, `api_key`, `email`, `preferred_challenge`, `status`, `cert_path`, `key_path`, `issued_date`, `last_renewal_attempt`, `toml_exclude`) are dropped on read instead of rejected, and the 1.0.0 migration removes them from the file. They are ignored, never interpreted, so a retired key cannot change what fmx does. Rejecting them would mean a bench fmx cannot load until it is migrated, and `fmx list`, `fmx bake` and `fmx switch` skip the migration gate: one un-migrated file would take `fmx list` down for every bench on the host.
 
 ---
 
 ### `[workers]` {#workers}
 
-Worker care: how `fm restart` and the `fm switch` pipeline treat RQ workers and their in-flight jobs.
+Worker care: how `fmx restart` and the `fmx switch` pipeline treat RQ workers and their in-flight jobs.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `drain` | `true` | drain RQ workers before cycling or stopping (fm restart, fm update, fm stop, fm apps add, fm switch) |
+| `drain` | `true` | drain RQ workers before cycling or stopping (fmx restart, fmx update, fmx stop, fmx apps add, fmx switch) |
 | `drain_timeout` | `300` | seconds to wait for **one in-flight job**; restart, stop, update and switch abort when exceeded |
 | `drain_poll` | `5` | poll interval while draining |
 | `skip_stale` | `true` | skip idle workers that stop responding |
@@ -866,15 +903,15 @@ Worker care: how `fm restart` and the `fm switch` pipeline treat RQ workers and 
 
 ### `[sites."<site>".database]` {#sites-database}
 
-**Default:** `type = "mariadb"`, no host (fm's own container)  
+**Default:** `type = "mariadb"`, no host (fmx's own container)  
 **File key:** `[sites."<site>".database]`, one table per site name
 
-Which database one site runs on. Written for every site, and it names two independent things: `type` is the engine, `host` is whose server. A table with no `host` means fm's own container for that engine, so being on fm's MariaDB is stated rather than implied by a missing table.
+Which database one site runs on. Written for every site, and it names two independent things: `type` is the engine, `host` is whose server. A table with no `host` means fmx's own container for that engine, so being on fmx's MariaDB is stated rather than implied by a missing table.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `type` | `mariadb` | database engine: `mariadb` or `postgres`. This is Frappe's own `db_type`. MySQL is not a supported backend |
-| `host` | (none) | database server hostname or IP. Absent means fm's own container for this engine |
+| `host` | (none) | database server hostname or IP. Absent means fmx's own container for this engine |
 | `port` | engine default | database server port; absent takes `3306` for MariaDB and `5432` for Postgres |
 | `name` | required when external | schema (database) name for this site |
 | `user` | (none) | login user for the schema; absent means equal to `name`, and it must equal `name` on a v15 bench |
@@ -882,11 +919,11 @@ Which database one site runs on. Written for every site, and it names two indepe
 | `check_hostname` | `true` | verify the server certificate names the host dialled. Set `false` only for a certificate that cannot name it |
 
 ```toml
-# fm's own MariaDB, which is what a site gets by default
+# fmx's own MariaDB, which is what a site gets by default
 [sites."mybench.localhost".database]
 type = "mariadb"
 
-# a server fm does not own
+# a server fmx does not own
 [sites."shop.localhost".database]
 type = "mariadb"
 host = "db.example.com"
@@ -897,11 +934,11 @@ ca = "/etc/ssl/certs/db-ca.pem"
 ```
 
 !!! info "Postgres"
-    `type = "postgres"` works on fm's own server (no `host`) and on one you run (`host` set). fm's Postgres container runs only while some site uses it, and its major version is pinned: Postgres has no automatic datadir upgrade, so fm will never move you across a major by changing an image tag. Frappe's framework supports Postgres and ERPNext's support is newer than fm's confidence in it, so verify your own apps rather than assuming parity with MariaDB.
+    `type = "postgres"` works on fmx's own server (no `host`) and on one you run (`host` set). fmx's Postgres container runs only while some site uses it, and its major version is pinned: Postgres has no automatic datadir upgrade, so fmx will never move you across a major by changing an image tag. Frappe's framework supports Postgres and ERPNext's support is newer than fmx's confidence in it, so verify your own apps rather than assuming parity with MariaDB.
 
 Passwords never live here: the site's database password goes into `site_config.json`.
 
-**Set via:** `fm create BENCH --db-host ... --db-name ...`; `fm update BENCH --db-ca` reinstalls the CA after a rotation.
+**Set via:** `fmx create BENCH --db-host ... --db-name ...`; `fmx update BENCH --db-ca` reinstalls the CA after a rotation.
 
 **See also:** [External database guide](../guides/external-database.md)
 
@@ -912,7 +949,7 @@ Passwords never live here: the site's database password goes into `site_config.j
 **Default:** (absent)  
 **File key:** `[redis]`
 
-External Redis for the whole bench. Absent means FM starts and manages the per-bench `redis-cache` and `redis-queue` containers.
+External Redis for the whole bench. Absent means fmx starts and manages the per-bench `redis-cache` and `redis-queue` containers.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -925,23 +962,23 @@ cache = "redis://r.example:6379/0"
 queue = "redis://r.example:6379/1"
 ```
 
-The two sides are independent, and a **split is a first-class shape**: each key names a redis FM does not own, and an absent key leaves that side on FM's own per-bench container. Moving only the queue out is the usual managed-redis setup, because the queue is the stateful half where a provider's durability and failover earn their keep, while the cache is throwaway and latency-sensitive.
+The two sides are independent, and a **split is a first-class shape**: each key names a redis fmx does not own, and an absent key leaves that side on fmx's own per-bench container. Moving only the queue out is the usual managed-redis setup, because the queue is the stateful half where a provider's durability and failover earn their keep, while the cache is throwaway and latency-sensitive.
 
 ```toml
 [redis]
-queue = "redis://r.example:6379/1"   # cache absent: stays on FM's redis-cache container
+queue = "redis://r.example:6379/1"   # cache absent: stays on fmx's redis-cache container
 ```
 
-An absent `[redis]` table means both sides are FM's. A table naming neither side is refused, since that is what dropping the table already says.
+An absent `[redis]` table means both sides are fmx's. A table naming neither side is refused, since that is what dropping the table already says.
 
 !!! danger "Cache and queue need different logical databases"
     Loading the config fails when they share one. A restore calls `frappe.cache.delete_keys("")`, a mass delete, so a shared index would wipe the queue along with the cache.
 
-**Set via:** `fm create BENCH --redis-cache URL --redis-queue URL` at create time; `fm update BENCH --redis-cache URL` and/or `--redis-queue URL` afterwards, with `--no-redis-cache`, `--no-redis-queue` and `--no-redis` to bring a side (or both) back to FM's own per-bench redis containers. Either side can be moved on its own, and `--no-redis-cache`/`--no-redis-queue` bring one side back while leaving the other alone; `--no-redis` brings both back. Realtime rides the cache endpoint (`redis_socketio` is set from `redis_cache`), so moving the cache out moves realtime with it.
+**Set via:** `fmx create BENCH --redis-cache URL --redis-queue URL` at create time; `fmx update BENCH --redis-cache URL` and/or `--redis-queue URL` afterwards, with `--no-redis-cache`, `--no-redis-queue` and `--no-redis` to bring a side (or both) back to fmx's own per-bench redis containers. Either side can be moved on its own, and `--no-redis-cache`/`--no-redis-queue` bring one side back while leaving the other alone; `--no-redis` brings both back. Realtime rides the cache endpoint (`redis_socketio` is set from `redis_cache`), so moving the cache out moves realtime with it.
 
-**Queued jobs are the one thing that cannot be regenerated, so the queue side is gated.** Before moving the queue, FM counts what is still pending on the server being left; if anything is, it pauses the producers (Frappe's `maintenance_mode`, which also makes the scheduler inactive, plus the nginx 503) and waits for the workers to clear the backlog, so there is nothing to migrate. That wait is deliberately unbounded, since its scale is the queue rather than a job: it reports the remaining count each poll, and Ctrl-C aborts it, resuming producers and changing nothing. `--abandon-queued` is the way to skip the wait -- it switches anyway and those jobs are never run. An empty queue needs no window and switches straight through.
+**Queued jobs are the one thing that cannot be regenerated, so the queue side is gated.** Before moving the queue, fmx counts what is still pending on the server being left; if anything is, it pauses the producers (Frappe's `maintenance_mode`, which also makes the scheduler inactive, plus the nginx 503) and waits for the workers to clear the backlog, so there is nothing to migrate. That wait is deliberately unbounded, since its scale is the queue rather than a job: it reports the remaining count each poll, and Ctrl-C aborts it, resuming producers and changing nothing. `--abandon-queued` is the way to skip the wait: it switches anyway and those jobs are never run. An empty queue needs no window and switches straight through.
 
-The cache and realtime are deliberately NOT gated: the cache holds derived data (doctype meta, table columns) that is regenerated on the first miss and *wants* to be cold after a cutover, and realtime is pub/sub with nothing at rest. FM never copies redis data in either direction, because a copy would carry the old server's worker-registry keys (workers that no longer exist, jobs recorded as started by them), and the transports that could do it (`SYNC`, `MIGRATE`, `DEBUG`) are exactly what managed providers block. Recent job history in `rq:failed`/`rq:finished` (what the RQ Job doctype reads) does not survive a queue cutover either.
+The cache and realtime are deliberately NOT gated: the cache holds derived data (doctype meta, table columns) that is regenerated on the first miss and *wants* to be cold after a cutover, and realtime is pub/sub with nothing at rest. fmx never copies redis data in either direction, because a copy would carry the old server's worker-registry keys (workers that no longer exist, jobs recorded as started by them), and the transports that could do it (`SYNC`, `MIGRATE`, `DEBUG`) are exactly what managed providers block. Recent job history in `rq:failed`/`rq:finished` (what the RQ Job doctype reads) does not survive a queue cutover either.
 
 Changing the endpoints re-renders the compose file and recreates the whole bench, because the two per-bench redis containers appear or disappear with this table and every process holds its connection from start-up. Queued jobs and cached sessions do **not** move with the endpoint: anything still in the old queue is left there, and sessions are invalidated by the cache change. Workers drain first, so in-flight jobs finish before the switch (see [`[workers]`](#workers)).
 
@@ -951,7 +988,7 @@ Changing the endpoints re-renders the compose file and recreates the whole bench
 
 **File key:** `[[apps]]` (the legacy name `[[apps_list]]` is still read)
 
-Apps to install. Read by `fm create --config` and `fm bake --config`, and built from `fm create --apps`. FM never writes this array back, so a bench's own `bench_config.toml` normally has none; the installed apps are whatever the workspace or the image carries, and `fm info` lists them.
+Apps to install. Read by `fmx create --config` and `fmx bake --config`, and built from `fmx create --apps`. fmx never writes this array back, so a bench's own `bench_config.toml` normally has none; the installed apps are whatever the workspace or the image carries, and `fmx info` lists them.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -979,12 +1016,12 @@ Frappe is installed first whether or not it appears here.
 
 **File key:** `[deployments]`, `[deployments.current]`, `[deployments.previous]` + `[[deployments.history]]`
 
-Image deploy state, managed by `fm switch`; do not edit. `[deployments]` holds `last_at` (the timestamp of the last successful deploy) plus one `Deployment` record shape reused three times: `current`, `previous` and every `history` row carry the same fields, so a bench that deployed one image twice is not ambiguous the way matching by image string used to be. `deployed_at` is the record's identity; there is no separate id field.
+Image deploy state, managed by `fmx switch`; do not edit. `[deployments]` holds `last_at` (the timestamp of the last successful deploy) plus one `Deployment` record shape reused three times: `current`, `previous` and every `history` row carry the same fields, so a bench that deployed one image twice is not ambiguous the way matching by image string used to be. `deployed_at` is the record's identity; there is no separate id field.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `app_image` | required | App image deployed (full reference, e.g. `repo:tag`) |
-| `nginx_image` | optional | Its nginx companion image (full reference). Stamped by `fm bake` as an `fm.nginx.image` label on the app image it builds; `fm migrate` backfills it on records from before this field existed |
+| `nginx_image` | optional | Its nginx companion image (full reference). Stamped by `fmx bake` as an `fm.nginx.image` label on the app image it builds; `fmx migrate` backfills it on records from before this field existed |
 | `deployed_at` | required | ISO timestamp of the deploy; also this record's identity |
 | `migrate_status` | required | `migrated`, `skipped`, `failed`, or `rollback` |
 | `backups` | optional | pre-migrate DB dumps taken during this deploy, keyed by site |
@@ -1010,10 +1047,10 @@ app_image = "local/mybench:20260728103100-abc123"
 nginx_image = "local/mybench-nginx:20260728103100-abc123"
 deployed_at = "2026-07-28T10:31:02"
 migrate_status = "migrated"      # migrated | skipped | failed | rollback
-backups = { "mybench.localhost" = "/home/user/frappe/sites/mybench/..." }  # pre-migrate DB dump, used by `fm switch --previous --restore-db`
+backups = { "mybench.localhost" = "/home/user/frappe/sites/mybench/..." }  # pre-migrate DB dump, used by `fmx switch --previous --restore-db`
 ```
 
-`fm prune` trims old history rows and their dumps/images, keeping the newest `keep_releases` (current + previous are always safe).
+`fmx prune` trims old history rows and their dumps/images, keeping the newest `keep_releases` (current + previous are always safe).
 
 ---
 
@@ -1022,7 +1059,7 @@ backups = { "mybench.localhost" = "/home/user/frappe/sites/mybench/..." }  # pre
 **Default:** (absent; every key falls through to the global `[prune]` table)
 **File key:** `[prune]`
 
-Per-bench overrides for [`fm prune`](../commands/prune.md), same keys as the [global table](#fm-prune): `keep_backup_sessions`, `keep_log_archives`, `rotate_logs_over`. Set only what should differ, e.g. a production bench keeping more backup history:
+Per-bench overrides for [`fmx prune`](../commands/prune.md), same keys as the [global table](#fm-prune): `keep_backup_sessions`, `keep_log_archives`, `rotate_logs_over`. Set only what should differ, e.g. a production bench keeping more backup history:
 
 ```toml
 [prune]
@@ -1037,7 +1074,7 @@ Release retention is not here: it predates this table as [`[switch].keep_release
 
 **File key:** `[schema]`
 
-FM version this bench was last migrated to. Managed by `fm migrate`; do not edit.
+fmx version this bench was last migrated to. Managed by `fmx migrate`; do not edit.
 
 ```toml
 [schema]
@@ -1067,16 +1104,16 @@ license_key = "eu01xx..."
 
 `[telemetry]` declares `newrelic` and is the umbrella for future backends, so an unrecognised sub-table under it is accepted, retained and reported as an unknown key, not rejected. The table was named `[monitoring]` in the unreleased 0.20/0.21 development line and, before that, two flat top-level keys (`newrelic_enabled`, `newrelic_license_key`); the 1.0.0 migration moves either shape into `[telemetry.newrelic]` and deletes the old keys.
 
-With both keys set, FM seeds `workspace/frappe-bench/config/newrelic.ini` (app name `Frappe - <bench>`, SQL recorded obfuscated, `Authorization` and `Cookie` request headers excluded) and adds `NEWRELIC_ENABLED` and `NEWRELIC_LICENSE_KEY` to the `frappe` service's compose environment. The wrapper installs the `newrelic` package into the bench venv on first start when it is missing, exports the key as the agent's own `NEW_RELIC_LICENSE_KEY`, then execs Gunicorn under `newrelic-admin`. If the env vars are set but `newrelic.ini` is gone, the web process refuses to start; re-seed it with `fm telemetry enable BENCH newrelic --force-config`.
+With both keys set, fmx seeds `workspace/frappe-bench/config/newrelic.ini` (app name `Frappe - <bench>`, SQL recorded obfuscated, `Authorization` and `Cookie` request headers excluded) and adds `NEWRELIC_ENABLED` and `NEWRELIC_LICENSE_KEY` to the `frappe` service's compose environment. The wrapper installs the `newrelic` package into the bench venv on first start when it is missing, exports the key as the agent's own `NEW_RELIC_LICENSE_KEY`, then execs Gunicorn under `newrelic-admin`. If the env vars are set but `newrelic.ini` is gone, the web process refuses to start; re-seed it with `fmx telemetry enable BENCH newrelic --force-config`.
 
 The ini deliberately carries no `license_key`: the credential lives only in the container environment, so rotating it is one command and no stale copy on disk can outrank the new value. The file is seeded once and then belongs to you, which is why a disable/enable cycle preserves local tuning and only `--force-config` restores the generated version.
 
 When `enabled` is `false`, `NEWRELIC_ENABLED` is written as an explicit `false` and the license key is removed from the compose file. The explicit value matters: compose environments are merged on every regeneration, so an omitted key would be a retained key, and the disable would not survive the container recreate.
 
 !!! warning "Enabling without a license key is refused"
-    `fm telemetry enable` fails with a parameter error when no key is passed and none is already stored, and `fm create` refuses a `--config` whose `[telemetry.newrelic]` enables monitoring without a `license_key`. There is no half-enabled state: the compose env vars and `newrelic.ini` are written only when `enabled` and `license_key` are both set, and the wrapper falls back to plain Gunicorn otherwise. `fm telemetry status` reports such a bench as not reporting.
+    `fmx telemetry enable` fails with a parameter error when no key is passed and none is already stored, and `fmx create` refuses a `--config` whose `[telemetry.newrelic]` enables monitoring without a `license_key`. There is no half-enabled state: the compose env vars and `newrelic.ini` are written only when `enabled` and `license_key` are both set, and the wrapper falls back to plain Gunicorn otherwise. `fmx telemetry status` reports such a bench as not reporting.
 
-**Set via:** `fm telemetry enable BENCH newrelic --license-key KEY` / `fm telemetry disable BENCH newrelic`, which recreate the frappe container to apply the change. At create time the table can be supplied through `fm create --config`; there are no monitoring flags on `fm create`.
+**Set via:** `fmx telemetry enable BENCH newrelic --license-key KEY` / `fmx telemetry disable BENCH newrelic`, which recreate the frappe container to apply the change. At create time the table can be supplied through `fmx create --config`; there are no monitoring flags on `fmx create`.
 
 **See also:** [Monitoring (New Relic)](../concepts/environments.md#monitoring-new-relic)
 
@@ -1084,18 +1121,18 @@ When `enabled` is `false`, `NEWRELIC_ENABLED` is written as an explicit `false` 
 
 ## Environment variables
 
-FM recognizes these environment variables for runtime configuration overrides.
+fmx also reads a handful of environment variables: some locate fmx itself, others override a config value for one run without editing the file.
 
 ### `FRAPPE_MANAGER_HOME` {#env-frappe-manager-home}
 
 **Default:** `~/frappe`  
 **Type:** directory path
 
-Root directory for all FM data (benches, services, logs, configs). Must be set before any `fm` command.
+Root directory for all fmx data (benches, services, logs, configs). Must be set before any `fmx` command.
 
 ```bash
 export FRAPPE_MANAGER_HOME=/srv/frappe
-fm create mybench
+fmx create mybench
 ```
 
 Everything moves with it; [Where the files live](#directory-layout) shows the tree it produces. Export it from your shell profile to make it stick across sessions.
@@ -1111,7 +1148,7 @@ Force staging Let's Encrypt server for testing. Prevents hitting production rate
 
 ```bash
 export FM_LETSENCRYPT_STAGING=1
-fm ssl add mybench/example.com
+fmx ssl add mybench/example.com
 ```
 
 !!! warning "Staging certificates are untrusted"
@@ -1133,9 +1170,9 @@ fm ssl add mybench/example.com
 | `FM_THEME` | Output color theme override (`default`, `mono`, `high-contrast`); wins over `[output] theme` |
 | `FM_STYLE` | Output layout override (`rail`, `box`, `flat`, `ascii`); wins over `[output] style` |
 | `NO_COLOR` | Disables colored output entirely |
-| `GITHUB_TOKEN` | GitHub token for private app repos (`fm create` / `fm bake`) |
-| `NGROK_AUTHTOKEN` | ngrok auth token for `fm ngrok` |
-| `FM_DOCKER_IMAGE_TAG` | Override the FM stack image tag (testing only) |
+| `GITHUB_TOKEN` | GitHub token for private app repos (`fmx create` / `fmx bake`) |
+| `NGROK_AUTHTOKEN` | ngrok auth token for `fmx ngrok` |
+| `FM_DOCKER_IMAGE_TAG` | Override the fmx stack image tag (testing only) |
 
 ---
 
@@ -1150,7 +1187,7 @@ Only the paths that hold configuration or credentials. The [Architecture referen
 ├── services/
 │   ├── docker-compose.yml                   ← Global services compose
 │   ├── nginx-proxy/ssl/acmesh/              ← acme.sh certificate store
-│   ├── nginx-proxy/ssl/custom/              ← imported custom certificates (fm ssl add --custom)
+│   ├── nginx-proxy/ssl/custom/              ← imported custom certificates (fmx ssl add --custom)
 │   ├── mariadb/conf/                        ← mariadb configuration
 │   └── secrets/                             ← mariadb root and user password files
 └── sites/<benchname>/
@@ -1162,4 +1199,4 @@ Only the paths that hold configuration or credentials. The [Architecture referen
     └── workspace/frappe-bench/sites/        ← common_site_config.json and per-site site_config.json
 ```
 
-Inside `configs/nginx/conf/`, fm owns three files and rewrites them on every `fm start`: `custom/real-ip.conf` from the frontend network subnet, plus the basic-auth server and map confs it derives from [`[auth]`](#auth). Editing those is pointless. Other files you drop into `custom/` are left alone, `custom/upload-limit.conf` among them, which is why `upload_limit` changes go through `fm update` rather than the file.
+Inside `configs/nginx/conf/`, fmx owns three files and rewrites them on every `fmx start`: `custom/real-ip.conf` from the frontend network subnet, plus the basic-auth server and map confs it derives from [`[auth]`](#auth). Editing those is pointless. Other files you drop into `custom/` are left alone, `custom/upload-limit.conf` among them, which is why `upload_limit` changes go through `fmx update` rather than the file.

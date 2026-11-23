@@ -1,15 +1,15 @@
-# `fm stop`
+# `fmx stop`
 
 Stop a bench's containers, admin tools and workers.
 
 In-flight background jobs are waited for first: a container stop gives a running job ten seconds and then kills it, which leaves the job recorded as still running with nothing to finish it. If they outlast \[workers].drain_timeout the bench is left running and nothing is stopped, so the stop can be retried; --no-drain stops immediately and interrupts them.
 
-Nothing is deleted; fm start brings the bench back.
+Nothing is deleted; fmx start brings the bench back.
 
 **Usage**:
 
 ```console
-$ fm stop BENCH [OPTIONS]
+$ fmx stop BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -27,11 +27,11 @@ $ fm stop BENCH [OPTIONS]
 Waits for in-flight RQ jobs first.
 
 ```bash
-fm stop mybench
+fmx stop mybench
 ```
 
 ### Stop now, interrupting running jobs
 
 ```bash
-fm stop mybench --no-drain
+fmx stop mybench --no-drain
 ```

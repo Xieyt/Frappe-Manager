@@ -1,6 +1,6 @@
 # Guides
 
-Task-shaped instructions for a bench that already exists, dev or prod, laptop or server. If you have not read [How fm works](../concepts/index.md) yet, start there: most of these pages assume you know what a runtime and an environment are.
+Your bench already exists, dev or prod, laptop or server. These pages are task-shaped: pick the thing you're trying to do. If you haven't read [How fmx works](../concepts/index.md) yet, start there instead: most of what follows assumes you already know what a runtime and an environment are.
 
 For immutable releases and rolling swaps, see [Deployment](../deploy/index.md) instead.
 
@@ -12,25 +12,25 @@ For immutable releases and rolling swaps, see [Deployment](../deploy/index.md) i
 
     ---
 
-    Install, update and pin Frappe apps at create time or later with `fm apps add`, private repos and monorepo subdirectories included.
+    Install, update and pin Frappe apps at create time or later with `fmx apps add`, private repos and monorepo subdirectories included.
 
 -   :lucide-package:{ .lg .middle } &nbsp; **[Python and Node versions](python-node-versions.md)**
 
     ---
 
-    Pin toolchain versions per bench, or let fm auto-detect them from Frappe's requirements.
+    Pin toolchain versions per bench, or let fmx auto-detect them from Frappe's requirements.
 
 -   :lucide-code-2:{ .lg .middle } &nbsp; **[VS Code integration](vscode.md)**
 
     ---
 
-    Attach VS Code to a bench's running container: fm's extension set, and a Frappe debug config that steps into framework code.
+    Attach VS Code to a bench's running container: fmx's extension set, and a Frappe debug config that steps into framework code.
 
 -   :lucide-wrench:{ .lg .middle } &nbsp; **[Admin tools](admin-tools.md)**
 
     ---
 
-    Mailpit for mail and Adminer for the database, plus the `fm auth` basic auth prompt that can front either the tools or the whole site.
+    Mailpit for mail and Adminer for the database, plus the `fmx auth` basic auth prompt that can front either the tools or the whole site.
 
 -   :lucide-cpu:{ .lg .middle } &nbsp; **[fmx: in-container services](fmx.md)**
 
@@ -54,7 +54,7 @@ For immutable releases and rolling swaps, see [Deployment](../deploy/index.md) i
 
     ---
 
-    Let's Encrypt over HTTP-01 or Cloudflare DNS-01, fm's own CA for locally trusted development certificates, or a certificate you bring yourself.
+    Let's Encrypt over HTTP-01 or Cloudflare DNS-01, fmx's own CA for locally trusted development certificates, or a certificate you bring yourself.
 
 -   :lucide-server:{ .lg .middle } &nbsp; **[Hosting on a server](hosting.md)**
 
@@ -66,13 +66,13 @@ For immutable releases and rolling swaps, see [Deployment](../deploy/index.md) i
 
     ---
 
-    Three overlapping tools (fm, `bench`, the Frappe UI), which one owns what, where backups land, and how to restore.
+    Three tools, three jobs: `bench` owns site data, fmx owns its own safety nets around migrations and deploys, the host filesystem gets copies off the machine. Which is which, and how to restore.
 
 -   :lucide-database:{ .lg .middle } &nbsp; **[External database](external-database.md)**
 
     ---
 
-    Point a site at your own MariaDB server instead of fm's `mariadb`. Declared per site, not per bench.
+    Point a site at your own MariaDB server instead of fmx's `mariadb`. Declared per site, not per bench.
 
 </div>
 
@@ -84,4 +84,4 @@ A few tasks are documented where the thing they change lives:
 |---|---|
 | Switch a bench between `dev` and `prod` | [Environments](../concepts/environments.md) |
 | Raise the file upload limit | [`upload_limit` reference](../reference/configuration.md#upload-limit) |
-| Run fm on Windows | [Installation](../getting-started/installation.md#windows) |
+| Run fmx on Windows | [Installation](../getting-started/installation.md#windows) |

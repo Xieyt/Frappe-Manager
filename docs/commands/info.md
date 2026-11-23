@@ -1,13 +1,13 @@
-# `fm info`
+# `fmx info`
 
 Show a bench's URL, credentials, apps, deploy history and live service state.
 
-Every secret on the card is printed in cleartext: the administrator password, the site database password, and the basic auth password while a surface is protected. The shared mariadb root credentials moved to fm services info.
+Every secret on the card is printed in cleartext: the administrator password, the site database password, and the basic auth password while a surface is protected. The shared mariadb root credentials moved to fmx services info.
 
 **Usage**:
 
 ```console
-$ fm info BENCH [OPTIONS]
+$ fmx info BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -24,13 +24,13 @@ $ fm info BENCH [OPTIONS]
 ### Show everything about a bench
 
 ```bash
-fm info mybench
+fmx info mybench
 ```
 
 ### Read one fact out of it
 
-fm info mybench --json | jq -r '.result.url'
+fmx info mybench --json | jq -r '.result.url'
 
 ```bash
-fm info mybench --json
+fmx info mybench --json
 ```

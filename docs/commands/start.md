@@ -1,13 +1,13 @@
-# `fm start`
+# `fmx start`
 
 Start a bench's containers, admin tools and workers.
 
-Every start refreshes the bench's own nginx config and its entry in the global proxy, so a bench that predates a change fm makes there heals by being started. It does NOT rewrite the supervisord config, common_site_config.json or the workers compose file: those are only regenerated when you ask, with --reconfigure-supervisor, --reconfigure-common-site-config or --reconfigure-workers, so an edit to bench_config.toml that touches them needs one of those flags or an fm update.
+Every start refreshes the bench's own nginx config and its entry in the global proxy, so a bench that predates a change fmx makes there heals by being started. It does NOT rewrite the supervisord config, common_site_config.json or the workers compose file: those are only regenerated when you ask, with --reconfigure-supervisor, --reconfigure-common-site-config or --reconfigure-workers, so an edit to bench_config.toml that touches them needs one of those flags or an fmx update.
 
 **Usage**:
 
 ```console
-$ fm start BENCH [OPTIONS]
+$ fmx start BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -18,7 +18,7 @@ $ fm start BENCH [OPTIONS]
 
 * `-f, --force`: Recreate the containers instead of reusing the existing ones.  [default: false]
 * `--reconfigure-supervisor`: Regenerate the supervisord config before starting processes.  [default: false]
-* `--reconfigure-common-site-config`: Rewrite common_site_config.json with fm's defaults.  [default: false]
+* `--reconfigure-common-site-config`: Rewrite common_site_config.json with fmx's defaults.  [default: false]
 * `--reconfigure-workers`: Regenerate the workers compose file from the bench config.  [default: false]
 * `--include-default-workers`: Include the default workers when regenerating. Needs --reconfigure-workers.  [default: true]
 * `--include-custom-workers`: Include custom workers when regenerating. Needs --reconfigure-workers.  [default: true]
@@ -29,7 +29,7 @@ $ fm start BENCH [OPTIONS]
 ### Start a bench
 
 ```bash
-fm start mybench
+fmx start mybench
 ```
 
 ### Recreate the containers
@@ -37,11 +37,11 @@ fm start mybench
 Use after an image or compose change.
 
 ```bash
-fm start mybench --force
+fmx start mybench --force
 ```
 
 ### Pick up worker config changes
 
 ```bash
-fm start mybench --reconfigure-workers
+fmx start mybench --reconfigure-workers
 ```

@@ -1,15 +1,15 @@
-# `fm shell`
+# `fmx shell`
 
 Open a shell in one of a bench's containers, or run a command in it.
 
-A command can come from -c, from the arguments after --, or from stdin when stdin is not a terminal, and its exit code becomes fm's. --bench-console works on the frappe service only: interactively it is bench console, and with -c or piped input it runs Python with frappe already initialised and connected.
+A command can come from -c, from the arguments after --, or from stdin when stdin is not a terminal, and its exit code becomes fmx's. --bench-console works on the frappe service only: interactively it is bench console, and with -c or piped input it runs Python with frappe already initialised and connected.
 
-fm shell BENCH/SITE exports FRAPPE_SITE, so every bare bench command in that shell acts on the site you named. A plain fm shell BENCH exports nothing and leaves them on the bench's own default_site, which on a bench serving several sites is whichever one bench use last wrote. Name the site when it matters: bench migrate is not a command to aim by guesswork.
+fmx shell BENCH/SITE exports FRAPPE_SITE, so every bare bench command in that shell acts on the site you named. A plain fmx shell BENCH exports nothing and leaves them on the bench's own default_site, which on a bench serving several sites is whichever one bench use last wrote. Name the site when it matters: bench migrate is not a command to aim by guesswork.
 
 **Usage**:
 
 ```console
-$ fm shell BENCH(/SITE) [OPTIONS]
+$ fmx shell BENCH(/SITE) [OPTIONS]
 ```
 
 **Arguments**:
@@ -30,7 +30,7 @@ $ fm shell BENCH(/SITE) [OPTIONS]
 ### Open a shell in the bench
 
 ```bash
-fm shell mybench
+fmx shell mybench
 ```
 
 ### Run one command
@@ -38,7 +38,7 @@ fm shell mybench
 Everything after -- is joined into one command line and run through the container's shell.
 
 ```bash
-fm shell mybench -- bench migrate
+fmx shell mybench -- bench migrate
 ```
 
 ### Run a command against one site of a multi-site bench
@@ -46,7 +46,7 @@ fm shell mybench -- bench migrate
 Exports FRAPPE_SITE=shop.example.com, so the bare bench command targets that site instead of whichever one bench use last wrote.
 
 ```bash
-fm shell mybench/shop.example.com -- bench migrate
+fmx shell mybench/shop.example.com -- bench migrate
 ```
 
 ### Pipe a script in
@@ -54,7 +54,7 @@ fm shell mybench/shop.example.com -- bench migrate
 stdin is read as a shell script whenever it is not a terminal.
 
 ```bash
-fm shell mybench <<'EOF'
+fmx shell mybench <<'EOF'
 bench build --app frappe
 bench clear-cache
 EOF
@@ -65,7 +65,7 @@ EOF
 An IPython console with frappe initialised. With -c or piped input it runs Python instead.
 
 ```bash
-fm shell mybench --bench-console
+fmx shell mybench --bench-console
 ```
 
 ### Use a throwaway container
@@ -73,5 +73,5 @@ fm shell mybench --bench-console
 --run goes through 'docker compose run --rm' rather than the bench's own container.
 
 ```bash
-fm shell mybench --run -- bench migrate
+fmx shell mybench --run -- bench migrate
 ```

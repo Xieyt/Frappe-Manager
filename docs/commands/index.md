@@ -1,6 +1,6 @@
 # Commands
 
-Every `fm` command has a page here with its arguments, options and worked examples. `fm <command> --help` prints the same option list in the terminal.
+Every `fmx` command has a page here: arguments, options and worked examples. `fmx <command> --help` prints the same option list in the terminal.
 
 <div class="grid cards" markdown>
 
@@ -9,8 +9,8 @@ Every `fm` command has a page here with its arguments, options and worked exampl
     ---
 
     ```bash
-    fm create mybench
-    fm create mybench --apps erpnext
+    fmx create mybench
+    fmx create mybench --apps erpnext
     ```
 
 -   :material-play-circle:{ .lg .middle } **[Start and stop](start.md)**
@@ -18,8 +18,8 @@ Every `fm` command has a page here with its arguments, options and worked exampl
     ---
 
     ```bash
-    fm start mybench
-    fm stop mybench
+    fmx start mybench
+    fmx stop mybench
     ```
 
 -   :material-console:{ .lg .middle } **[Run commands](shell.md)**
@@ -27,8 +27,8 @@ Every `fm` command has a page here with its arguments, options and worked exampl
     ---
 
     ```bash
-    fm shell mybench
-    fm shell mybench -c "bench --version"
+    fmx shell mybench
+    fmx shell mybench -c "bench --version"
     ```
 
 -   :material-certificate:{ .lg .middle } **[Add HTTPS](ssl.md)**
@@ -36,8 +36,8 @@ Every `fm` command has a page here with its arguments, options and worked exampl
     ---
 
     ```bash
-    fm ssl add mybench/example.com
-    fm ssl add mybench/example.com --challenge dns01
+    fmx ssl add mybench/example.com
+    fmx ssl add mybench/example.com --challenge dns01
     ```
 
 </div>
@@ -48,115 +48,117 @@ These come before the subcommand and work everywhere.
 
 | Option | Default | Description |
 |---|---|---|
-| `-v`, `--verbose` | off | Show more on screen: `-v` what fm changed and ran, `-vv` why it chose it |
-| `--log-level TEXT` | from config | The same dial, set explicitly: `info` matches `-v`, `debug` matches `-vv`. Also accepts `warning`, `error` |
+| `-v`, `--verbose` | off | Show more on screen: `-v` what fmx changed and ran, `-vv` why it chose it |
+| `--log-level TEXT` | `warning` | Set the level directly instead of counting `-v`: `info` matches `-v`, `debug` matches `-vv`. Also accepts `error` |
+| `--no-color` | off | Render without colour. `NO_COLOR` in the environment does the same |
+| `--progress VALUE` | `auto` | How progress is drawn: `auto` animates at a terminal, `plain` prints one line per step, `none` prints nothing at all. `--non-interactive` and `--events json` both imply `plain` |
 | `-n`, `--non-interactive` | off | Never prompt. A prompt that would have been shown becomes an error naming the flag that answers it |
-| `--events json` | off | Stream what fm is doing as one JSON line per event (JSONL). Implies `--non-interactive` |
-| `-V`, `--version` | | Print the fm version and exit |
+| `--events json` | off | Stream what fmx is doing as one JSON line per event (JSONL). Implies `--non-interactive` |
+| `-V`, `--version` | | Print the fmx version and exit |
 
 ## Flag conventions
 
 Seven rules hold across every command, so a flag means the same thing everywhere.
 
-**`--yes` / `-y` answers confirmation prompts.** It means "do the thing I typed, don't ask". It never expands what a command does. Every prompt defaults to No, so a bare Enter aborts. Under `--non-interactive`, an unanswered prompt refuses and names `--yes`.
+**`--yes` / `-y` answers confirmation prompts.** It means "do the thing I typed, don't ask," and never expands what a command does. Every prompt defaults to No, so a bare Enter aborts. Under `--non-interactive`, an unanswered prompt refuses and names `--yes`.
 
-**A decision that changes what happens gets its own named flag.** `--restore-db`, `--delete-backups`, `--skip-db-backup`, `--on-failure`. Such a choice is never buried in a prompt alone, and `--yes` never answers it for you.
+**A decision that changes what happens gets its own named flag.** `--restore-db`, `--delete-backups`, `--skip-db-backup`, `--on-failure`: that kind of choice is never buried in a prompt alone, and `--yes` never answers it for you.
 
 **`--force` selects a stronger action**, such as recreating containers, interrupting jobs, or renewing a certificate early. It never skips a question.
 
-**`--dry-run` prints the plan and changes nothing.** Exit 0, never prompts. Available on the plan-first commands: `prune`, `services prune`, `migrate`, `services migrate`, `delete`, `update`, `create`. It is the scriptable way to see a plan, because a non-interactive run without `--yes` refuses instead.
+**`--dry-run` prints the plan and changes nothing.** Exit 0, never prompts. It's on every plan-first command: `create`, `delete`, `migrate`, `services migrate`, `prune`, `services prune`, `update`, `self uninstall`, `ssl ca remove`. It's the scriptable way to see a plan, because a non-interactive run without `--yes` refuses instead.
 
-**The exit code answers "did the thing I typed happen?"** Declining a confirmation exits non-zero, because the command was asked to act and did not. That is the same answer a non-interactive run without `--yes` gives, so a script cannot tell a human saying no from a refused flag, and neither reads as success. A command that finds nothing to do, such as `fm migrate` with no stale benches, exits 0: that one did finish.
+**The exit code answers "did the thing I typed happen?"** Declining a confirmation exits non-zero: the command was asked to act and did not. A non-interactive run without `--yes` gives that same answer, so a script can't tell a human saying no from a refused flag, and neither reads as success. A command that finds nothing to do, such as `fmx migrate` with no stale benches, exits 0: that one did finish.
 
-**Exit 2 means the command line was wrong; exit 1 means fm tried and could not.** A missing or invalid argument, an unknown flag, a bad value, a flag combination fm refuses, or a name that does not exist is 2, whether Click caught it or fm did: those are all "fix what you typed". Everything else fm refuses or fails is 1 -- a declined confirmation, a drain that timed out, docker being unreachable. A script can therefore branch on 2 to mean "my invocation is broken" without enumerating messages. These two commands are the same mistake and answer the same way:
+**Exit 2 means the command line was wrong; exit 1 means fmx tried and could not.** A missing or invalid argument, an unknown flag, a bad value, a flag combination fmx refuses, or a name that doesn't exist is 2, whether Click caught it or fmx did: those are all "fix what you typed." A declined confirmation, a drain that timed out, docker being unreachable: those, and everything else fmx refuses or fails, are 1. A script can branch on 2 alone to mean "my invocation is broken," without enumerating messages. These two commands are the same mistake and answer the same way:
 
 ```bash
-fm create          # exit 2, caught by the parser
-fm info            # exit 2, caught by fm
+fmx create          # exit 2, caught by the parser
+fmx info            # exit 2, caught by fmx
 ```
 
-**`--events` is the stream, a command's `--json` is the result.** They answer different questions and are deliberately not the same flag. `fm --events json` describes *what fm did*, as it happens: one JSON line per event, ending in a terminal exit event, useful for a CI log or a progress UI. A command's own `--json`, such as `fm list --json`, returns *the answer*: one document, on clean stdout, ready for `jq`. `--events` comes before the subcommand because it changes how everything is rendered; `--json` comes after it, because it belongs to that command. Docker Compose splits the same way, with `--progress json` against `ps --format json`.
+**`--events` is the stream; a command's `--json` is the result.** They answer different questions and are deliberately not the same flag. `fmx --events json` describes what fmx did, as it happens: one JSON line per event, ending in a terminal exit event, useful for a CI log or a progress UI. A command's own `--json`, such as `fmx list --json`, returns the answer: one document on clean stdout, ready for `jq`. `--events` comes before the subcommand because it changes how everything is rendered; `--json` comes after it, because it belongs to that command. Docker Compose splits the same way, with `--progress json` against `ps --format json`.
 
 ### The event vocabulary
 
-Eleven event types, named after what fm did rather than what it drew. The first line declares the schema version; fields may be added to this stream, but no field already emitted will be renamed or change meaning. Event TYPES are additive too: a reader must ignore a type it does not recognise rather than treat the line as malformed, and a new type does not bump the version.
+Eleven event types, named after what fmx did rather than what it drew. The first line declares the schema version; fields may be added to the stream, but no field already emitted will be renamed or change meaning. Event types are additive too: a reader must ignore a type it doesn't recognise rather than treat the line as malformed, and a new type doesn't bump the version.
 
 | Event | When | Carries |
 |---|---|---|
-| `run.started` | first line of every run | `v`, `fm` version, `argv` |
-| `step.started` / `step.finished` | fm opens or closes a unit of work | `step`, and `ok` on finish |
-| `command.started` | fm runs a child process | `cmd`, `argv` |
+| `run.started` | first line of every run | `v`, fmx version, `argv` |
+| `step.started` / `step.finished` | fmx opens or closes a unit of work | `step`, and `ok` on finish |
+| `command.started` | fmx runs a child process | `cmd`, `argv` |
 | `command.output` | that process writes a line | `cmd`, `stream` (`out`/`err`), `text` |
 | `command.finished` | that process exits | `cmd`, `exit` |
-| `effect` | fm changed something | `text`, `changed` |
+| `effect` | fmx changed something | `text`, `changed` |
 | `result` | the command's own answer | `data` or `text` |
 | `warning`, `error` | as they occur | `text`, or `error` and `exception` |
 | `run.finished` | last line of every run | `ok`, `code` |
 
-`effect` is the one to read if you want to know what a run did to the host: a container restarted, a certificate issued, a schema dropped. `changed` is `false` on the deliberate non-changes a program still needs — a database left in place, a backup skipped because nothing changed, a `--test-ca` rehearsal that issues a real certificate and deploys nothing. Absence cannot say those things, because absence is also what a crash looks like.
+`effect` is the one to read if you want to know what a run did to the host: a container restarted, a certificate issued, a schema dropped. `changed` is `false` on the deliberate non-changes a program still needs: a database left in place, a backup skipped because nothing changed, a `--test-ca` rehearsal that issues a real certificate and deploys nothing. Absence can't say those things, since absence is also what a crash looks like.
 
 Every event carries `level` (`info`, `warn` or `error`), so finding what went wrong is one field rather than three shapes read together. Text fields are plain: the terminal's styling is stripped before an event is written.
 
-Every event carries `run`, the same correlation id fm stamps on each line of `~/frappe/logs/fm.log`, and every `command.*` event carries `cmd`, the same four characters that tag that command's lines in the log. So a run's stream and its log file can be read against each other:
+Every event also carries `run`, the same correlation id fmx stamps on each line of `~/frappe/logs/fm.log`, and every `command.*` event carries `cmd`, the same four characters that tag that command's lines in the log. A run's stream and its log file can be read against each other:
 
 ```bash
-fm --events json restart mybench.localhost > run.jsonl
+fmx --events json restart mybench.localhost > run.jsonl
 jq -r 'select(.event=="command.started") | "\(.cmd)  \(.argv)"' run.jsonl
 grep 'cmd=a3f1' ~/frappe/logs/fm.log     # the same command, in the log
 ```
 
-A step is a unit of work opening, not a sentence fm printed. A command that polls while it waits -- `fm update` draining its queue -- re-states its progress every few seconds; that narration is not on this stream, so a wait of any length is one `step.started` and one `step.finished`.
+A step is a unit of work opening, not a sentence fmx printed. A command that polls while it waits, `fmx update` draining its queue, re-states its progress every few seconds; that narration never reaches this stream, so a wait of any length is one `step.started` and one `step.finished`.
 
-The stream always ends with `run.finished`. A reader that has seen it knows nothing more is coming, which is the one thing tailing a pipe cannot tell you on its own.
+The stream always ends with `run.finished`. A reader who has seen it knows nothing more is coming, which is the one thing tailing a pipe can't tell you on its own.
 
 ## Bench lifecycle
 
 | Command | What it does |
 |---|---|
-| [`fm create`](create.md) | Build a new bench and start it |
-| [`fm start`](start.md) | Bring a stopped bench's containers up |
-| [`fm stop`](stop.md) | Shut a bench's containers down, keeping all data |
-| [`fm restart`](restart.md) | Restart web and workers through supervisor, whole containers, or a rolling swap that minimises downtime |
-| [`fm delete`](delete.md) | Remove a bench directory, and optionally its database |
-| [`fm reset`](reset.md) | Drop the database and reinstall every app from scratch |
-| [`fm list`](list.md) | Every bench with its status, runtime and apps |
-| [`fm info`](info.md) | One bench's URL, credentials, apps and service state |
+| [`fmx create`](create.md) | Build a new bench and start it |
+| [`fmx start`](start.md) | Bring a stopped bench's containers up |
+| [`fmx stop`](stop.md) | Shut a bench's containers down, keeping all data |
+| [`fmx restart`](restart.md) | Restart web and workers through supervisor, whole containers, or a rolling swap that minimises downtime |
+| [`fmx delete`](delete.md) | Remove a bench directory, and optionally its database |
+| [`fmx reset`](reset.md) | Drop the database and reinstall every app from scratch |
+| [`fmx list`](list.md) | Every bench with its status, runtime and apps |
+| [`fmx info`](info.md) | One bench's URL, credentials, apps and service state |
 
 ## Working on a bench
 
 | Command | What it does |
 |---|---|
-| [`fm shell`](shell.md) | A shell, a single command, or the Frappe console inside the bench |
-| [`fm code`](code.md) | Open the bench in VS Code attached to its container |
-| [`fm logs`](logs.md) | Show or follow a bench service's log |
-| [`fm compose`](compose.md) | Raw `docker compose` against a bench, with its compose files already wired up |
+| [`fmx shell`](shell.md) | A shell, a single command, or the Frappe console inside the bench |
+| [`fmx code`](code.md) | Open the bench in VS Code attached to its container |
+| [`fmx logs`](logs.md) | Show or follow a bench service's log |
+| [`fmx compose`](compose.md) | Raw `docker compose` against a bench, with its compose files already wired up |
 
 ## Changing a bench
 
 | Command | What it does |
 |---|---|
-| [`fm update`](update.md) | Change environment, runtime, Python or Node version, restart policy, upload limit, database and Redis endpoints. Plan-first |
-| [`fm apps`](apps.md) | Fetch an app onto a bench, install it into one site or all, and list what is installed |
-| [`fm domain`](domain.md) | Add, remove and list a bench's alias domains |
-| [`fm tools`](tools.md) | Start, stop and inspect the bench's Adminer and Mailpit containers |
-| [`fm telemetry`](telemetry.md) | Turn New Relic reporting on or off, and report whether it is reporting |
-| [`fm ngrok`](ngrok.md) | Expose a local bench to the internet through an ngrok tunnel |
+| [`fmx update`](update.md) | Change environment, runtime, Python or Node version, restart policy, upload limit, database and Redis endpoints. Plan-first |
+| [`fmx apps`](apps.md) | Fetch an app onto a bench, install it into one site or all, and list what is installed |
+| [`fmx domain`](domain.md) | Add, remove and list a bench's alias domains |
+| [`fmx tools`](tools.md) | Start, stop and inspect the bench's Adminer and Mailpit containers |
+| [`fmx telemetry`](telemetry.md) | Turn New Relic reporting on or off, and report whether it is reporting |
+| [`fmx ngrok`](ngrok.md) | Expose a local bench to the internet through an ngrok tunnel |
 
 ## Access control
 
 | Command | What it does |
 |---|---|
-| [`fm auth`](auth.md) | Put HTTP basic auth in front of the site, the admin tools, or both |
-| [`fm maintenance`](maintenance.md) | Serve a maintenance page for a bench's domains, with allow lists and a bypass URL |
-| [`fm ssl`](ssl.md) | Issue, import, renew, list and remove certificates; manage DNS credentials and the dev CA |
+| [`fmx auth`](auth.md) | Put HTTP basic auth in front of the site, the admin tools, or both |
+| [`fmx maintenance`](maintenance.md) | Serve a maintenance page for a bench's domains, with allow lists and a bypass URL |
+| [`fmx ssl`](ssl.md) | Issue, import, renew, list and remove certificates; manage DNS credentials and the dev CA |
 
 ## Deployment
 
 | Command | What it does |
 |---|---|
-| [`fm bake`](bake.md) | Provision a bench's apps into an immutable image, from a bench or standalone in CI |
-| [`fm switch`](switch.md) | Point a bench at an image, or roll back to the previous one |
-| [`fm prune`](prune.md) | Reclaim a bench's disk: old releases, old backup sessions, oversized logs |
+| [`fmx bake`](bake.md) | Provision a bench's apps into an immutable image, from a bench or standalone in CI |
+| [`fmx switch`](switch.md) | Point a bench at an image, or roll back to the previous one |
+| [`fmx prune`](prune.md) | Reclaim a bench's disk: old releases, old backup sessions, oversized logs |
 
 The full workflow is in the [Deployment guide](../deploy/index.md).
 
@@ -164,6 +166,6 @@ The full workflow is in the [Deployment guide](../deploy/index.md).
 
 | Command | What it does |
 |---|---|
-| [`fm services`](services.md) | Manage the shared MariaDB and nginx proxy: start, stop, shell, info, real-ip, migrate, prune |
-| [`fm migrate`](migrate.md) | Bring benches up to the installed fm version, with backups and rollback |
-| [`fm self`](self.md) | Upgrade fm, pull images, stop everything fm manages, or uninstall it |
+| [`fmx services`](services.md) | Manage the shared MariaDB and nginx proxy: info, migrate, start, stop, restart, shell, ports, trusted-proxies, prune |
+| [`fmx migrate`](migrate.md) | Bring benches up to the installed fmx version, with backups and rollback |
+| [`fmx self`](self.md) | Upgrade fmx, pull images, stop everything fmx manages, or uninstall it |

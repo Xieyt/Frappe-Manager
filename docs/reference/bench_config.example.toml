@@ -1,12 +1,12 @@
-# bench_config.toml, every key fm reads, generated from the models by
+# bench_config.toml, every key fmx reads, generated from the models by
 # `just config-example`. Committed and drift-tested, so it cannot fall behind the schema.
 #
-# This is a REFERENCE, not a starting file: fm writes bench_config.toml itself when you run
-# `fm create`. Everything below is commented out. Copy a line, uncomment it, set a value.
-# Comments you add to a real bench_config.toml are preserved when fm saves it.
+# This is a REFERENCE, not a starting file: fmx writes bench_config.toml itself when you run
+# `fmx create`. Everything below is commented out. Copy a line, uncomment it, set a value.
+# Comments you add to a real bench_config.toml are preserved when fmx saves it.
 #
-# fm's own bookkeeping tables are omitted: [schema] and [deployments] are written
-# by fm and are not settings.
+# fmx's own bookkeeping tables are omitted: [schema] and [deployments] are written
+# by fmx and are not settings.
 
 # ---- top-level keys ---------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@
 # rollback_db = ...
 # Install new apps to the site during finalize. [default: True]
 # install_apps = ...
-# Releases `fm prune` keeps (history rows + dumps + local tags); current + previous are always
+# Releases `fmx prune` keeps (history rows + dumps + local tags); current + previous are always
 # safe. [default: 7]
 # keep_releases = ...
 # Keys to merge into common_site_config.json. [optional, unset by default]
@@ -119,7 +119,7 @@
 
 # ---- [prune] -------------------------------------------------------------------------------
 
-# Per-bench disk-hygiene overrides for fm prune ([prune]).
+# Per-bench disk-hygiene overrides for fmx prune ([prune]).
 # [prune]
 # Backup sessions kept per location; overrides the host-wide [prune] value. [optional, unset by
 # default]
@@ -190,8 +190,8 @@
 # Target build platform (e.g. 'linux/amd64'). None = the build daemon's native arch. Cross-arch
 # bakes run under emulation (needs binfmt/Rosetta). [optional, unset by default]
 # platform = ...
-# Push the built image to the registry. Overridden either way by `fm bake --push/--no-push`. A
-# bake that does not push still loads the image into the local daemon, so a same-host `fm switch`
+# Push the built image to the registry. Overridden either way by `fmx bake --push/--no-push`. A
+# bake that does not push still loads the image into the local daemon, so a same-host `fmx switch`
 # needs no registry at all. [default: False]
 # push = ...
 # Extra host paths baked into the image: 'src' or 'src:dest' (dest relative to /workspace/frappe-
@@ -201,7 +201,7 @@
 # ---- [sites.<key>] -------------------------------------------------------------------------
 
 # The Frappe sites this bench holds, keyed by site name ([sites."<site>"]). Several are allowed;
-# `fm create BENCH/SITE` adds one. Replaces the old [database."<site>"] table, whose contents now
+# `fmx create BENCH/SITE` adds one. Replaces the old [database."<site>"] table, whose contents now
 # live at [sites."<site>".database].
 # [sites.<key>]
 #
@@ -291,7 +291,7 @@
 # DNS provider API Key. [optional, unset by default]
 # api_key = ...
 #
-# One entry per domain, written by `fm ssl add`. A certificate never holds a credential; it names
+# One entry per domain, written by `fmx ssl add`. A certificate never holds a credential; it names
 # one with dns_provider.
 # [[ssl.certificates]]
 # Hostname this certificate covers. [required]
@@ -310,14 +310,14 @@
 # Label of the `[ssl.dns_providers]` credential set that authenticates this domain's DNS-01
 # challenge. Absent means the set labelled 'cloudflare'. [optional, unset by default]
 # dns_provider = ...
-# Zone that _acme-challenge is delegated to, passed to acme.sh as --challenge-alias. Set by `fm
+# Zone that _acme-challenge is delegated to, passed to acme.sh as --challenge-alias. Set by `fmx
 # ssl add --cname`. [optional, unset by default]
 # delegation_cname = ...
 
 # ---- [[apps]] ---------------------------------------------------------------------------------
 
-# Apps installed in this bench, in install order. fm READS this array but never writes it: the
-# list it maintains comes from the container. `fm create --config` and `fm bake --config` supply
+# Apps installed in this bench, in install order. fmx READS this array but never writes it: the
+# list it maintains comes from the container. `fmx create --config` and `fmx bake --config` supply
 # it, and a copy persisted here is preserved across saves rather than pruned.
 # [[apps]]
 # App name (e.g., 'erpnext') [required]
