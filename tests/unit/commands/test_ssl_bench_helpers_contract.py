@@ -893,7 +893,7 @@ def test_list_prints_one_line_when_no_domain_in_the_bench_has_a_certificate(h):
     _list_bench_certificates(h.ctx, BENCH)
 
     h.output.print_data.assert_not_called()
-    assert f"fm ssl add {BENCH} <domain>" in h.prints()[0]
+    assert f"fm ssl add {BENCH}/<domain>" in h.prints()[0]
 
 
 @pytest.mark.timeout(15)

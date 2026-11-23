@@ -1,11 +1,20 @@
 """Unit tests for the `fm self uninstall` teardown planner."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from frappe_manager.utils.uninstall import FM_IMAGE_PREFIX, PathEntry, Scope, TeardownPlan, bench_names, plan_teardown
+from frappe_manager.commands.self.uninstall import _remove_path
+from frappe_manager.utils.uninstall import (
+    FM_IMAGE_PREFIX,
+    PathEntry,
+    Scope,
+    TeardownPlan,
+    _needs_sudo,
+    bench_names,
+    plan_teardown,
+)
 
 
 class FakeDocker:
@@ -351,3 +360,91 @@ class TestTeardownPlanShape:
         """total_size is the sum of each planned path's recorded size, ignoring unrelated fields."""
         plan = TeardownPlan(paths=[PathEntry(path=Path("/a"), size=100), PathEntry(path=Path("/b"), size=250)])
         assert plan.total_size == 350
+
+
+@pytest.mark.unit
+class TestPrivilegedPathRemoval:
+    def test_a_root_owned_subdirectory_is_planned_as_needing_sudo(self, tmp_path):
+        """nginx-proxy's cache is created by the container as root; rmtree cannot empty it."""
+        services = tmp_path / "services"
+        (services / "cache").mkdir(parents=True)
+        with patch("frappe_manager.utils.uninstall.os.access", side_effect=lambda p, _m: Path(p) != services / "cache"):
+            assert _needs_sudo(services) is True
+
+    def test_a_directory_fm_owns_outright_is_not_planned_as_needing_sudo(self, tmp_path):
+        (tmp_path / "logs").mkdir()
+        assert _needs_sudo(tmp_path) is False
+
+    def test_a_removal_blocked_by_permissions_retries_with_sudo_and_reports_nothing(self, tmp_path):
+        """Leaving the husk behind is not cosmetic: a services dir with no compose file made the
+        next `fm create` refuse with 'global services has taken a down'."""
+        target = tmp_path / "services"
+        target.mkdir()
+        failures: list[str] = []
+        with (
+            patch("frappe_manager.commands.self.uninstall.shutil.rmtree", side_effect=PermissionError(13, "denied")),
+            patch("frappe_manager.commands.self.uninstall.subprocess.run") as run,
+        ):
+            run.side_effect = lambda *_a, **_k: (target.rmdir(), MagicMock(returncode=0, stderr=""))[1]
+            _remove_path(target, failures)
+
+        assert run.call_args[0][0] == ["sudo", "rm", "-rf", str(target)]
+        assert failures == []
+
+    def test_a_failing_sudo_still_names_the_command_the_operator_must_run(self, tmp_path):
+        target = tmp_path / "services"
+        target.mkdir()
+        failures: list[str] = []
+        with (
+            patch("frappe_manager.commands.self.uninstall.shutil.rmtree", side_effect=PermissionError(13, "denied")),
+            patch(
+                "frappe_manager.commands.self.uninstall.subprocess.run",
+                return_value=MagicMock(returncode=1, stderr="sudo: a password is required"),
+            ),
+        ):
+            _remove_path(target, failures)
+
+        assert len(failures) == 1
+        assert f"sudo rm -rf {target}" in failures[0]
+        assert "a password is required" in failures[0]
+
+    def test_no_sudo_rights_falls_back_to_a_root_container_mounting_only_the_parent(self, tmp_path):
+        """A docker-group member with no sudo can still finish a teardown; that group already
+        grants root on this host, so the fallback escalates nothing new."""
+        target = tmp_path / "services"
+        target.mkdir()
+        failures: list[str] = []
+        docker = MagicMock()
+        docker.run.side_effect = lambda **_k: (target.rmdir(), MagicMock(exit_code=0))[1]
+        with (
+            patch("frappe_manager.commands.self.uninstall.shutil.rmtree", side_effect=PermissionError(13, "denied")),
+            patch(
+                "frappe_manager.commands.self.uninstall.subprocess.run",
+                return_value=MagicMock(returncode=1, stderr="sudo: a password is required"),
+            ),
+        ):
+            _remove_path(target, failures, docker=docker, image="mariadb:11.8")
+
+        kwargs = docker.run.call_args.kwargs
+        assert kwargs["volume"] == [f"{tmp_path}:/fm-target"]
+        assert (kwargs["entrypoint"], kwargs["command"]) == ("rm", "-rf /fm-target/services")
+        assert kwargs["user"] == "0:0"
+        assert kwargs["pull"] == "never"
+        assert failures == []
+
+    def test_a_container_that_cannot_delete_it_either_is_reported(self, tmp_path):
+        target = tmp_path / "services"
+        target.mkdir()
+        failures: list[str] = []
+        docker = MagicMock()
+        docker.run.return_value = MagicMock(exit_code=1)
+        with (
+            patch("frappe_manager.commands.self.uninstall.shutil.rmtree", side_effect=PermissionError(13, "denied")),
+            patch(
+                "frappe_manager.commands.self.uninstall.subprocess.run",
+                return_value=MagicMock(returncode=1, stderr="sudo: a password is required"),
+            ),
+        ):
+            _remove_path(target, failures, docker=docker, image="mariadb:11.8")
+
+        assert len(failures) == 1

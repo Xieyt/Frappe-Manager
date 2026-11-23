@@ -78,7 +78,7 @@ class TestTheUninstallSummaryCountsWhatWent:
         plan = TeardownPlan(paths=[PathEntry(path=kept, size=5_000_000)])
 
         with patch("frappe_manager.commands.self.uninstall._remove_path") as remove:
-            remove.side_effect = lambda _p, failures: failures.append("files: permission denied")
+            remove.side_effect = lambda _p, failures, **_kw: failures.append("files: permission denied")
             printed, _warned = _run_uninstall(plan, MagicMock(), tmp_path)
 
         assert not [line for line in printed if "of files" in line and "0" not in line]

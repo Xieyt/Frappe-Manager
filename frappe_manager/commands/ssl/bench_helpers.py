@@ -518,7 +518,7 @@ def _list_bench_certificates(ctx: typer.Context, benchname: str):
         # identical "no ssl" cards, so this says so once and names how to fix it instead.
         output.print(
             f"No SSL certificates configured for bench '{benchname}'. "
-            f"Add one with 'fm ssl add {benchname} <domain>'.",
+            f"Add one with 'fm ssl add {benchname}/<domain>'.",
             emoji_code=":information:",
         )
         return

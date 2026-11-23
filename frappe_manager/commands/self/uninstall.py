@@ -1,6 +1,7 @@
 """`fm self uninstall`: remove everything fm put on this host."""
 
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Annotated
 
@@ -38,7 +39,8 @@ def _print_plan(output, plan: TeardownPlan, *, keep_backups: bool, keep_images: 
     if plan.paths:
         output.print(f"Files    : {format_size(plan.total_size)}", emoji_code="")
         for entry in plan.paths:
-            output.print(f"delete      {entry.path}  ({format_size(entry.size)})", emoji_code="", prefix="  ")
+            suffix = "  (needs sudo)" if entry.privileged else ""
+            output.print(f"delete      {entry.path}  ({format_size(entry.size)}){suffix}", emoji_code="", prefix="  ")
     if plan.images:
         output.print(f"Images   : {len(plan.images)}", emoji_code="")
         for image in plan.images:
@@ -64,17 +66,59 @@ def _print_plan(output, plan: TeardownPlan, *, keep_backups: bool, keep_images: 
         output.print(f"Kept     : {image}  (container '{container}' still uses it)", emoji_code="")
 
 
-def _remove_path(path: Path, failures: list[str]) -> None:
+def _container_rm(docker, image: str, path: Path) -> bool:
+    """Delete `path` from inside a root container, mounting only its PARENT.
+
+    The way out on a host where the operator is in the docker group and has no sudo -- which is
+    the same privilege either way, since that group can already mount / into a container.
+    """
+    try:
+        result = docker.run(
+            image=image,
+            command=f"-rf /fm-target/{path.name}",
+            # `rm` itself, not a shell: "/bin/sh -c" as an entrypoint is ONE argv word, and docker
+            # stats it as a filename (exit 127, no such file).
+            entrypoint="rm",
+            volume=[f"{path.parent}:/fm-target"],
+            user="0:0",
+            rm=True,
+            pull="never",
+        )
+        return result.exit_code == 0 and not path.exists()
+    except Exception:
+        return False
+
+
+def _scratch_image(docker, plan: TeardownPlan) -> str | None:
+    """An image already on this host, to lend `_container_rm` a filesystem. Never pulled: a
+    teardown must not reach the network, and a host with no images has nothing to borrow."""
+    if docker is None:
+        return None
+    if plan.images:
+        return plan.images[0]
+    local = [f"{image.get('Repository', '')}:{image.get('Tag', '')}" for image in docker.images()]
+    return next((ref for ref in local if "<none>" not in ref), None)
+
+
+def _remove_path(path: Path, failures: list[str], *, docker=None, image: str | None = None) -> None:
     try:
         if path.is_dir():
             shutil.rmtree(path)
         else:
             path.unlink(missing_ok=True)
     except OSError as e:
-        # mariadb's data directory is a bind mount the container created as root, so a plain
-        # rmtree hits EACCES. Naming the sudo command beats a stack trace: fm refuses to run as
-        # root itself (main.py), so it cannot simply retry with privilege.
-        failures.append(f"{path}: {e}. Remove it with: sudo rm -rf {path}")
+        # mariadb's data directory and nginx-proxy's cache are bind mounts the containers created
+        # as root, so a plain rmtree hits EACCES. fm refuses to run as root itself (main.py), so
+        # the escalation is a sudo child, the same way the dev-CA tier already removes its anchor.
+        # Leaving the husk behind is not cosmetic: a services directory with no compose file in it
+        # made the next `fm create` refuse with "global services has taken a down".
+        result = subprocess.run(["sudo", "rm", "-rf", str(path)], capture_output=True, text=True, check=False)  # noqa: S603, S607
+        if result.returncode == 0 and not path.exists():
+            return
+        if docker is not None and image and _container_rm(docker, image, path):
+            return
+        detail = result.stderr.strip() or e
+        failures.append(f"{path}: {detail}. Remove it with: sudo rm -rf {path}")
 
 
 @example(
@@ -113,11 +157,16 @@ def uninstall(
     ] = None,
     keep_images: Annotated[
         bool,
-        typer.Option("--keep-images", help="Leave every docker image fm pulled or built on disk (fm's own and the stock mariadb/postgres/redis/nginx-proxy/mailpit/adminer set)."),
+        typer.Option(
+            "--keep-images",
+            help="Leave every docker image fm pulled or built on disk (fm's own and the stock mariadb/postgres/redis/nginx-proxy/mailpit/adminer set).",
+        ),
     ] = False,
     keep_backups: Annotated[
         bool,
-        typer.Option("--keep-backups", help="Leave the backups directory in fm's home (~/frappe/backups by default) on disk."),
+        typer.Option(
+            "--keep-backups", help="Leave the backups directory in fm's home (~/frappe/backups by default) on disk."
+        ),
     ] = False,
     yes: Annotated[
         bool,
@@ -222,11 +271,14 @@ def uninstall(
 
     if plan.paths:
         freed = 0
+        # Files go before images, so an image from the plan is still on disk to lend the fallback
+        # removal a root filesystem.
+        scratch = _scratch_image(docker, plan)
         with spinner(output, "Removing files"):
             for entry in plan.paths:
                 output.change_head(f"Removing {entry.path} ({format_size(entry.size)})")
                 before = len(failures)
-                _remove_path(entry.path, failures)
+                _remove_path(entry.path, failures, docker=docker, image=scratch)
                 if len(failures) == before:
                     freed += entry.size
         # Summing only the entries that survived _remove_path: plan.total_size counted the
