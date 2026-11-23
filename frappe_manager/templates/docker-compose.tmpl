@@ -1,7 +1,12 @@
 services:
   frappe:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     environment:
       USERID: REPLACE_ME_WITH_CURRENT_USER
       USERGROUP: REPLACE_ME_WITH_CURRENT_USER_GROUP
@@ -21,8 +26,13 @@ services:
       frontend-network:
 
   nginx:
-    image: ghcr.io/rtcamp/frappe-manager-nginx:{{ nginx_image_tag }}
+    image: "{{ fm_nginx_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     depends_on:
       - frappe
       - socketio
@@ -48,8 +58,13 @@ services:
       frontend-network:
 
   socketio:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     environment:
       USERID: REPLACE_ME_WITH_CURRENT_USER
       USERGROUP: REPLACE_ME_WITH_CURRENT_USER_GROUP
@@ -67,8 +82,13 @@ services:
       frontend-network:
 
   schedule:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     environment:
       USERID: REPLACE_ME_WITH_CURRENT_USER
       USERGROUP: REPLACE_ME_WITH_CURRENT_USER_GROUP
@@ -83,8 +103,13 @@ services:
       frontend-network:
 
   redis-cache:
-    image: redis:8-alpine
+    image: "{{ images.redis }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     volumes:
       - redis-cache-data:/data
     expose:
@@ -93,8 +118,13 @@ services:
       site-network:
 
   redis-queue:
-    image: redis:8-alpine
+    image: "{{ images.redis }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     volumes:
       - redis-queue-data:/data
     expose:

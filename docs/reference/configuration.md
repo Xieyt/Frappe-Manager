@@ -147,6 +147,48 @@ file_level = "DEBUG"
 
 ---
 
+### `logs.container_max_size`, `logs.container_max_files` {#logs-container-caps}
+
+**Defaults:** `container_max_size = "10m"`, `container_max_files = 3`  
+**Type:** `string`, `integer`  
+**File key:** `[logs]` → `container_max_size` / `container_max_files`
+
+Caps container log files on disk, applied to every service fmx writes into a compose file: `frappe`, workers, mariadb, redis, the proxy, all of it. Docker's default `json-file` driver never rotates on its own, so without a cap a long-running container's output grows on disk for the life of the container. `container_max_size` is docker's own size syntax (`10m`, `512k`, `1g`) for one log file before docker rotates it; `container_max_files` is how many rotated files docker keeps per container. Worst case on disk for one service is `container_max_size` x `container_max_files`; a bench runs about ten services.
+
+```toml
+[logs]
+container_max_size  = "10m"
+container_max_files = 3
+```
+
+A compose file fmx already wrote is read as-is and never re-rendered, so a logging block edited by hand survives untouched; a new value here only reaches a compose file that gets written fresh, by `fmx create`, a migration, or anything else that regenerates it.
+
+**See also:** [per-service override](#logs-containers), [Logs reference](logs.md)
+
+---
+
+### `logs.containers` {#logs-containers}
+
+**Default:** (none)  
+**Type:** `table of tables`  
+**File key:** `[logs.containers.<service>]`
+
+Overrides `container_max_size` and/or `container_max_files` for one compose service, keyed by its service name, for example `[logs.containers.frappe]` or `[logs.containers."long-worker"]`. Each of `max_size` and `max_files` inherits independently from the `[logs]` defaults above: set only `max_size` to raise a chatty service's file size while leaving its file count at the global default, or only `max_files` the other way round.
+
+```toml
+[logs.containers.frappe]
+max_size = "100m"
+
+[logs.containers.redis]
+max_files = 1
+```
+
+A worker service only resolves its own entry once fmx has renamed it from the template placeholder, so an override meant for one worker has to name that worker's final name, not the template's.
+
+**See also:** [`container_max_size` / `container_max_files`](#logs-container-caps)
+
+---
+
 ### `ssl.dns_providers` {#global-dns-providers}
 
 **Default:** (none)  

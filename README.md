@@ -41,13 +41,13 @@ Prefer pipx, want to try it without installing, or need a dev build? See the [In
 | Capability | What it means |
 |---|---|
 | **Isolated benches** | Each bench owns its containers, apps and database, and several run side by side on one host. `fmx list` shows them all. |
-| **Dev or prod, per bench** | `dev` mounts an editable workspace with admin tools on; `prod` runs lean behind the shared proxy. Switch with `fmx update -e`. |
+| **Dev or prod, per bench** | `dev` runs Frappe's auto-reloading dev server; `prod` runs Gunicorn behind the shared proxy. Switch with `fmx update -e`. |
 | **Any Frappe app** | Install ERPNext, HRMS or your own repo with `--apps`, pinned to a branch, tag or commit. |
 | **HTTPS in one command** | `fmx ssl add` issues a Let's Encrypt certificate over HTTP-01 or DNS-01; `fmx ssl renew all` is cron-safe. |
 | **VS Code, attached** | `fmx code mybench` opens the bench inside its running container, `--debugger` adds the Frappe debug config. |
 | **Immutable deploys** | `fmx bake` builds an image of the bench, `fmx switch` swaps onto it with a rolling web swap, `fmx switch --previous` rolls back. |
-| **Batteries for debugging** | Adminer and Mailpit path-routed under the bench URL, behind basic auth, on by default for `dev`. |
-| **Scriptable** | Every command takes `-n` for non-interactive use and `--json` for one JSON line per output event. |
+| **Batteries for debugging** | Adminer and Mailpit, path-routed under the bench URL. Off until `fmx tools enable`; `fmx auth enable --tools` puts a password on them. |
+| **Scriptable** | Every command takes `-n` for non-interactive use. `--events json` streams what fmx is doing as JSON; a command's own `--json`, where it has one, returns its result as one JSON document. |
 
 ## Commands
 

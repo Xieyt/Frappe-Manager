@@ -1,7 +1,12 @@
 services:
   worker-name:
-    image: ghcr.io/rtcamp/frappe-manager-frappe:{{ frappe_image_tag }}
+    image: "{{ fm_frappe_image }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     command: launch_supervisor_service.sh
     networks:
       site-network:

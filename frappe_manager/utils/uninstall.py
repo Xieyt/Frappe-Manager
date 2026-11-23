@@ -179,7 +179,10 @@ def _fm_images(docker) -> set[str]:
     """
     from frappe_manager.utils.site import get_all_docker_images
 
-    wanted = {f"{info['name']}:{info['tag']}" for info in get_all_docker_images().values()}
+    # Both spellings: a digest-pinned image is removable as `repo@digest` and, when some other
+    # pull also tagged it, as `repo:tag` -- neither alone clears both cases.
+    wanted = {f"{info['name']}:{info['tag']}" for info in get_all_docker_images().values() if info["tag"]}
+    wanted |= {info["image"] for info in get_all_docker_images().values()}
     wanted |= {
         image
         for name, image in docker.container_images().items()

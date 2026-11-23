@@ -61,7 +61,7 @@ class SSLCertificate(BaseModel):
 
     domain: str = Field(description="Hostname this certificate covers.")
     ssl_type: SUPPORTED_SSL_TYPES = Field(
-        description="'letsencrypt', 'dev' for a certificate from fm's local CA, or 'disable' for none."
+        description="'letsencrypt', 'dev' for a certificate from fmx's local CA, or 'disable' for none."
     )
     # Optional on the base because a dev or disabled certificate has no ACME challenge, while
     # `get_dns_credentials_for_certificate` reads this on whatever it is handed. The Let's Encrypt

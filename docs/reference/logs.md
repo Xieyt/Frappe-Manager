@@ -107,6 +107,19 @@ With `--service`, the logs come from docker and that container has to be running
 
 ---
 
+## Container log caps {#container-log-caps}
+
+Docker's `json-file` driver never rotates on its own, so without a cap a container's stdout grows on disk for as long as the container lives, in a place `fmx prune` cannot reach: it rotates the bench and nginx log files below, not what docker itself stores. Every service fmx writes into a compose file, the bench's web tier and workers, admin tools, and the shared MariaDB and proxy, keeps three 10 MB log files by default.
+
+Move the default, or give one service its own ceiling, in `fm_config.toml`: [`logs.container_max_size` / `container_max_files`](configuration.md#logs-container-caps) apply to every service, [`logs.containers.<service>`](configuration.md#logs-containers) overrides one. A compose file fmx already wrote is read, never re-rendered, so a cap you edited by hand stays put; `fmx migrate` and `fmx services migrate` add the default cap to a pre-1.0.0 compose file that declared none, leaving a service that already has a logging block alone.
+
+```bash
+# What docker is actually capping, per service
+fmx compose mybench config | grep -A2 logging
+```
+
+---
+
 ## Bench log files
 
 Written by supervisor inside the container to `~/frappe/sites/<bench>/workspace/frappe-bench/logs/`:

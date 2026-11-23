@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from jinja2 import Template
 from ruamel.yaml import YAML
@@ -16,7 +16,13 @@ from frappe_manager.docker.compose_exceptions import (
 )
 from frappe_manager.migration_manager.version import Version
 from frappe_manager.output_manager import get_global_output_handler
-from frappe_manager.utils.helpers import ImageRef, get_docker_image_tag, get_template_path, represent_null_empty
+from frappe_manager.utils.helpers import (
+    ImageRef,
+    fm_image,
+    get_template_path,
+    represent_null_empty,
+    upstream_images,
+)
 from frappe_manager.utils.site import parse_docker_volume
 
 yaml = YAML(typ="rt")
@@ -24,6 +30,9 @@ yaml.representer.ignore_aliases = lambda *args: True
 
 yaml.default_flow_style = False
 yaml.default_style = None
+# A digest-pinned image is 85 characters; ruamel's default width folds it onto its own line,
+# which is valid YAML docker accepts but reads like a mistake in a file operators open.
+yaml.width = 4096
 
 
 def _warn_missing_service(container: str, what: str) -> None:
@@ -57,6 +66,7 @@ def _image_report(image: str) -> dict[str, str | None]:
 
 class ComposeFile:
     yml: dict[Any, Any]
+    _logs_config_cache: ClassVar[Any] = None
 
     def __init__(
         self,
@@ -115,17 +125,62 @@ class ComposeFile:
         Load the template file and return its contents as a YAML object.
         Renders Jinja2 template variables for dynamic Docker image tags.
 
+        Every service gets a `logging` block: docker's default json-file driver NEVER rotates, so
+        an unattended bench writes container output to disk forever. The template's values are the
+        floor; `[logs]` in fm_config.toml overrides them. Existing compose files keep whatever they
+        were written with until something recreates them.
+
         Returns:
             dict: The contents of the template file as a YAML object.
         """
         template_path: Path = get_template_path(self.template_name, self.template_dir)
 
         template = Template(template_path.read_text())
-        image_tag = get_docker_image_tag()
-        rendered_template = template.render(frappe_image_tag=image_tag, nginx_image_tag=image_tag)
+        rendered_template = template.render(
+            fm_frappe_image=fm_image("frappe"),
+            fm_nginx_image=fm_image("nginx"),
+            images=upstream_images(),
+        )
 
         yml = yaml.load(rendered_template)
+        self._apply_configured_log_limits(yml)
         return yml
+
+    def apply_log_limits(self) -> None:
+        """Write each service's log cap from `[logs]`, after services have their final names.
+
+        Worker services are copies of one template block renamed per worker, so their per-service
+        overrides can only be resolved once the rename has happened.
+        """
+        self._apply_configured_log_limits(self.yml)
+
+    @classmethod
+    def _apply_configured_log_limits(cls, yml) -> None:
+        for name, service in yml.get("services", {}).items():
+            max_size, max_files = cls._log_limits(name)
+            service["logging"] = {
+                "driver": "json-file",
+                "options": {"max-size": max_size, "max-file": str(max_files)},
+            }
+
+    @classmethod
+    def _log_limits(cls, service_name: str) -> tuple[str, int]:
+        # Read once per process: a run writes several compose files, and import_from_toml warns
+        # about unknown keys every time it parses.
+        if cls._logs_config_cache is None:
+            from frappe_manager.metadata_manager import FMConfigManager, FMLogsConfig
+
+            try:
+                cls._logs_config_cache = FMConfigManager.import_from_toml().logs
+            except Exception:
+                # A compose write must never be what takes a command down over a malformed config.
+                cls._logs_config_cache = FMLogsConfig()
+
+        logs = cls._logs_config_cache
+        override = logs.containers.get(service_name)
+        max_size = (override.max_size if override else None) or logs.container_max_size
+        max_files = (override.max_files if override else None) or logs.container_max_files
+        return max_size, max_files
 
     def set_container_names(self, prefix):
         """

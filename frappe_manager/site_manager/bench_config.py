@@ -954,7 +954,7 @@ class SwitchHookScripts(BaseModel):
         description="After the whole switch ends -- ALWAYS, on success and every failure. Branch on "
         "DEPLOY_OUTCOME (hook env: DEPLOY_OUTCOME=succeeded|rolled_back|halted|aborted; on a rollback "
         "also ROLLBACK_REASON=migrate_failed|health_check_failed, FAILED_IMAGE and ROLLBACK_TO_IMAGE). "
-        "For notifications, and external-DB restores fm cannot do itself (restore on rolled_back).",
+        "For notifications, and external-DB restores fmx cannot do itself (restore on rolled_back).",
     )
 
 
@@ -1435,7 +1435,7 @@ class DatabaseConfig(BaseModel):
     )
     host: str | None = Field(
         None,
-        description="Database server hostname or IP. Absent means fm's own container for this engine.",
+        description="Database server hostname or IP. Absent means fmx's own container for this engine.",
     )
     port: int | None = Field(
         None,
@@ -1443,8 +1443,8 @@ class DatabaseConfig(BaseModel):
     )
     name: str | None = Field(
         None,
-        description="Schema (database) name for this site. Absent on an fm-managed server, where "
-        "fm derives it.",
+        description="Schema (database) name for this site. Absent on an fmx-managed server, where "
+        "fmx derives it.",
     )
     user: str | None = Field(
         None,
@@ -1712,10 +1712,10 @@ class RedisConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     cache: str | None = Field(
-        None, description="Redis URL for the framework cache; absent leaves it on fm's container."
+        None, description="Redis URL for the framework cache; absent leaves it on fmx's container."
     )
     queue: str | None = Field(
-        None, description="Redis URL for the queue and realtime; absent leaves it on fm's container."
+        None, description="Redis URL for the queue and realtime; absent leaves it on fmx's container."
     )
 
     @model_validator(mode="after")
@@ -1812,7 +1812,7 @@ class BenchConfig(BaseModel):
         BenchRuntime.mount,
         description="Runtime: 'mount' (live-mounted code) or 'image' (immutable app image). Default 'mount'.",
     )
-    image: str | None = Field(None, description="App image repo (image runtime); fm manages the :tag.")
+    image: str | None = Field(None, description="App image repo (image runtime); fmx manages the :tag.")
     switch: SwitchConfig | None = Field(None, description="Switch/migrate pipeline configuration ([switch]).")
     prune: BenchPruneConfig | None = Field(
         None, description="Per-bench disk-hygiene overrides for fmx prune ([prune])."
@@ -1824,7 +1824,7 @@ class BenchConfig(BaseModel):
     build: BuildConfig | None = Field(None, description="Image build configuration for bake ([build]).")
     base_image: str | None = Field(
         None,
-        description="Mount mode: override the base frappe image (repo:tag) for frappe/socketio/schedule/workers. None = default fm image.",
+        description="Mount mode: override the base frappe image (repo:tag) for frappe/socketio/schedule/workers. None = default fmx image.",
     )
     apps_from: str | None = Field(
         None,
@@ -1839,7 +1839,7 @@ class BenchConfig(BaseModel):
     )
     redis: RedisConfig | None = Field(
         None,
-        description="External redis for this bench ([redis]). Absent means fm starts and manages the "
+        description="External redis for this bench ([redis]). Absent means fmx starts and manages the "
         "per-bench redis containers.",
     )
 

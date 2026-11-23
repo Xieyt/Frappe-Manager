@@ -281,7 +281,7 @@ class TestImageFiltering:
             patch("frappe_manager.utils.uninstall.CLI_BENCHES_DIRECTORY", tmp_path / "sites"),
             patch("frappe_manager.utils.uninstall.CLI_SERVICES_DIRECTORY", tmp_path / "services"),
             patch("frappe_manager.utils.uninstall.CLI_CACHE_PATH", tmp_path / "cache"),
-            patch("frappe_manager.utils.site.get_all_docker_images", return_value={"mariadb": {"name": "mariadb", "tag": "11.8"}}),
+            patch("frappe_manager.utils.site.get_all_docker_images", return_value={"mariadb": {"name": "mariadb", "tag": "11.8", "image": "mariadb:11.8"}}),
         ):
             plan = plan_teardown(docker, {Scope.host}, keep_backups=False, include_images=True)
         assert plan.images == [f"{FM_IMAGE_PREFIX}/frappe:1.0", "mariadb:11.8"]
@@ -299,8 +299,8 @@ class TestImageFiltering:
             container_images={"fm__erp__frappe": "mariadb:11.8", "someones-cache": "redis:8-alpine"},
         )
         stock = {
-            "redis": {"name": "redis", "tag": "8-alpine"},
-            "mariadb": {"name": "mariadb", "tag": "11.8"},
+            "redis": {"name": "redis", "tag": "8-alpine", "image": "redis:8-alpine"},
+            "mariadb": {"name": "mariadb", "tag": "11.8", "image": "mariadb:11.8"},
         }
         with (
             patch("frappe_manager.utils.uninstall.CLI_DIR", tmp_path),

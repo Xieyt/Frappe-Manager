@@ -6,10 +6,10 @@ How fmx's containers, networks and volumes fit together, and the path a request 
 
 fmx's containers split into two tiers:
 
-1. **Global services**, started once per machine: a shared MariaDB (`mariadb`) and a `jwilder/nginx-proxy` (`nginx-proxy`) that owns ports 80 and 443.
+1. **Global services**, shared once per machine: MariaDB (`mariadb`) and Postgres (`postgres`), each started only once some bench actually uses that engine, and a `jwilder/nginx-proxy` (`nginx-proxy`) that owns ports 80 and 443.
 2. **Per-bench services**, one stack per bench: the frappe web container, its own nginx, socketio, the scheduler, two Redis instances, the RQ worker containers and (optionally) admin tools.
 
-Many benches share one host, one database server and one proxy.
+Many benches share one host, fmx's database servers and one proxy.
 
 Orthogonally, each bench runs in one of two **runtimes** ([`runtime`](configuration.md#runtime) in `bench_config.toml`):
 
@@ -254,7 +254,9 @@ fmx keeps everything under a single root directory (default `~/frappe/`).
 
 ## Global services
 
-Started once by fmx and shared by every bench on the host.
+Shared by every bench on the host. `nginx-proxy` starts once, at install, and stays up. `mariadb` and `postgres` only start once some bench on the host actually uses that engine, and fmx removes the container again if nothing does, so a host with no Postgres site never runs one.
+
+`mariadb`, `postgres` and `nginx-proxy` are all pinned by digest, not just a tag: the exact bytes a host runs are decided by the fmx release it installed, not by whatever a floating tag happens to resolve to on the day something pulls it. A `docker pull` here is a no-op until an fmx upgrade re-renders the compose file onto a new pin; `fmx self update-images --check` reports when a pin has moved in the registry, without pulling it.
 
 ### `mariadb` {#mariadb}
 
@@ -274,6 +276,19 @@ fmx shell mybench -c "bench mariadb"
 
 A bench can be pointed at an external server instead; see the [external database guide](../guides/external-database.md).
 
+### `postgres` {#postgres}
+
+`postgres:18`, reachable on 5432 over the backend network only: it publishes no host port.
+
+Each bench on Postgres gets its own database and role in this one server. Storage is a bind mount at `services/postgres/data/`. Unlike MariaDB, Postgres has no automatic major-version upgrade: a datadir written by one major refuses to start under the next, so fmx refuses to start the container rather than let it crash-loop, and moving majors needs a dump and restore.
+
+```bash
+# Shell into the database server
+fmx services shell postgres
+```
+
+A bench can be pointed at an external server instead; see the [external database guide](../guides/external-database.md).
+
 ### `nginx-proxy` {#nginx-proxy}
 
 `jwilder/nginx-proxy:1.11`, publishing 80 and 443. It watches the Docker socket, discovers each bench nginx by its `VIRTUAL_HOST` environment variable and routes by `Host:` header. It enables HTTPS for a domain as soon as `<domain>.crt` and `<domain>.key` appear in `services/nginx-proxy/certs/`.
@@ -288,7 +303,7 @@ Access logs use the same JSON format as bench nginx, so both hops feed one inges
 
 Container names are prefixed `fm__<benchname>__`, with dots in the bench name replaced by underscores.
 
-**Core stack** (`docker-compose.yml`): `frappe`, `nginx`, `socketio`, `schedule`, `redis-cache`, `redis-queue`. The frappe and nginx images are fmx's own; Redis is `redis:8-alpine`.
+**Core stack** (`docker-compose.yml`): `frappe`, `nginx`, `socketio`, `schedule`, `redis-cache`, `redis-queue`. The frappe and nginx images are fmx's own; Redis is `redis:8-alpine`, pinned by digest the same way as the global services above.
 
 **Workers** (`docker-compose.workers.yml`): one container per RQ queue, generated from the supervisor configs in the bench's `config/` directory rather than hard-coded. `short-worker` consumes `short,default` and `long-worker` consumes `long,default,short`, so a `default` job is picked up by whichever is free. Extra queues come from the `workers` key of `common_site_config.json`, each getting its own container. Each container runs `background_workers` RQ processes (default 1, also from `common_site_config.json`); see [Background jobs and workers](../concepts/background-jobs.md).
 

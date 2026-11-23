@@ -34,6 +34,34 @@ class FMValidationConfig(BaseModel):
         return cls(**toml_doc)
 
 
+class FMContainerLogConfig(BaseModel):
+    """Log limits for ONE service, under [logs.containers.<service>] (e.g. [logs.containers.frappe]), overriding the [logs] defaults."""
+
+    # extra="allow": see the design note on FMValidationConfig above; same file, same reasoning.
+    model_config = ConfigDict(extra="allow")
+
+    max_size: str | None = Field(
+        default=None,
+        description="Max size of one log file for this service (10m, 512k, 1g). Unset inherits [logs].container_max_size.",
+    )
+
+    max_files: int | None = Field(
+        default=None,
+        description="Log files kept for this service. Unset inherits [logs].container_max_files.",
+    )
+
+    def get_toml_doc(self):
+        model_dict = self.model_dump(exclude_none=True)
+        toml_doc = tomlkit.document()
+        for key, value in model_dict.items():
+            toml_doc[key] = value
+        return toml_doc
+
+    @classmethod
+    def import_from_toml_doc(cls, toml_doc):
+        return cls(**toml_doc)
+
+
 class FMLogsConfig(BaseModel):
     """Logging configuration for file and console output."""
 
@@ -43,6 +71,24 @@ class FMLogsConfig(BaseModel):
     file_level: str = Field(
         default="DEBUG",
         description="Log level for file logs (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+
+    container_max_size: str = Field(
+        default="10m",
+        description="Max size of one container log file before docker rotates it (docker's own "
+        "size syntax: 10m, 512k, 1g). Applied to every service fmx writes into a compose file.",
+    )
+
+    container_max_files: int = Field(
+        default=3,
+        description="Container log files kept per service. Worst case on disk for one service is "
+        "container_max_size x container_max_files; a bench runs about ten services.",
+    )
+
+    containers: dict[str, FMContainerLogConfig] = Field(
+        default_factory=dict,
+        description="Per-service overrides, keyed by compose service name: [logs.containers.frappe], "
+        '[logs.containers."long-worker"]. A chatty service can keep more than the rest.',
     )
 
     def get_toml_doc(self):
@@ -126,7 +172,7 @@ class FMOutputConfig(BaseModel):
 
 
 class FMNetworkConfig(BaseModel):
-    """Subnets fm's own shared networks occupy on this host."""
+    """Subnets fmx's own shared networks occupy on this host."""
 
     # extra="allow": see the design note on FMValidationConfig above; same file, same reasoning.
     model_config = ConfigDict(extra="allow")

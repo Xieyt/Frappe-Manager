@@ -1,6 +1,6 @@
 # `fmx services`
 
-Manage the shared MariaDB server and nginx proxy every bench uses.
+Manage the shared database servers and nginx proxy every bench uses.
 
 **Usage**:
 

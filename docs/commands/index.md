@@ -137,7 +137,7 @@ The stream always ends with `run.finished`. A reader who has seen it knows nothi
 
 | Command | What it does |
 |---|---|
-| [`fmx update`](update.md) | Change environment, runtime, Python or Node version, restart policy, upload limit, database and Redis endpoints. Plan-first |
+| [`fmx update`](update.md) | Change environment, developer mode, restart policy, Python or Node version, upload limit, database CA and Redis endpoints. Plan-first |
 | [`fmx apps`](apps.md) | Fetch an app onto a bench, install it into one site or all, and list what is installed |
 | [`fmx domain`](domain.md) | Add, remove and list a bench's alias domains |
 | [`fmx tools`](tools.md) | Start, stop and inspect the bench's Adminer and Mailpit containers |
@@ -169,3 +169,5 @@ The full workflow is in the [Deployment guide](../deploy/index.md).
 | [`fmx services`](services.md) | Manage the shared MariaDB and nginx proxy: info, migrate, start, stop, restart, shell, ports, trusted-proxies, prune |
 | [`fmx migrate`](migrate.md) | Bring benches up to the installed fmx version, with backups and rollback |
 | [`fmx self`](self.md) | Upgrade fmx, pull images, stop everything fmx manages, or uninstall it |
+
+`fmx info` names more than a bench's own state: the image line also says when the registry has published a newer build than what the host is running, and names it. `fmx self update-images --check` asks the same question for every image fmx's stack runs, print-only, before you commit to the pull: `fmx self update-images` is what actually catches the host up.

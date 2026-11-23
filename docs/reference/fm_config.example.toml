@@ -19,6 +19,22 @@
 # [logs]
 # Log level for file logs (DEBUG, INFO, WARNING, ERROR, CRITICAL) [default: 'DEBUG']
 # file_level = ...
+# Max size of one container log file before docker rotates it (docker's own size syntax: 10m,
+# 512k, 1g). Applied to every service fmx writes into a compose file. [default: '10m']
+# container_max_size = ...
+# Container log files kept per service. Worst case on disk for one service is container_max_size x
+# container_max_files; a bench runs about ten services. [default: 3]
+# container_max_files = ...
+#
+# Log limits for ONE service, under [logs.containers.<service>] (e.g. [logs.containers.frappe]),
+# overriding the [logs] defaults.
+# [logs.containers]
+# Max size of one log file for this service (10m, 512k, 1g). Unset inherits
+# [logs].container_max_size. [optional, unset by default]
+# max_size = ...
+# Log files kept for this service. Unset inherits [logs].container_max_files. [optional, unset by
+# default]
+# max_files = ...
 
 # ---- [prune] -------------------------------------------------------------------------------
 
@@ -34,7 +50,7 @@
 
 # ---- [network] -----------------------------------------------------------------------------
 
-# Subnets fm's own shared networks occupy on this host.
+# Subnets fmx's own shared networks occupy on this host.
 # [network]
 # CIDR subnet for the frontend-network (e.g. 10.1.0.0/16) [optional, unset by default]
 # subnet_cidr = ...

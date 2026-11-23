@@ -1,7 +1,12 @@
 services:
   mailpit:
-    image: axllent/mailpit:v1.22
+    image: "{{ images.mailpit }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     volumes:
       - mailpit-data:/data
     expose:
@@ -17,8 +22,13 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
   adminer:
-    image: adminer:5
+    image: "{{ images.adminer }}"
     container_name: REPLACE_ME_WITH_CONTAINER_NAME
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     expose:
       - 8080
     networks:

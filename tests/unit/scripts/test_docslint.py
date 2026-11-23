@@ -11,9 +11,11 @@ the fix (skip fenced code) is one `continue` away from ignoring the whole file.
 """
 
 import importlib.util
+import typing
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel
 
 SCRIPT = Path(__file__).parent.parent.parent.parent / "scripts" / "docslint.py"
 
@@ -340,6 +342,131 @@ class TestStaleFmName:
         monkeypatch.setattr(dl, "source_strings", lambda: [(tmp_path / "x.py", "Run 'fmx create mybench' now.")])
 
         assert dl.check_stale_fm_messages(self.SPEC) == []
+
+
+class TestSourceStringsFStrings:
+    """An f-string is parsed as a `JoinedStr`, split into literal fragments around each
+    `{...}`: read naively, a flag or a chain an interpolated argument falls in the middle of
+    is spread across two pieces of text that neither check below ever sees together.
+    """
+
+    def _write(self, tmp_path: Path, code: str) -> None:
+        pkg = tmp_path / "frappe_manager" / "commands"
+        pkg.mkdir(parents=True)
+        (pkg / "x.py").write_text(code)
+
+    def test_a_flag_after_an_interpolated_argument_is_one_string_not_two(self, dl, tmp_path, monkeypatch):
+        self._write(tmp_path, 'def warn(bench):\n    return f"Run: fmx restart {bench} --no-such-flag"\n')
+        monkeypatch.chdir(tmp_path)
+
+        texts = [text for _, text in dl.source_strings()]
+
+        assert any("fmx restart" in t and "--no-such-flag" in t for t in texts)
+
+    def test_the_flag_split_by_the_interpolation_is_caught_by_check_message_commands(self, dl, tmp_path, monkeypatch):
+        self._write(tmp_path, 'def warn(bench):\n    return f"Run: fmx restart {bench} --no-such-flag"\n')
+        monkeypatch.chdir(tmp_path)
+        spec = {
+            (): {"flags": {}, "max_pos": 0, "allow_extra": False, "group": True},
+            ("restart",): {"flags": {"--drain": False}, "max_pos": 1, "allow_extra": False, "group": False},
+        }
+
+        problems = dl.check_message_commands(spec)
+
+        assert any("--no-such-flag" in p for p in problems)
+
+    def test_a_dynamic_command_name_stays_invisible_by_design(self, dl, tmp_path, monkeypatch):
+        """`<value>` stands in for the interpolation, but it is not a real subcommand word, so
+        `f"fm {cmd}"` cannot be recovered into a resolved chain: there is no way to know what
+        `cmd` will be at lint time. Documented as a limitation, not expected to pass."""
+        self._write(tmp_path, 'def warn(cmd):\n    return f"fm {cmd}"\n')
+        monkeypatch.chdir(tmp_path)
+        spec = {
+            (): {"flags": {}, "max_pos": 0, "allow_extra": False, "group": True},
+            ("create",): {"flags": {}, "max_pos": 1, "allow_extra": False, "group": False},
+        }
+
+        assert dl.check_stale_fm_messages(spec) == []
+
+
+class TestConfigKeyDocumentedPosition:
+    """`check_config_keys`'s "missing" direction used to be a bare substring search over the
+    whole page: a field named after a common word (`bind`) passed the moment that word appeared
+    ANYWHERE in prose, documented or not. It now has to show up in one of the positions
+    `documented_config_keys` already recognises in the other direction.
+    """
+
+    def test_a_key_used_only_as_an_ordinary_word_is_still_reported_missing(self, dl, tmp_path, monkeypatch):
+        config = tmp_path / "configuration.md"
+        config.write_text("## Networking\n\nPlease bind your proxy to the interface you like.\n")
+        monkeypatch.setattr(dl, "CONFIG_DOC", config)
+        monkeypatch.setattr(dl, "persisted_config_fields", lambda: [("global", "bind")])
+        monkeypatch.setattr(dl, "all_model_keys", lambda: {"bind"})
+
+        missing, _ = dl.check_config_keys()
+
+        assert any("bind" in m for m in missing)
+
+    def test_a_key_named_in_a_file_key_line_is_recognised(self, dl, tmp_path, monkeypatch):
+        config = tmp_path / "configuration.md"
+        config.write_text("## Networking\n\n**File key:** `bind`\n")
+        monkeypatch.setattr(dl, "CONFIG_DOC", config)
+        monkeypatch.setattr(dl, "persisted_config_fields", lambda: [("global", "bind")])
+        monkeypatch.setattr(dl, "all_model_keys", lambda: {"bind"})
+
+        missing, _ = dl.check_config_keys()
+
+        assert missing == []
+
+
+class TestUnreachableSubmodelsError:
+    """A submodel defined outside `_CONFIG_MODULES` used to be exempted from the whole walk
+    with no record anywhere that it happened. `_resolve_nested` now raises unless the model is
+    one of `_known_out_of_scope_models`'s two named exemptions, so a new third-file submodel
+    gets noticed the day it is added instead of silently losing every one of its keys.
+    """
+
+    class _Outsider(BaseModel):
+        pass
+
+    def test_a_model_outside_config_modules_with_no_named_exemption_raises(self, dl):
+        with pytest.raises(RuntimeError, match="_Outsider"):
+            dl._resolve_nested(self._Outsider, "Owner", "field")
+
+    def test_a_named_exemption_is_let_through_without_raising(self, dl, monkeypatch):
+        monkeypatch.setattr(dl, "_known_out_of_scope_models", lambda: (self._Outsider,))
+
+        assert dl._resolve_nested(self._Outsider, "Owner", "field") == [self._Outsider]
+
+    def test_a_model_inside_config_modules_is_let_through(self, dl, monkeypatch):
+        monkeypatch.setattr(dl, "_CONFIG_MODULES", {self._Outsider.__module__})
+
+        assert dl._resolve_nested(self._Outsider, "Owner", "field") == [self._Outsider]
+
+
+class TestModelOfWidensAnnotations:
+    """`_model_of` used to stop at `Optional`, a list/dict value type: an outer
+    `Annotated[X, ...]` or a bare `SubModelA | SubModelB` union fell through as a scalar, and
+    every key inside the wrapped/unioned model(s) went unchecked in both directions.
+    """
+
+    class _SubA(BaseModel):
+        pass
+
+    class _SubB(BaseModel):
+        pass
+
+    def test_an_annotated_wrapped_model_is_still_found(self, dl):
+        assert dl._model_of(typing.Annotated[self._SubA, "meta"]) == [self._SubA]
+
+    def test_a_bare_union_of_two_models_yields_both(self, dl):
+        assert set(dl._model_of(self._SubA | self._SubB)) == {self._SubA, self._SubB}
+
+    def test_optional_still_unwraps_to_the_one_model(self, dl):
+        assert dl._model_of(typing.Optional[self._SubA]) == [self._SubA]
+
+    def test_a_plain_scalar_annotation_still_yields_nothing(self, dl):
+        assert dl._model_of(str) == []
 
 
 class TestCannotSilentlyPass:

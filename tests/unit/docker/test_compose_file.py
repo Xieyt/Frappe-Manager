@@ -789,3 +789,67 @@ class TestReload:
         cf.commit()
 
         assert "environment" not in cf.yml["services"]["frappe"]
+
+
+@pytest.mark.parametrize(
+    "template_name",
+    [
+        "docker-compose.tmpl",
+        "docker-compose.workers.tmpl",
+        "docker-compose.services.tmpl",
+        "docker-compose.services.osx.tmpl",
+        "docker-compose.admin-tools.tmpl",
+    ],
+)
+def test_every_rendered_service_caps_its_container_log(tmp_path, template_name):
+    # Docker's default json-file driver never rotates, so a service written without a cap grows
+    # on an operator's disk for the life of the container.
+    cf = ComposeFile(loadfile=tmp_path / "docker-compose.yml", template_name=template_name)
+
+    for name, service in cf.yml["services"].items():
+        options = service.get("logging", {}).get("options", {})
+        assert options.get("max-size"), f"{template_name}:{name} has no log size cap"
+        assert options.get("max-file"), f"{template_name}:{name} has no log file count"
+
+
+def test_log_limits_come_from_config_and_fall_back_per_key(tmp_path, monkeypatch):
+    # A noisy service gets its own ceiling; what it does not name is inherited, not reset.
+    from frappe_manager.metadata_manager import FMContainerLogConfig, FMLogsConfig
+
+    monkeypatch.setattr(
+        ComposeFile,
+        "_logs_config_cache",
+        FMLogsConfig(
+            container_max_size="20m",
+            container_max_files=2,
+            containers={
+                "frappe": FMContainerLogConfig(max_size="100m", max_files=5),
+                "nginx": FMContainerLogConfig(max_size="50m"),
+            },
+        ),
+    )
+
+    services = ComposeFile(loadfile=tmp_path / "docker-compose.yml").yml["services"]
+
+    assert dict(services["frappe"]["logging"]["options"]) == {"max-size": "100m", "max-file": "5"}
+    assert dict(services["nginx"]["logging"]["options"]) == {"max-size": "50m", "max-file": "2"}
+    assert dict(services["schedule"]["logging"]["options"]) == {"max-size": "20m", "max-file": "2"}
+
+
+def test_an_operators_own_logging_block_is_never_rewritten(tmp_path):
+    # An existing compose file is read, never re-rendered: a hand-edited cap has to survive.
+    path = tmp_path / "docker-compose.yml"
+    path.write_text(
+        "services:\n"
+        "  frappe:\n"
+        "    image: frappe:x\n"
+        "    logging:\n"
+        "      driver: local\n"
+        "      options:\n"
+        "        max-size: 500m\n",
+    )
+
+    cf = ComposeFile(loadfile=path)
+
+    assert cf.yml["services"]["frappe"]["logging"]["driver"] == "local"
+    assert cf.yml["services"]["frappe"]["logging"]["options"]["max-size"] == "500m"

@@ -53,11 +53,17 @@ Running containers keep the image they started with until they are recreated.
 
 Which tags get pulled is fixed by the installed fmx version, so a newer stack starts with fmx self upgrade.
 
+fmx republishes a release's image tags when their base picks up fixes, and a pull is skipped while the tag is already on disk, so --check is how a host learns it is behind.
+
 **Usage**:
 
 ```console
-$ fmx self update-images
+$ fmx self update-images [OPTIONS]
 ```
+
+**Options**:
+
+* `--check`: Report which images have moved in the registry and pull nothing.  [default: false]
 
 ### Examples
 
@@ -65,6 +71,12 @@ $ fmx self update-images
 
 ```bash
 fmx self update-images
+```
+
+#### Say which images have a newer build published, without pulling any
+
+```bash
+fmx self update-images --check
 ```
 
 ## `fmx self stop`
@@ -78,8 +90,13 @@ A bench that fails to stop does not abort the run: the remaining benches and the
 **Usage**:
 
 ```console
-$ fmx self stop
+$ fmx self stop [OPTIONS]
 ```
+
+**Options**:
+
+* `--global-only`: Stop the global services only, leaving every bench running.  [default: false]
+* `--benches-only`: Stop every bench only, leaving the global services running.  [default: false]
 
 ### Examples
 

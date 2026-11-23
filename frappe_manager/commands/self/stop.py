@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import typer
 from typer_examples import example
 
@@ -22,12 +24,12 @@ from frappe_manager.site_manager.bench_service import BenchService
 )
 def stop(
     ctx: typer.Context,
-    global_only: bool = typer.Option(
-        False, "--global-only", help="Stop the global services only, leaving every bench running."
-    ),
-    benches_only: bool = typer.Option(
-        False, "--benches-only", help="Stop every bench only, leaving the global services running."
-    ),
+    global_only: Annotated[
+        bool, typer.Option("--global-only", help="Stop the global services only, leaving every bench running.")
+    ] = False,
+    benches_only: Annotated[
+        bool, typer.Option("--benches-only", help="Stop every bench only, leaving the global services running.")
+    ] = False,
 ):
     """
     Stop every bench on this host, then the global services (nginx-proxy, mariadb).

@@ -36,12 +36,12 @@ Most other questions about a bench, can you edit code in place, does a change ne
 
 ## What is shared and what is not
 
-One machine runs many benches. They share exactly two things:
+One machine runs many benches. They share:
 
-- **One MariaDB server** holding every bench's database.
+- **A MariaDB server and a Postgres server**, each holding every bench's databases on that engine. Each one starts only once some bench on the host actually uses it, and stops again if nothing does, so a host with no Postgres site never runs a Postgres container.
 - **One nginx proxy** on ports 80 and 443, routing each request to the right bench by domain.
 
-`fmx services` manages those two. Everything else belongs to a single bench.
+`fmx services` manages all three. Everything else belongs to a single bench.
 
 A bench can skip the shared database at create time by pointing at an external server; after that, only the CA is editable, with `fmx update --db-ca`. Redis is more flexible: either side, cache or queue, can move to an external server at create time or later, and back again. `fmx update --redis-cache` and `--redis-queue` point a side out; `--no-redis-cache`, `--no-redis-queue`, or `--no-redis` bring it back to fmx's own container.
 

@@ -274,6 +274,17 @@ def source_strings() -> list[tuple[Path, str]]:
     retired ("this owns what `fm update --newrelic` used to"). That is history stated on purpose,
     not an instruction anyone can follow, and failing on it would train people to delete the
     explanation instead of fixing the message.
+
+    An f-string parses as a `JoinedStr`: one `Constant` per literal fragment, one
+    `FormattedValue` per `{...}`. Read naively, `f"fmx restart {bench} --no-such-flag"` would
+    hand the checks below two disconnected halves, "fmx restart " and " --no-such-flag", and
+    neither contains both the command and the flag that follows it. Reconstructed instead: every
+    `JoinedStr` becomes ONE string, with `<value>` standing in for each interpolation, so a flag
+    or a chain that an argument splits in two is still one piece of text to match. This does NOT
+    recover an f-string whose interpolation supplies the COMMAND OR SUBCOMMAND name itself
+    (`f"fm {cmd}"`): `<value>` is deliberately not a word a chain-walk would accept, because
+    there is no way to know what `cmd` will be at lint time. That case stays invisible; a
+    message built that way has to be caught by eye.
     """
     out: list[tuple[Path, str]] = []
     for path in sorted(Path("frappe_manager").rglob("*.py")):
@@ -292,8 +303,22 @@ def source_strings() -> list[tuple[Path, str]]:
             and isinstance(node.body[0].value, ast.Constant)
             and isinstance(node.body[0].value.value, str)
         }
+        # Direct children of a JoinedStr are read once, reconstructed, below; counting them
+        # again as standalone Constants would just be the same text split back into halves.
+        joined_fragments = {id(v) for node in ast.walk(tree) if isinstance(node, ast.JoinedStr) for v in node.values}
         for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings:
+            if isinstance(node, ast.JoinedStr):
+                text = "".join(
+                    v.value if isinstance(v, ast.Constant) and isinstance(v.value, str) else "<value>"
+                    for v in node.values
+                )
+                out.append((path, text))
+            elif (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and id(node) not in docstrings
+                and id(node) not in joined_fragments
+            ):
                 out.append((path, node.value))
     return out
 
@@ -437,12 +462,12 @@ def check_message_commands(
 def check_stale_fm_messages(spec: dict[tuple[str, ...], dict]) -> list[str]:
     """fmx's own messages that still spell out the retired `fm` name for an invocation.
 
-    `fm` still runs (it prints a one-line deprecation warning, see `main.py`) but is going
-    away in 1.0.0; a message built with `fm <command>` is telling the operator to type the
-    name that stops working. Chain-walked against the live spec exactly like
-    `check_message_commands`, so an ordinary sentence ("fm will...", "fm also...") never
-    counts, only `fm` followed by a real command does -- the same signal that keeps
-    `fm_config.toml`, `fm.log` and the `# fm:` nginx markers out of this, none of them have a
+    `fm` still runs (it prints a one-line deprecation warning, see `main.py`) and keeps running
+    through 1.0.0, but it will be withdrawn in a later release; a message built with `fm <command>`
+    is telling the operator to type the name we are steering them away from. Chain-walked against
+    the live spec exactly like `check_message_commands`, so an ordinary sentence ("fm will...",
+    "fm also...") never counts, only `fm` followed by a real command does -- the same signal that
+    keeps `fm_config.toml`, `fm.log` and the `# fm:` nginx markers out of this, none of them have a
     space after `fm`.
     """
     problems: list[str] = []
@@ -485,6 +510,18 @@ def check_doc_commands(
     its new name with the in-container service manager, so a doc line showing what to run
     inside a shell (`fmx start short-worker -p short-worker_1`) parses as a host `fmx start`
     invocation and would otherwise be told it does not own `-p`.
+
+    Scans one physical line at a time, which leaves two gaps open rather than closed: a shell
+    continuation (`fmx update mybench` ending the line with a trailing backslash, the rest of
+    the command continuing on the next) hides a flag written on that next line from the chain
+    it belongs to, since the scan never joins the two lines back together; and a 4-space-indented
+    code block that is NOT also fenced -- the shape mkdocs renders as code inside an admonition
+    body -- is never treated as "quoted", so a dangling subcommand written that way does not
+    trip the leftover-subcommand check above even though a reader would read it as a real
+    command. Both are left as gaps rather than joined/widened: a continuation-aware scanner has
+    to track fence state across a join without losing line numbers for the report, and treating
+    every 4-space indent as code would also catch an ordinary nested-list continuation line,
+    turning an everyday sentence into a false "not a real command".
     """
     problems: list[str] = []
     root_flags = spec[()]["flags"]
@@ -495,7 +532,9 @@ def check_doc_commands(
                 fenced = not fenced
                 continue
             backticks = [m.span() for m in re.finditer(r"`[^`]*`", line)]
-            quoted = lambda pos: fenced or any(start <= pos < end for start, end in backticks)  # noqa: E731
+
+            def quoted(pos: int, fenced: bool = fenced, spans: list = backticks) -> bool:
+                return fenced or any(start <= pos < end for start, end in spans)
 
             for match in re.finditer(r"(?<![\w-])fmx ((?:[a-z][a-z0-9-]*)(?: [^\s'\"`,;]+)*)", line):
                 tokens = match.group(1).split()
@@ -564,6 +603,11 @@ def check_stale_fm_docs(files: list[Path], spec: dict[tuple[str, ...], dict]) ->
     quoted -- `fm` has no in-container namesake to confuse it with, so a resolved chain is
     unambiguous wherever it appears. The caller excludes changelog.md the same way it does for
     `check_doc_commands`, since that file names `fm` on purpose as shipped history.
+
+    Same one-line-at-a-time scan as `check_doc_commands`, so the same shell-continuation gap
+    applies here too: `fm services` ending a line with a trailing backslash, the rest of the
+    chain alone on the next line, never resolves, because the two halves are never joined back
+    into one piece of text to match.
     """
     problems: list[str] = []
     for f in files:
@@ -600,20 +644,63 @@ _CONFIG_MODULES = {"frappe_manager.site_manager.bench_config", "frappe_manager.m
 SITE_CONFIG_KEY_ALLOWLIST: dict[str, str] = {
     "allow_ips": "Per-site auth refers to [auth] by name instead of relisting its keys.",
     "allow_paths": "same reference as allow_ips.",
+    "serve_admin_tools": "named only in the lead prose sentence's dotted path and a toml "
+    "example under 'Per-site admin tools', never a key table row/heading/File key line/bullet.",
+}
+
+# Keys `documented_config_keys` cannot see because the page names them only through an inline
+# `key = value` backtick, a toml example, or another row's own Meaning/description column, never
+# a key table row, a backticked heading, a `**File key:**` line, or a bulleted key -- the four
+# positions that function recognises. Each is genuinely documented; widening the parser to catch
+# an inline example is not worth it, because a bare `key = value` backtick or a fenced-toml
+# assignment line is indistinguishable from an unrelated field shown for context: the "Bench
+# config (bench_config.toml)" quick-reference example two sections up shows `domain`, `ssl_type`,
+# `challenge_type` and `acme_client`, all SSLCertificate fields out of scope for this check, the
+# same way.
+GLOBAL_CONFIG_KEY_ALLOWLIST: dict[str, str] = {
+    "before_migrate": "named only in the `hooks` row's own Meaning column, not a Key column.",
+    "after_migrate": "same `hooks` row as before_migrate.",
+    "before_restart": "same `hooks` row as before_migrate.",
+    "after_restart": "same `hooks` row as before_migrate.",
+    "after_switch": "same `hooks` row as before_migrate.",
+    "keep_backup_sessions": "named only in the `[prune]` section's inline **Defaults:** line and a toml example.",
+    "keep_log_archives": "same **Defaults:** line as keep_backup_sessions.",
+    "rotate_logs_over": "same **Defaults:** line as keep_backup_sessions.",
+    "max_size": "named only in prose ('Each of `max_size` and `max_files` inherits...') and a toml example.",
+    "max_files": "same prose sentence as max_size.",
+    "last_at": "named only in prose ('`[deployments]` holds `last_at`...') and a toml example.",
+    "last_migration_date": "named only in the `[schema]` toml example, never alone in text.",
 }
 
 
 def _unwrap_optional(ann):
+    """Strip `Optional[X]` and `Annotated[X, ...]` wrappers down to the type actually stored,
+    repeating until neither applies: `Annotated[Optional[X], ...]` and `Optional[Annotated[X,
+    ...]]` both end at `X`. A bare `Union` of several non-`None` types (no wrapper to strip) is
+    returned as-is, for `_model_of` to walk every member of.
+    """
     import typing
 
-    if typing.get_origin(ann) is typing.Union:
-        args = [a for a in typing.get_args(ann) if a is not type(None)]
-        if len(args) == 1:
-            return _unwrap_optional(args[0])
-    return ann
+    while True:
+        if typing.get_origin(ann) is typing.Annotated:
+            ann = typing.get_args(ann)[0]
+            continue
+        if typing.get_origin(ann) is typing.Union:
+            args = [a for a in typing.get_args(ann) if a is not type(None)]
+            if len(args) == 1:
+                ann = args[0]
+                continue
+        return ann
 
 
-def _model_of(ann):
+def _model_of(ann) -> list[type]:
+    """Every `BaseModel` subclass this annotation could hold on disk: through `Optional`, a
+    list/dict value type, an `Annotated[X, ...]` wrapper, and a bare `SubModelA | SubModelB`
+    union (a discriminated union, each member a real shape the same TOML table could take) --
+    every member is walked, not just the first, so a key that exists on only one branch is
+    still checked. Returns a list rather than one type or `None` because of that last case:
+    a plain field returns `[]`, same meaning the old `None` carried.
+    """
     import typing
 
     from pydantic import BaseModel
@@ -622,13 +709,48 @@ def _model_of(ann):
     origin = typing.get_origin(ann)
     if origin in (list, set, frozenset):
         args = typing.get_args(ann)
-        return _model_of(args[0]) if args else None
+        return _model_of(args[0]) if args else []
     if origin is dict:
         args = typing.get_args(ann)
-        return _model_of(args[1]) if len(args) == 2 else None
+        return _model_of(args[1]) if len(args) == 2 else []
+    if origin is typing.Union:
+        models: list[type] = []
+        for arg in typing.get_args(ann):
+            models.extend(_model_of(arg))
+        return models
     if isinstance(ann, type) and issubclass(ann, BaseModel):
-        return ann
-    return None
+        return [ann]
+    return []
+
+
+def _known_out_of_scope_models() -> tuple[type, ...]:
+    """The model types this check deliberately will not walk into (see `_CONFIG_MODULES`
+    above): matched by class identity, not by module string, so a submodel added in a THIRD
+    file is never silently exempted the same way -- `_resolve_nested` raises on it instead.
+    """
+    from frappe_manager.ssl_manager.certificate import SSLCertificate
+    from frappe_manager.ssl_manager.dns_provider import DNSProviderConfig
+
+    return (SSLCertificate, DNSProviderConfig)
+
+
+def _resolve_nested(ann, owner: str, field_name: str) -> list[type]:
+    """`_model_of(ann)`, but a model outside `_CONFIG_MODULES` is only ever allowed through if
+    it is one of `_known_out_of_scope_models`'s two named exemptions. Anything else is a model
+    this check has never heard of walking past, which used to mean every one of its fields was
+    silently exempted with no record of why; now it is a hard failure instead, so a submodel
+    placed in a new third file gets noticed the day it is added, not never.
+    """
+    nested = _model_of(ann)
+    for model in nested:
+        if model.__module__ not in _CONFIG_MODULES and model not in _known_out_of_scope_models():
+            raise RuntimeError(
+                f"{owner}.{field_name} holds {model.__module__}.{model.__qualname__}, a model "
+                "outside _CONFIG_MODULES with no recorded exemption in _known_out_of_scope_models(); "
+                "add its module to _CONFIG_MODULES, or extend the exemption deliberately -- it "
+                "cannot pass this check unexamined."
+            )
+    return nested
 
 
 def persisted_config_fields() -> list[tuple[str, str]]:
@@ -641,7 +763,8 @@ def persisted_config_fields() -> list[tuple[str, str]]:
     (`Field(..., exclude=True)`) -- `set_default_site` is create-time-only this second way and
     is not in `NOT_WRITTEN_TO_DISK`, so checking the field's own `exclude` flag catches it where
     the named list alone would not. Also stops at a nested model defined outside these two files
-    (see `_CONFIG_MODULES`).
+    (see `_CONFIG_MODULES`), UNLESS that model is outside `_known_out_of_scope_models` too, in
+    which case `_resolve_nested` raises rather than exempting it silently.
     """
     from frappe_manager.metadata_manager import FMConfigManager
     from frappe_manager.site_manager.bench_config import NOT_WRITTEN_TO_DISK, BenchConfig
@@ -657,10 +780,11 @@ def persisted_config_fields() -> list[tuple[str, str]]:
         for name, field in model.model_fields.items():
             if name in exclude or field.exclude:
                 continue
-            nested = _model_of(field.annotation)
-            if nested is not None and nested.__module__ in _CONFIG_MODULES:
-                walk(nested, "site" if name == "sites" else scope, frozenset())
-            else:
+            nested = _resolve_nested(field.annotation, model.__qualname__, name)
+            in_scope = [m for m in nested if m.__module__ in _CONFIG_MODULES]
+            for m in in_scope:
+                walk(m, "site" if name == "sites" else scope, frozenset())
+            if len(in_scope) < len(nested) or not nested:
                 found.append((scope, field.alias or name))
 
     walk(BenchConfig, "global", NOT_WRITTEN_TO_DISK)
@@ -690,9 +814,9 @@ def all_model_keys() -> set[str]:
         seen.add(model)
         for name, field in model.model_fields.items():
             keys.add(field.alias or name)
-            nested = _model_of(field.annotation)
-            if nested is not None and nested.__module__ in _CONFIG_MODULES:
-                walk(nested)
+            for nested in _resolve_nested(field.annotation, model.__qualname__, name):
+                if nested.__module__ in _CONFIG_MODULES:
+                    walk(nested)
 
     walk(BenchConfig)
     walk(FMConfigManager)
@@ -754,6 +878,12 @@ def check_config_keys() -> tuple[list[str], list[str]]:
     `startup_timeout` all missing from docs/reference/configuration.md at once: each is a real
     field on a model that already has a page, which neither the flag checks above nor mkdocs
     itself has any reason to notice.
+    "Documented" means `documented_config_keys` recognises the key: a table row, a backticked
+    heading, a `**File key:**` line, or a bulleted key, never a bare substring match over the
+    whole page. A field named after a common word (`bind`, `theme`, `name`, `containers`) used
+    to pass this direction for free the moment that word appeared ANYWHERE in prose, which is
+    not being documented, it is coincidence. `SITE_CONFIG_KEY_ALLOWLIST`/`GLOBAL_CONFIG_KEY_ALLOWLIST`
+    name the keys that are genuinely documented but not through one of those four positions.
     """
     if not CONFIG_DOC.exists():
         return [], []
@@ -768,18 +898,23 @@ def check_config_keys() -> tuple[list[str], list[str]]:
             site_blocks.append(block)
     site_text = "\n".join(site_blocks)
 
+    global_documented = documented_config_keys(doc_text)
+    site_documented = documented_config_keys(site_text)
+
     missing: list[str] = []
     for scope, key in sorted(set(persisted_config_fields())):
         if scope == "site" and key in SITE_CONFIG_KEY_ALLOWLIST:
             continue
-        haystack = site_text if scope == "site" else doc_text
-        if not re.search(rf"(?<![\w-]){re.escape(key)}(?![\w-])", haystack):
+        if scope == "global" and key in GLOBAL_CONFIG_KEY_ALLOWLIST:
+            continue
+        documented = site_documented if scope == "site" else global_documented
+        if key not in documented:
             missing.append(f"{CONFIG_DOC}: {scope} key `{key}` has no model field documented on this page")
 
     model_keys = all_model_keys()
     unknown = [
         f"{CONFIG_DOC}: documents `{key}`, which no BenchConfig/FMConfigManager field produces"
-        for key in sorted(documented_config_keys(doc_text) - model_keys)
+        for key in sorted(global_documented - model_keys)
     ]
     return missing, unknown
 

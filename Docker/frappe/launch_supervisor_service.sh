@@ -8,6 +8,7 @@ cleanup() {
 	echo "Received signal SIGTERM, stopping..."
 	if [ -n "$running_script_pid" ]; then
 		kill -s SIGTERM "$running_script_pid"
+		wait "$running_script_pid"
 	fi
 	exit 0
 }

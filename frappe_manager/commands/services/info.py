@@ -152,7 +152,7 @@ def info(ctx: typer.Context, json_result: JsonResultOption = False, fields: Json
     card.fact("ports", f"{where}{proxy_cfg.http_port} [fm.muted]http[/fm.muted]   {proxy_cfg.https_port} [fm.muted]https[/fm.muted]")
     card.fact(
         "trusted proxies",
-        summary or "[fm.muted]none; every request is judged on the connection fm received[/fm.muted]",
+        summary or "[fm.muted]none; every request is judged on the connection fmx received[/fm.muted]",
     )
 
     card.section("services")

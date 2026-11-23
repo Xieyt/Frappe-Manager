@@ -83,8 +83,8 @@ USAGE:
 
 DESCRIPTION:
     Installs Frappe Manager (fmx) and all required dependencies including Docker,
-    Docker Compose, Python 3.10+, uv, and the fmx CLI tool. The old 'fm' name keeps
-    working until 1.0.0.
+    Docker Compose, Python 3.10+, uv, and the fmx CLI tool. It also installs under the old
+    'fm' name, which still works but prints a deprecation warning and will be withdrawn in a later release.
 
 OPTIONS:
     --username <name>      User to create or configure when running as root (default: 'frappe').
@@ -289,7 +289,7 @@ install_fm_dev() {
 	uv tool install --python "$PYTHON_VERSION" --force "git+https://github.com/rtCamp/Frappe-Manager.git@${BRANCH}"
 	local version
 	version=$(uv tool list 2>/dev/null | grep "^frappe-manager" | awk '{print $2}')
-	info_green "$(bold "fmx $version") (branch: ${BRANCH}) installed. The old 'fm' name keeps working until 1.0.0."
+	info_green "$(bold "fmx $version") (branch: ${BRANCH}) installed. The old 'fm' name still works but is deprecated and will be withdrawn in a later release."
 }
 
 install_fm() {
@@ -313,7 +313,7 @@ install_fm() {
 		fi
 		local version
 		version=$(uv tool list 2>/dev/null | grep "^frappe-manager" | awk '{print $2}')
-		info_green "$(bold "fmx $version") installed. The old 'fm' name keeps working until 1.0.0."
+		info_green "$(bold "fmx $version") installed. The old 'fm' name still works but is deprecated and will be withdrawn in a later release."
 	fi
 }
 

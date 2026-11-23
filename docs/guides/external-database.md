@@ -27,7 +27,7 @@ Four differences worth knowing before you use it:
 - **Attaching to an existing role changes its password.** Frappe's Postgres setup runs `ALTER USER ... WITH PASSWORD` when the role already exists, where the MariaDB path leaves an existing login alone. Point fmx at a role something else uses and that something else stops being able to log in.
 - **The login needs `CREATEDB` and `CREATEROLE`,** or superuser. Frappe creates the database and the site's role itself. The preflight checks this before anything is written, because finding out later leaves a site directory on disk and no database.
 - **App support is newer than fmx's confidence in it.** Frappe's framework supports Postgres; ERPNext's support was hardened recently. Verify your own apps rather than assuming parity with MariaDB.
-- **fmx's own Postgres is pinned to a major version and stays there.** Postgres has no equivalent of MariaDB's automatic datadir upgrade: a datadir written by one major refuses to start under the next, so fmx will never move you across one by changing an image tag. Moving majors is a dump and a restore.
+- **fmx's own Postgres is pinned to a major version, and now by digest too.** Postgres has no equivalent of MariaDB's automatic datadir upgrade: a datadir written by one major refuses to start under the next, so fmx will never move you across one by changing an image tag. Pinned by digest, a `docker pull` doesn't move the server under a running site either: the exact build is decided by the fmx release you installed. Moving majors is a dump and a restore.
 
 ## What fmx refuses to do on a server it does not own
 

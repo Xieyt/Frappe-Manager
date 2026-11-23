@@ -26,7 +26,7 @@ inputs:
     required: false
     default: ''
   tag:
-    description: 'Tag to build. Defaults to the short commit sha, so the ref is deterministic and this action never has to read it back out of fm output.'
+    description: 'Tag to build. Defaults to the short commit sha, so the ref is deterministic and this action never has to read it back out of fmx output.'
     required: false
     default: ''
   base-image:
@@ -46,7 +46,7 @@ inputs:
     required: false
     default: ''
   fmx-remote-path:
-    description: 'Absolute path to fm on the switch target. Only needed when it is somewhere the preflight does not look (PATH, ~/.local/bin, /usr/local/bin, /usr/bin).'
+    description: 'Absolute path to fmx on the switch target. Only needed when it is somewhere the preflight does not look (PATH, ~/.local/bin, /usr/local/bin, /usr/bin).'
     required: false
     default: ''
   platform:
@@ -92,7 +92,7 @@ inputs:
     required: false
     default: ''
   switch-args:
-    description: 'Extra arguments appended to fmx switch, e.g. --keep 5 or --no-backup-db.'
+    description: 'Extra arguments appended to fmx switch, e.g. --keep 5 or --no-rolling.'
     required: false
     default: ''
 
@@ -241,7 +241,7 @@ runs:
         # optional input is the normal case here, not an error.
         args=(bake)
         if [ -n "$BENCH" ]; then args+=("$BENCH"); fi
-        args+=(--image "$IMAGE_REF")
+        args+=(--app-image "$IMAGE_REF")
         if [ -n "$BASE_IMAGE" ]; then args+=(--base-image "$BASE_IMAGE"); fi
 
         while IFS= read -r app; do

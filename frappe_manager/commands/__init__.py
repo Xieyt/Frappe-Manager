@@ -271,7 +271,7 @@ from frappe_manager.commands.tools import tools_app
 app.add_typer(
     services_app,
     name="services",
-    help="Manage the shared MariaDB server and nginx proxy every bench uses.",
+    help="Manage the shared database servers and nginx proxy every bench uses.",
     rich_help_panel=_PANEL_GLOBAL,
 )
 app.add_typer(

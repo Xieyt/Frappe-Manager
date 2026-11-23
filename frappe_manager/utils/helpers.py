@@ -10,6 +10,7 @@ import shutil
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from io import StringIO
 from pathlib import Path
 
@@ -207,6 +208,26 @@ def get_docker_image_tag():
         return f"v{version}"
 
     return version
+
+
+@lru_cache(maxsize=1)
+def upstream_images() -> dict[str, str]:
+    """``{service: reference}`` from ``templates/compose.images.yml``, the one place an upstream
+    image is pinned. Read, never written: dependabot owns that file's digests.
+    """
+    from ruamel.yaml import YAML
+
+    path = get_template_path("compose.images.yml")
+    document = YAML(typ="safe").load(path.read_text())
+    return {service: spec["image"] for service, spec in document["services"].items()}
+
+
+def fm_image(component: str) -> str:
+    """Reference for one of fm's OWN images (``frappe`` or ``nginx``), at this fm's tag."""
+    from frappe_manager import FM_IMAGE_PREFIX
+
+    return f"{FM_IMAGE_PREFIX}-{component}:{get_docker_image_tag()}"
+
 
 
 def represent_null_empty(string_null):

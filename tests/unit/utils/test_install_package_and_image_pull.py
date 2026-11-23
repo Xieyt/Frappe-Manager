@@ -137,8 +137,8 @@ def test_every_image_is_attempted_even_after_a_failure():
         patch(
             "frappe_manager.utils.site.get_all_docker_images",
             return_value={
-                "a": {"name": "Aimg", "tag": "1"},
-                "b": {"name": "Bimg", "tag": "2"},
+                "a": {"name": "Aimg", "tag": "1", "image": "Aimg:1"},
+                "b": {"name": "Bimg", "tag": "2", "image": "Bimg:2"},
             },
         ),
         patch.object(handler, "live_lines"),
@@ -186,9 +186,9 @@ def test_one_cause_failing_every_image_is_reported_once():
         patch(
             "frappe_manager.utils.site.get_all_docker_images",
             return_value={
-                "a": {"name": "Aimg", "tag": "1"},
-                "b": {"name": "Bimg", "tag": "2"},
-                "c": {"name": "Cimg", "tag": "3"},
+                "a": {"name": "Aimg", "tag": "1", "image": "Aimg:1"},
+                "b": {"name": "Bimg", "tag": "2", "image": "Bimg:2"},
+                "c": {"name": "Cimg", "tag": "3", "image": "Cimg:3"},
             },
         ),
         patch.object(handler, "live_lines"),
@@ -223,8 +223,8 @@ def test_two_registries_failing_differently_each_get_their_own_diagnosis():
         patch(
             "frappe_manager.utils.site.get_all_docker_images",
             return_value={
-                "a": {"name": "ghcr.io/rtcamp/frappe-manager-frappe", "tag": "v1"},
-                "b": {"name": "redis", "tag": "8-alpine"},
+                "a": {"name": "ghcr.io/rtcamp/frappe-manager-frappe", "tag": "v1", "image": "ghcr.io/rtcamp/frappe-manager-frappe:v1"},
+                "b": {"name": "redis", "tag": "8-alpine", "image": "redis:8-alpine"},
             },
         ),
         patch.object(handler, "live_lines"),
@@ -248,10 +248,53 @@ def test_all_images_pulled_reports_success():
         patch("frappe_manager.docker.DockerClient", return_value=docker),
         patch(
             "frappe_manager.utils.site.get_all_docker_images",
-            return_value={"a": {"name": "Aimg", "tag": "1"}},
+            return_value={"a": {"name": "Aimg", "tag": "1", "image": "Aimg:1"}},
         ),
         patch.object(handler, "live_lines"),
         patch.object(handler, "change_head"),
         patch.object(handler, "print"),
     ):
         assert pull_docker_images() is True
+
+
+def _check_with(images, *, local, published=None):
+    from frappe_manager.utils.site import check_docker_images
+
+    docker = MagicMock(name="docker_client")
+    docker.image_repo_digests.side_effect = lambda ref: local.get(ref, [])
+    docker.registry_digest.side_effect = lambda ref: (published or {}).get(ref)
+    with (
+        patch("frappe_manager.docker.DockerClient", return_value=docker),
+        patch("frappe_manager.utils.site.get_all_docker_images", return_value=images),
+    ):
+        return check_docker_images()
+
+
+def test_a_pinned_image_is_judged_against_its_pin_not_against_the_tag():
+    """A moving tag must never make a pinned host look behind: only the pin decides."""
+    images = {"db": {"name": "mariadb", "tag": "11.8", "digest": "sha256:aaa", "image": "mariadb:11.8@sha256:aaa"}}
+
+    assert (
+        _check_with(
+            images,
+            local={"mariadb:11.8@sha256:aaa": ["sha256:aaa"]},
+            published={"mariadb:11.8@sha256:aaa": "sha256:bbb"},
+        )
+        == {}
+    )
+
+
+def test_a_pinned_image_the_daemon_does_not_have_is_reported_as_pinned():
+    images = {"db": {"name": "mariadb", "tag": "11.8", "digest": "sha256:aaa", "image": "mariadb:11.8@sha256:aaa"}}
+
+    assert _check_with(images, local={"mariadb:11.8@sha256:aaa": ["sha256:old"]}) == {
+        "mariadb:11.8@sha256:aaa": ("pinned", "sha256:aaa")
+    }
+
+
+def test_a_floating_tag_that_moved_in_the_registry_is_reported_as_moved():
+    images = {"web": {"name": "fm/frappe", "tag": "v1", "digest": None, "image": "fm/frappe:v1"}}
+
+    assert _check_with(
+        images, local={"fm/frappe:v1": ["sha256:old"]}, published={"fm/frappe:v1": "sha256:new"}
+    ) == {"fm/frappe:v1": ("moved", "sha256:new")}

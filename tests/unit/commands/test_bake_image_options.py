@@ -116,13 +116,23 @@ def test_base_image_lands_on_build_base_image(cli, baked):
     assert re.fullmatch(r"ghcr\.io/acme/mysite:\d{14}-testsha", baked["built"]), baked["built"]
 
 
+def _plain(output: str) -> str:
+    """Output with rich's styling and box drawing removed, whitespace collapsed.
+
+    typer renders a refusal in a bordered box and, on a CI runner, with style escapes inside it,
+    so a plain-text search finds the phrase locally and misses it there. These tests are about the
+    message, not about how a terminal paints it.
+    """
+    text = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    text = text.translate({ord(c): " " for c in "\u2502\u2500\u256d\u256e\u2570\u256f"})
+    return " ".join(text.split())
+
+
 def test_tagless_base_image_is_rejected(cli, baked):
     result = _invoke(cli, "--app-image", "ghcr.io/acme/mysite", "--base-image", "ghcr.io/acme/frappe-custom")
 
     assert result.exit_code != 0
-    # The rich error box word-wraps at terminal width; assert a substring that stays on one
-    # rendered line rather than "...specific version..." which straddles the wrap.
-    assert "--base-image must be pinned to a specific" in result.output
+    assert "--base-image must be pinned to a specific version" in _plain(result.output)
     # Refused at parse time, so no bake is attempted.
     assert baked == {}
 
@@ -132,7 +142,7 @@ def test_base_image_host_port_alone_is_not_a_tag(cli, baked):
     result = _invoke(cli, "--app-image", "ghcr.io/acme/mysite", "--base-image", "localhost:5000/frappe-custom")
 
     assert result.exit_code != 0
-    assert "--base-image must be pinned to a specific" in result.output
+    assert "--base-image must be pinned to a specific version" in _plain(result.output)
     assert baked == {}
 
 

@@ -21,10 +21,10 @@
 # Runtime: 'mount' (live-mounted code) or 'image' (immutable app image). Default 'mount'.
 # [default: 'mount']
 # runtime = ...
-# App image repo (image runtime); fm manages the :tag. [optional, unset by default]
+# App image repo (image runtime); fmx manages the :tag. [optional, unset by default]
 # image = ...
 # Mount mode: override the base frappe image (repo:tag) for frappe/socketio/schedule/workers. None
-# = default fm image. [optional, unset by default]
+# = default fmx image. [optional, unset by default]
 # base_image = ...
 # Mount runtime: the baked image this workspace's apps were copied from at create (extracted; no
 # clone/install/build). Provenance record, read once and never run. [optional, unset by default]
@@ -95,8 +95,8 @@
 # After the whole switch ends -- ALWAYS, on success and every failure. Branch on DEPLOY_OUTCOME
 # (hook env: DEPLOY_OUTCOME=succeeded|rolled_back|halted|aborted; on a rollback also
 # ROLLBACK_REASON=migrate_failed|health_check_failed, FAILED_IMAGE and ROLLBACK_TO_IMAGE). For
-# notifications, and external-DB restores fm cannot do itself (restore on rolled_back). [optional,
-# unset by default]
+# notifications, and external-DB restores fmx cannot do itself (restore on rolled_back).
+# [optional, unset by default]
 # after_switch = ...
 #
 # Switch-phase hooks for a single location (container or host).
@@ -113,8 +113,8 @@
 # After the whole switch ends -- ALWAYS, on success and every failure. Branch on DEPLOY_OUTCOME
 # (hook env: DEPLOY_OUTCOME=succeeded|rolled_back|halted|aborted; on a rollback also
 # ROLLBACK_REASON=migrate_failed|health_check_failed, FAILED_IMAGE and ROLLBACK_TO_IMAGE). For
-# notifications, and external-DB restores fm cannot do itself (restore on rolled_back). [optional,
-# unset by default]
+# notifications, and external-DB restores fmx cannot do itself (restore on rolled_back).
+# [optional, unset by default]
 # after_switch = ...
 
 # ---- [prune] -------------------------------------------------------------------------------
@@ -209,13 +209,13 @@
 # [sites.<key>.database]
 # Database engine: 'mariadb' or 'postgres'. This is Frappe's own db_type. [default: 'mariadb']
 # type = ...
-# Database server hostname or IP. Absent means fm's own container for this engine. [optional,
+# Database server hostname or IP. Absent means fmx's own container for this engine. [optional,
 # unset by default]
 # host = ...
 # Database server port. Absent takes the engine's default (3306 / 5432). [optional, unset by
 # default]
 # port = ...
-# Schema (database) name for this site. Absent on an fm-managed server, where fm derives it.
+# Schema (database) name for this site. Absent on an fmx-managed server, where fmx derives it.
 # [optional, unset by default]
 # name = ...
 # Login user for the schema; omitted means equal to name; must equal name on v15. [optional, unset
@@ -253,13 +253,13 @@
 
 # ---- [redis] -------------------------------------------------------------------------------
 
-# External redis for this bench ([redis]). Absent means fm starts and manages the per-bench redis
+# External redis for this bench ([redis]). Absent means fmx starts and manages the per-bench redis
 # containers.
 # [redis]
-# Redis URL for the framework cache; absent leaves it on fm's container. [optional, unset by
+# Redis URL for the framework cache; absent leaves it on fmx's container. [optional, unset by
 # default]
 # cache = ...
-# Redis URL for the queue and realtime; absent leaves it on fm's container. [optional, unset by
+# Redis URL for the queue and realtime; absent leaves it on fmx's container. [optional, unset by
 # default]
 # queue = ...
 

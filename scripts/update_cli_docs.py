@@ -210,6 +210,17 @@ def extract_param_info(param_name: str, param: inspect.Parameter) -> dict[str, A
                     info["metavar"] = typer_info.metavar
 
     if not info["is_option"] and not info["is_argument"]:
+        # A parameter declared the old way (`check: bool = typer.Option(...)`) carries its
+        # OptionInfo as the DEFAULT, not inside an Annotated, so the Annotated branch above
+        # never sees it and the flag vanishes from the page while `--help` still shows it.
+        # `fmx self update-images --check` shipped undocumented exactly this way. Refuse,
+        # rather than generate a page that is quietly missing a flag.
+        if isinstance(default_val, typer.models.ParameterInfo):
+            raise SystemExit(
+                f"{param_name}: declare typer parameters as Annotated[T, typer.Option(...)] = default. "
+                f"The {type(default_val).__name__} form is invisible to this generator and the flag would "
+                f"be missing from the generated page."
+            )
         if default_val != inspect.Parameter.empty:
             if default_val is not ... and str(default_val) != "Ellipsis":
                 info["default"] = str(default_val)

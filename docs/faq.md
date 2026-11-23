@@ -22,7 +22,7 @@ The first updates the CLI. The second brings fmx's own config and the global ser
 
 ### Can I run multiple benches on the same machine?
 
-Yes. Each bench gets its own containers, workspace, apps and database schema. Two things are shared: one MariaDB server (`mariadb`) and one nginx proxy holding ports 80 and 443, which routes to the right bench by domain. `fmx list` shows them all.
+Yes. Each bench gets its own containers, workspace, apps and database schema. What is shared: a MariaDB server (`mariadb`) and a Postgres server (`postgres`), each running only while some bench on the host uses that engine, and one nginx proxy holding ports 80 and 443, which routes to the right bench by domain. `fmx list` shows them all.
 
 ---
 

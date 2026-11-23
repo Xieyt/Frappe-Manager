@@ -124,6 +124,72 @@ class DockerClient:
         pairs = (line.split("\t", 1) for line in result.stdout.splitlines() if "\t" in line)
         return {name.strip(): image.strip() for name, image in pairs}
 
+    def container_image_digest(self, container: str) -> tuple[str | None, str | None]:
+        """``(image reference, registry digest)`` of what ``container`` is actually running.
+
+        Read from the container, never from a compose file: a tag is rewritten upstream (fm's own
+        release tag is rebuilt nightly), so the reference alone cannot say which bytes are here.
+        The digest is empty for an image built locally and never pushed -- there is no registry
+        record of that content, and claiming one would be a lie.
+        """
+        result = subprocess.run(  # noqa: S603
+            [*self.docker_cmd, "inspect", container, "--format", "{{.Config.Image}}\t{{.Image}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0 or "\t" not in result.stdout:
+            return None, None
+        reference, image_id = (part.strip() for part in result.stdout.strip().split("\t", 1))
+
+        digests = subprocess.run(  # noqa: S603
+            [*self.docker_cmd, "image", "inspect", image_id, "--format", "{{join .RepoDigests \" \"}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if digests.returncode != 0:
+            return reference or None, None
+        repo = reference.split(":", 1)[0].split("@", 1)[0]
+        for entry in digests.stdout.split():
+            name, _, digest = entry.partition("@")
+            if digest and (name == repo or not repo):
+                return reference or None, digest
+        return reference or None, None
+
+    def registry_digest(self, image: str, timeout: int = 8) -> str | None:
+        """Digest the registry's copy of ``image`` points at RIGHT NOW, without pulling it.
+
+        Reads the manifest only (a few hundred bytes), so this is the cheap way to learn that a
+        tag has moved -- fm's own release tags are rebuilt nightly and pushed over themselves.
+        None on any failure (offline, private registry, no credentials): a report that cannot be
+        made is not an error worth taking a command down for.
+        """
+        try:
+            result = subprocess.run(  # noqa: S603
+                [*self.docker_cmd, "buildx", "imagetools", "inspect", image, "--format", "{{.Manifest.Digest}}"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        digest = result.stdout.strip()
+        return digest if result.returncode == 0 and digest.startswith("sha256:") else None
+
+    def image_repo_digests(self, image: str) -> list[str]:
+        """Registry digests the local copy of ``image`` carries, empty for a never-pushed build."""
+        result = subprocess.run(  # noqa: S603
+            [*self.docker_cmd, "image", "inspect", image, "--format", "{{join .RepoDigests \" \"}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return []
+        return [entry.partition("@")[2] for entry in result.stdout.split() if "@" in entry]
+
     def kill(
         self,
         container: str,

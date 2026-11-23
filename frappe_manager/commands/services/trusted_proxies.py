@@ -65,7 +65,7 @@ def _fetch_cloudflare_ranges(output) -> list[str]:
         if ranges:
             return ranges
     except Exception:
-        output.warning("Could not fetch Cloudflare's published ranges; using the list vendored with fm")
+        output.warning("Could not fetch Cloudflare's published ranges; using the list vendored with fmx")
     return list(CLOUDFLARE_FALLBACK_RANGES)
 
 
