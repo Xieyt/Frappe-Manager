@@ -89,7 +89,7 @@ def materialize_workspace_from_image(docker_client, image: str, frappe_bench_dir
         if app_dirs and not any((d / ".git").exists() for d in app_dirs):
             output.warning(
                 "Extracted apps carry no .git metadata (slim-baked image?): the bench works, "
-                "but 'fm bake' from this workspace cannot derive app specs.",
+                "but 'fmx bake' from this workspace cannot derive app specs.",
             )
     if extracted:
         fix_host_path_ownership(paths=[frappe_bench_dir / r for r in extracted], image=image, output=output)

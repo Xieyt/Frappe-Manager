@@ -56,13 +56,13 @@ class TestTheFailureIsMachineReadable:
 
     def test_the_reason_and_the_next_command_are_fields(self):
         error = RuntimeError("Bench not found")
-        error.suggestions = ["Run 'fm list' to see the benches on this host"]
+        error.suggestions = ["Run 'fmx list' to see the benches on this host"]
 
         envelope = self._emitted(error)
 
         assert envelope["ok"] is False
         assert envelope["error"] == "Bench not found"
-        assert envelope["next"] == ["Run 'fm list' to see the benches on this host"]
+        assert envelope["next"] == ["Run 'fmx list' to see the benches on this host"]
 
     def test_markup_never_reaches_the_parser(self):
         """The message was written for a terminal; `[bold]` is not part of the reason."""

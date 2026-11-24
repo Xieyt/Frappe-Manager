@@ -90,9 +90,9 @@ def external_dump_tls_hint(site: str) -> str:
     return (
         "The `mariadb` client that dumps and restores go through does not read db_ssl_* from "
         f"sites/{site}/site_config.json. It takes TLS from the \\[client] section of the option file "
-        f"found through MYSQL_HOME, which fm points at config/tls/{site}/my.cnf for this site. "
+        f"found through MYSQL_HOME, which fmx points at config/tls/{site}/my.cnf for this site. "
         "Check that file, and config/tls/ca-bundle.pem: the bundle is what a CA replaced by hand "
-        "leaves stale, and `fm update <bench> --db-ca PATH` rewrites both."
+        "leaves stale, and `fmx update <bench> --db-ca PATH` rewrites both."
     )
 
 
@@ -465,9 +465,9 @@ class DeployOrchestrator:
         if companion:
             return companion
         raise DeployError(
-            f"'{image}' carries no recorded nginx companion for bench '{self.bench.name}': fm does not "
+            f"'{image}' carries no recorded nginx companion for bench '{self.bench.name}': fmx does not "
             "guess a companion's name, and this image predates the fm.nginx.image label or was not "
-            "built by fm. Pass --nginx-image to name it explicitly."
+            "built by fmx. Pass --nginx-image to name it explicitly."
         )
 
 
@@ -757,7 +757,7 @@ class DeployOrchestrator:
             # makes a running bench read as down -- and the deploy audit rated this warn for
             # that reason, against `file` for its siblings above.
             self.output.warning(
-                f"Could not rename {container_id} to {name} ({e}); fm may report this bench as down "
+                f"Could not rename {container_id} to {name} ({e}); fmx may report this bench as down "
                 "even though it is serving."
             )
             return False
@@ -1144,7 +1144,7 @@ class DeployOrchestrator:
         endpoint = manager.database_server_info
         host = f"{endpoint.host}:{endpoint.port}"
         external = self._external_db(site) is not None
-        owner = "a database fm does not own" if external else "fm's own mariadb container"
+        owner = "a database fmx does not own" if external else "fmx's own mariadb container"
 
         def refuse(reason: str) -> RestoreNotConfirmed:
             return RestoreNotConfirmed(
@@ -1169,7 +1169,7 @@ class DeployOrchestrator:
 
         state = self._live_schema_state(site, manager, schema)
         if state is None:
-            holds = "fm could not read how many tables it holds right now"
+            holds = "fmx could not read how many tables it holds right now"
         elif not state[0]:
             holds = "it does not exist on that server yet, so this import would create it"
         else:
@@ -1264,7 +1264,7 @@ class DeployOrchestrator:
                 cause = found.group(0).strip() if found else "the queue did not answer"
                 raise DrainQueueUnreachable(
                     f"Cannot drain RQ workers: the queue at {self._queue_endpoint()} did not answer "
-                    f"({cause}). No drain timeout can fix an endpoint fm cannot reach, so nothing "
+                    f"({cause}). No drain timeout can fix an endpoint fmx cannot reach, so nothing "
                     f"was changed. Bring that redis up, or re-run with --no-drain to proceed and "
                     f"interrupt whatever the workers are doing."
                 ) from e
@@ -1275,7 +1275,7 @@ class DeployOrchestrator:
                 return False
             raise DrainUnavailable(
                 f"Could not drain RQ workers: {FMX_PYTHON} failed to run in the frappe container "
-                f"({detail}). The image may predate fmx -- 'fm self update-images' "
+                f"({detail}). The image may predate fmx -- 'fmx self update-images' "
                 "installs one that supports draining."
             ) from e
         self.output.info(f"Workers idle, queue {self._queue_endpoint()} (waited up to {timeout}s)")
@@ -1331,7 +1331,7 @@ class DeployOrchestrator:
                 # not clear it -- see set_maintenance_mode's docstring.
                 self.output.warning(
                     f"Could not clear Frappe's maintenance_mode for {self.site} ({e}); the site will refuse "
-                    f"requests until it is unset. Run: fm shell {self.bench.name} -c "
+                    f"requests until it is unset. Run: fmx shell {self.bench.name} -c "
                     f"'bench --site {self.site} set-config -g maintenance_mode 0'"
                 )
         self.resume_workers()
@@ -1665,7 +1665,7 @@ class DeployOrchestrator:
         # replaced, which is also where `fm switch --previous` would now land.
         if deployments.previous:
             self.output.info(
-                f"Replaced {deployments.previous.app_image}; 'fm switch --previous' now rolls back to it"
+                f"Replaced {deployments.previous.app_image}; 'fmx switch --previous' now rolls back to it"
             )
 
 
@@ -1694,7 +1694,7 @@ class DeployOrchestrator:
             self.output.warning(
                 f"sites/{site}/ exists on disk but is not in bench_config.toml. This deploy will "
                 f"NOT migrate it, so it will run the new image against its old schema. Migrate it "
-                f"yourself with: fm shell {self.bench.name} -c 'bench --site {site} migrate'",
+                f"yourself with: fmx shell {self.bench.name} -c 'bench --site {site} migrate'",
             )
 
         on_disk = read_sites_on_disk(self.bench_path)
@@ -1703,7 +1703,7 @@ class DeployOrchestrator:
         absent = [site for site in self.sites if site not in on_disk]
         if not absent:
             return
-        repairs = " ".join(f"fm delete {self.bench.name}/{site}" for site in absent)
+        repairs = " ".join(f"fmx delete {self.bench.name}/{site}" for site in absent)
         raise DeployError(
             f"{self.bench.name} records {', '.join(absent)} in bench_config.toml, but "
             f"sites/<name>/site_config.json does not exist. Every deploy step runs per site, so "
@@ -2026,8 +2026,8 @@ class DeployOrchestrator:
             raise DeployError(
                 f"Deploy of {new_image} failed health check and is halted in maintenance mode: {reason}.",
                 suggestions=[
-                    f"Check the new containers: 'fm logs {self.config.name}'",
-                    *([f"Roll back by hand: 'fm switch {self.config.name} {old_image}'"] if old_image else []),
+                    f"Check the new containers: 'fmx logs {self.config.name}'",
+                    *([f"Roll back by hand: 'fmx switch {self.config.name} {old_image}'"] if old_image else []),
                 ],
             )
         if not do_rolling:
@@ -2058,7 +2058,7 @@ class DeployOrchestrator:
                 except Exception as e:
                     self.output.warning(
                         f"Could not clear Frappe's maintenance_mode for {self.site} ({e}); the site will refuse "
-                        f"requests until it is unset. Run: fm shell {self.bench.name} -c "
+                        f"requests until it is unset. Run: fmx shell {self.bench.name} -c "
                         f"'bench --site {self.site} set-config -g maintenance_mode 0'"
                     )
             self._record(new_image, migrate_status, nginx_image=new_nginx_image, backups=db_dumps)
@@ -2092,7 +2092,7 @@ class DeployOrchestrator:
         self._require_image_mode()
         image = self._current_deployed_image()
         if not image:
-            raise DeployError("No deployed image recorded; bake and switch first (fm bake, then fm switch).")
+            raise DeployError("No deployed image recorded; bake and switch first (fmx bake, then fmx switch).")
         if not self._frappe_running():
             raise DeployError("Web tier is not running; use a plain start/restart instead of --rolling.")
 
@@ -2232,8 +2232,8 @@ class DeployOrchestrator:
                 f"Rollback to {previous_image} failed health check; bench halted on {previous_image} "
                 f"with maintenance mode ON, so the site serves 503 until you clear it.",
                 suggestions=[
-                    f"Check the containers: 'fm logs {self.config.name}'",
-                    f"If they are healthy, clear it: fm shell {self.config.name} -c "
+                    f"Check the containers: 'fmx logs {self.config.name}'",
+                    f"If they are healthy, clear it: fmx shell {self.config.name} -c "
                     f"'{BENCH_BIN} --site {self.site} set-config -g maintenance_mode 0'",
                 ],
             )
@@ -2249,7 +2249,7 @@ class DeployOrchestrator:
         state = self.config.deployments
         if state and state.previous:
             self.output.print(
-                f"Previous image is now {state.previous.app_image} -- running `fm rollback` again would re-deploy it.",
+                f"Previous image is now {state.previous.app_image} -- running `fmx rollback` again would re-deploy it.",
                 emoji_code=":information:",
             )
         self.output.effect(f"Rolled back to {previous_image}", emoji_code=":rewind:")

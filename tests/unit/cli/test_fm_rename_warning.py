@@ -1,4 +1,4 @@
-"""The 'fm' name is deprecated in favour of 'fmx' and is removed in 1.0.0."""
+"""The 'fm' name is deprecated in favour of 'fmx'."""
 
 from unittest.mock import patch
 
@@ -6,7 +6,7 @@ import pytest
 
 from frappe_manager import main
 
-NOTICE = "'fm' is being renamed to 'fmx'"
+NOTICE = "'fm' is deprecated; use 'fmx' instead."
 
 
 def run_as(argv0, monkeypatch, env=None):

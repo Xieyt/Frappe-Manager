@@ -65,7 +65,7 @@ def _fetch_cloudflare_ranges(output) -> list[str]:
         if ranges:
             return ranges
     except Exception:
-        output.warning("Could not fetch Cloudflare's published ranges; using the list vendored with fm")
+        output.warning("Could not fetch Cloudflare's published ranges; using the list vendored with fmx")
     return list(CLOUDFLARE_FALLBACK_RANGES)
 
 
@@ -127,7 +127,7 @@ def status(ctx: typer.Context, json_results: JsonResultOption = False, fields: J
     else:
         # Every request is judged on the connection fm received: this is the line that changes
         # what client IP every bench sees, so the empty state stays unmistakable, not just "none".
-        card.fact("ranges", "[fm.muted]none; fm treats every request as arriving directly[/fm.muted]")
+        card.fact("ranges", "[fm.muted]none; fmx treats every request as arriving directly[/fm.muted]")
     card.fact("config", f"[fm.muted][link=file://{conf_path}]{conf_path}[/link][/fm.muted]")
     output.print_data(card)
 
@@ -135,7 +135,7 @@ def status(ctx: typer.Context, json_results: JsonResultOption = False, fields: J
 @example(
     "Trust Cloudflare",
     "--cdn cloudflare",
-    detail="Proxy logs, fm maintenance --allow-ip and frappe's rate limiting then see the visitor instead of Cloudflare's edge.",
+    detail="Proxy logs, fmx maintenance --allow-ip and frappe's rate limiting then see the visitor instead of Cloudflare's edge.",
 )
 @example(
     "Trust your own load balancer",
@@ -145,7 +145,7 @@ def status(ctx: typer.Context, json_results: JsonResultOption = False, fields: J
 @example(
     "Trust a front running on the same machine",
     "--local",
-    detail="Resolves the address a same-machine connection actually reaches fm from; it is never 127.0.0.1, because fm's proxy is a container and docker rewrites the source.",
+    detail="Resolves the address a same-machine connection actually reaches fmx from; it is never 127.0.0.1, because fmx's proxy is a container and docker rewrites the source.",
 )
 def set_trusted(
     ctx: typer.Context,
@@ -161,7 +161,7 @@ def set_trusted(
         list[str],
         typer.Option(
             "--trust",
-            help="CIDR range or single IP of a proxy in front of fm (repeatable).",
+            help="CIDR range or single IP of a proxy in front of fmx (repeatable).",
             show_default=False,
         ),
     ] = [],
@@ -179,9 +179,9 @@ def set_trusted(
     ] = None,
 ):
     """
-    Trust the proxies in front of fm, so the visitor's address and scheme survive the hop.
+    Trust the proxies in front of fmx, so the visitor's address and scheme survive the hop.
 
-    Trust only the ranges you actually sit behind: whatever you trust fully controls the client IP and the scheme that fm, your logs and frappe go on to see. Anything arriving from any other address is judged on the connection itself, so a forged header changes nothing.
+    Trust only the ranges you actually sit behind: whatever you trust fully controls the client IP and the scheme that fmx, your logs and frappe go on to see. Anything arriving from any other address is judged on the connection itself, so a forged header changes nothing.
 
     Each run replaces the whole set.
     """
@@ -238,7 +238,7 @@ def set_trusted(
         loopback = [cidr for cidr in validated if ipaddress.ip_network(cidr).is_loopback]
         if loopback:
             output.display_error(
-                f"--trust {loopback[0]} can never match: fm's proxy runs in a container and never sees a connection from this machine as loopback. Use --local instead."
+                f"--trust {loopback[0]} can never match: fmx's proxy runs in a container and never sees a connection from this machine as loopback. Use --local instead."
             )
             raise typer.Exit(code=2)
         ranges += validated
@@ -276,7 +276,7 @@ def set_trusted(
         else:
             output.warning(
                 f"Trusted proxies written and validated ({summary}), but the proxy did not reload; "
-                "run 'fm services restart nginx-proxy' to apply it"
+                "run 'fmx services restart nginx-proxy' to apply it"
             )
 
     _report_self_call_risk(ctx, output)
@@ -286,13 +286,13 @@ def set_trusted(
 @example(
     "Stop trusting anything in front",
     "",
-    detail="Every request is then judged on the connection fm itself received, which is the right setting whenever nothing sits in front.",
+    detail="Every request is then judged on the connection fmx itself received, which is the right setting whenever nothing sits in front.",
 )
 def clear(ctx: typer.Context):
     """
-    Trust nothing in front of fm.
+    Trust nothing in front of fmx.
 
-    Use this whenever a front is removed: leaving its range trusted lets anyone reaching fm directly claim to be any client, over any scheme.
+    Use this whenever a front is removed: leaving its range trusted lets anyone reaching fmx directly claim to be any client, over any scheme.
     """
     output = get_global_output_handler()
     services = ctx.obj["services"]
@@ -352,7 +352,7 @@ def _refresh_bench_web_servers(ctx, output) -> None:
 
     if changed:
         output.print(
-            f"Run 'fm restart {' '.join(changed)}' to apply this to the web server; "
+            f"Run 'fmx restart {' '.join(changed)}' to apply this to the web server; "
             "the proxy change above does not reach an already-running gunicorn.",
             emoji_code="",
         )
@@ -404,6 +404,6 @@ def _report_self_call_risk(ctx, output) -> None:
         return
 
     output.print(
-        f"TLS for {', '.join(affected)} is now your front's alone; fm holds no certificate for them, so their own server-side calls to themselves will fail. Run 'fm ssl add --dev <domain>' to give each one an internal certificate.",
+        f"TLS for {', '.join(affected)} is now your front's alone; fmx holds no certificate for them, so their own server-side calls to themselves will fail. Run 'fmx ssl add --dev <domain>' to give each one an internal certificate.",
         emoji_code="",
     )

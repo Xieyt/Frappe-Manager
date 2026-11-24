@@ -51,7 +51,7 @@ def _benchname_callback(benchname: str | None) -> str | None:
             message=(
                 "Bench not found at {}. If '"
                 + str(benchname)
-                + "' was meant for docker compose, omit the bench with '--' to pick one: fm compose -- "
+                + "' was meant for docker compose, omit the bench with '--' to pick one: fmx compose -- "
                 + str(benchname)
             ),
         ) from e
@@ -88,7 +88,7 @@ def compose(
         str | None,
         typer.Argument(
             metavar="BENCH",
-            help="Bench to act on. Omit to pick from the benches you have; 'fm compose -- ARGS' also picks, passing ARGS to docker compose.",
+            help="Bench to act on. Omit to pick from the benches you have; 'fmx compose -- ARGS' also picks, passing ARGS to docker compose.",
             autocompletion=sites_autocompletion_callback,
             callback=_benchname_callback,
         ),
@@ -99,9 +99,9 @@ def compose(
 
     Everything after the bench name is handed to docker compose untouched, so any subcommand and flag it accepts works here.
 
-    Put '--' in the bench position to pick the bench interactively instead of naming it: fm compose -- ps. This is also the only way to hand docker compose a flag fm would otherwise claim for itself, such as --help.
+    Put '--' in the bench position to pick the bench interactively instead of naming it: fmx compose -- ps. This is also the only way to hand docker compose a flag fmx would otherwise claim for itself, such as --help.
 
-    docker compose runs with the bench directory as its working directory, so a relative path in the arguments resolves there and not against the directory you called fm from.
+    docker compose runs with the bench directory as its working directory, so a relative path in the arguments resolves there and not against the directory you called fmx from.
     """
     args = list(ctx.args)
     if _bench_omitted_by_double_dash():
@@ -124,7 +124,7 @@ def compose(
     if not compose_files:
         output.display_error(
             f"No docker-compose files found in {bench_path}; nothing to run docker compose "
-            f"against. Run 'fm start {benchname}' to regenerate them."
+            f"against. Run 'fmx start {benchname}' to regenerate them."
         )
         raise typer.Exit(1)
 

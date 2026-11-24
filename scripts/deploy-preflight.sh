@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Check that a host can receive `fm switch`, before anything is built.
+# Check that a host can receive `fmx switch`, before anything is built.
 #
-# `fm switch` has to run on the machine that owns the bench: it rewrites that bench's
+# `fmx switch` has to run on the machine that owns the bench: it rewrites that bench's
 # config and compose file, drains its workers, dumps its database and moves its traffic.
 # Driving it over SSH has one non-obvious failure mode, which is the reason this exists:
 #
-#   ssh host "fm switch ..."
+#   ssh host "fmx switch ..."
 #
 # gets a NON-INTERACTIVE shell. That reads neither .bashrc nor .profile, so PATH is the
-# bare system default. An fm installed by `uv tool install` lives in ~/.local/bin and is
-# invisible there: `command -v fm` returns nothing on a host where fm is installed and
-# working. So fm is resolved explicitly, against the places it actually gets installed.
+# bare system default. An fmx installed by `uv tool install` lives in ~/.local/bin and is
+# invisible there: `command -v fmx` returns nothing on a host where fmx is installed and
+# working. So fmx is resolved explicitly, trying the current name first and falling back
+# to the retired `fm` name so a host that has not upgraded yet still works.
 #
 # Run it by hand before wiring up CI, or to reproduce a CI failure:
 #
@@ -31,8 +32,10 @@ WORKDIR=""
 GITHUB_OUTPUT_FILE=""
 KEYSCAN="no"
 
-# Where fm actually ends up, in the order worth trying. PATH first so an explicit
+# Where fmx actually ends up, in the order worth trying. PATH first so an explicit
 # system install wins; then uv's tool dir, which is the case that motivated all this.
+# A retired `fm` install is checked too, after each fmx candidate, so an older host
+# that has not upgraded yet still passes.
 FM_CANDIDATE_DIRS=("\$HOME/.local/bin" "/usr/local/bin" "/usr/bin")
 
 usage() {
@@ -47,9 +50,9 @@ Options:
   --known-hosts PATH     known_hosts file; or pass its CONTENT in SSH_KNOWN_HOSTS
   --keyscan              no known_hosts supplied: accept whatever ssh-keyscan returns.
                          Trust on first use. Without this, ssh uses your own config.
-  --fm-path PATH         absolute path to fm on the target, skipping discovery
+  --fmx-path PATH        absolute path to fmx (or fm) on the target, skipping discovery
   --workdir DIR          where generated files go (default: a temp dir, removed on exit)
-  --github-output FILE   append key=, known-hosts= and fm-bin= to FILE
+  --github-output FILE   append key=, known-hosts= and fmx-bin= to FILE
   -h, --help             this text
 
 Environment:
@@ -57,8 +60,8 @@ Environment:
   SSH_KNOWN_HOSTS   known_hosts content, written to WORKDIR
 
 Exit status:
-  0  the host is reachable and fm runs there
-  1  bad usage, unreachable host, or no working fm
+  0  the host is reachable and fmx runs there
+  1  bad usage, unreachable host, or no working fmx
 USAGE
 }
 
@@ -73,7 +76,7 @@ while [ $# -gt 0 ]; do
     --key-file)      KEY_FILE="${2:-}"; shift 2 ;;
     --known-hosts)   KNOWN_HOSTS_FILE="${2:-}"; shift 2 ;;
     --keyscan)       KEYSCAN="yes"; shift ;;
-    --fm-path)       FM_PATH="${2:-}"; shift 2 ;;
+    --fmx-path)      FM_PATH="${2:-}"; shift 2 ;;
     --workdir)       WORKDIR="${2:-}"; shift 2 ;;
     --github-output) GITHUB_OUTPUT_FILE="${2:-}"; shift 2 ;;
     -h|--help)       usage; exit 0 ;;
@@ -129,7 +132,7 @@ log "Preflight ${target} (port ${PORT})"
 
 # Reachability first, with its own message. ssh returns 255 for its own failures and the
 # remote command's status otherwise, so without this check an auth or host-key problem
-# would surface below as "fm was not found", which sends the reader after the wrong thing.
+# would surface below as "fmx was not found", which sends the reader after the wrong thing.
 if ! ssh "${ssh_opts[@]}" "$target" true 2>"$WORKDIR/ssh.err"; then
   log ""
   log "Could not open an SSH session to ${target} on port ${PORT}:"
@@ -150,28 +153,29 @@ REMOTE
 )
 
 # $HOME must expand on the far side, so the candidate list is built as remote-shell text.
-candidates="\$(command -v fm 2>/dev/null)"
+# fmx is tried before the retired fm name at every tier, so an upgraded host always wins.
+candidates="\$(command -v fmx 2>/dev/null) \$(command -v fm 2>/dev/null)"
 if [ -n "$FM_PATH" ]; then
   candidates="$FM_PATH $candidates"
 fi
 for dir in "${FM_CANDIDATE_DIRS[@]}"; do
-  candidates="$candidates $dir/fm"
+  candidates="$candidates $dir/fmx $dir/fm"
 done
 
-# $candidates is built here and MUST expand client-side; only the `$(command -v fm)` part
-# inside it is escaped, so that one runs on the target.
+# $candidates is built here and MUST expand client-side; only the `$(command -v fmx)` and
+# `$(command -v fm)` parts inside it are escaped, so those run on the target.
 # shellcheck disable=SC2029
 if ! fm_bin=$(ssh "${ssh_opts[@]}" "$target" "FM_CANDIDATES=\"$candidates\" bash -s" <<< "$probe"); then
   log ""
-  log "fm was not found on ${target}."
+  log "fmx was not found on ${target} (checked for the retired fm name too)."
   log "Looked on PATH, then: $(printf '%s ' "${FM_CANDIDATE_DIRS[@]}")"
   log ""
   log "Install it there, e.g.  uv tool install frappe-manager"
-  log "or pass --fm-path /absolute/path/to/fm if it lives elsewhere."
-  fail "no usable fm on ${target}"
+  log "or pass --fmx-path /absolute/path/to/fmx if it lives elsewhere."
+  fail "no usable fmx on ${target}"
 fi
 
-# Present is not working: an interrupted install still leaves the shim behind. fm prints
+# Present is not working: an interrupted install still leaves the shim behind. It prints
 # --version to stderr, hence the redirect.
 # $fm_bin is the path we just discovered, so client-side expansion is the point.
 # shellcheck disable=SC2029
@@ -179,13 +183,13 @@ if ! fm_version=$(ssh "${ssh_opts[@]}" "$target" "'$fm_bin' --version 2>&1" | tr
   fail "found $fm_bin on ${target} but it failed to run"
 fi
 
-log "fm: ${fm_bin} (${fm_version# })"
+log "found: ${fm_bin} (${fm_version# })"
 
 if [ -n "$GITHUB_OUTPUT_FILE" ]; then
   {
     printf 'key=%s\n' "$KEY_FILE"
     printf 'known-hosts=%s\n' "$KNOWN_HOSTS_FILE"
-    printf 'fm-bin=%s\n' "$fm_bin"
+    printf 'fmx-bin=%s\n' "$fm_bin"
   } >> "$GITHUB_OUTPUT_FILE"
 fi
 

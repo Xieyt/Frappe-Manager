@@ -301,7 +301,7 @@ def test_a_single_ordinary_site_with_its_own_upload_limit_still_gets_a_row(tmp_p
     card, _ = _info_card(tmp_path, config, site_config={SITE: {}})
 
     assert card.labelled("sites") == [
-        f"http://{SITE}  [fm.muted]fm's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
+        f"http://{SITE}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
         "  [fm.muted]· upload 10M (own)[/fm.muted]",
     ]
 
@@ -341,9 +341,9 @@ def test_a_two_site_bench_lists_every_site_and_marks_the_primary(tmp_path, card_
     card, _ = _info_card(tmp_path, config, site_config={SITE: {}})
 
     assert card.labelled("sites") == [
-        f"http://{SITE}  [fm.muted]fm's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
+        f"http://{SITE}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
         "  [fm.muted]· upload 50M (inherited)[/fm.muted]",
-        f"http://{OTHER}  [fm.muted]fm's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
+        f"http://{OTHER}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
     ]
     # The primary's own line is unchanged: the rows are an addition, not a replacement.
     assert card.facts["url"] == f"http://{SITE}"
@@ -368,7 +368,7 @@ def test_a_site_on_someone_elses_server_names_that_server(tmp_path, card_spy):
     card, _ = _info_card(tmp_path, config, site_config={SITE: {}})
 
     assert card.labelled("sites") == [
-        f"http://{SITE}  [fm.muted]fm's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
+        f"http://{SITE}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.ok]● primary[/fm.ok]"
         "  [fm.muted]· upload 50M (inherited)[/fm.muted]",
         f"http://{OTHER}  [fm.muted]external mariadb · rds.internal:3307[/fm.muted]"
         "  [fm.muted]· upload 50M (inherited)[/fm.muted]",
@@ -409,8 +409,8 @@ def test_an_ambiguous_primary_prints_why_instead_of_raising(tmp_path, card_spy):
 
     assert card.facts["url"] == "[fm.muted]2 sites recorded, none named after the bench[/fm.muted]"
     assert card.labelled("sites") == [
-        f"http://{FOREIGN_A}  [fm.muted]fm's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
-        f"http://{FOREIGN_B}  [fm.muted]fm's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
+        f"http://{FOREIGN_A}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
+        f"http://{FOREIGN_B}  [fm.muted]fmx's mariadb[/fm.muted]  [fm.muted]· upload 50M (inherited)[/fm.muted]",
     ]
     # Nothing is marked primary, because nothing is: guessing one would point every bench-scoped
     # command at another site's schema.
@@ -444,7 +444,7 @@ def test_an_unmanaged_site_directory_is_reported_and_nothing_else_changes(tmp_pa
 
     assert card.labelled("unmanaged") == [
         f"sites/{UNMANAGED}/",
-        "[fm.muted]not in bench_config.toml; fm will not touch their schemas[/fm.muted]",
+        "[fm.muted]not in bench_config.toml; fmx will not touch their schemas[/fm.muted]",
     ]
     # A directory fm does not manage is not a site: it changes nothing else about the card.
     assert card.facts["url"] == f"http://{SITE}"
@@ -460,7 +460,7 @@ def test_many_unmanaged_directories_still_cost_two_rows(tmp_path, card_spy):
 
     assert card.labelled("unmanaged") == [
         f"sites/{UNMANAGED}/ [fm.muted]·[/fm.muted] sites/old.localhost/",
-        "[fm.muted]not in bench_config.toml; fm will not touch their schemas[/fm.muted]",
+        "[fm.muted]not in bench_config.toml; fmx will not touch their schemas[/fm.muted]",
     ]
 
 

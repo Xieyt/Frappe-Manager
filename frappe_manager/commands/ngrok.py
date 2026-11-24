@@ -37,7 +37,7 @@ def ngrok(
         typer.Option(
             "--auth-token",
             "-t",
-            help="ngrok auth token. Falls back to the one saved in fm's config.",
+            help="ngrok auth token. Falls back to the one saved in fmx's config.",
             envvar="NGROK_AUTHTOKEN",
         ),
     ] = None,
@@ -45,16 +45,16 @@ def ngrok(
         bool | None,
         typer.Option(
             "--save-token/--no-save-token",
-            help="Save this token to fm's config for later runs, or leave the config alone. fm asks when a new token arrives and neither flag is passed.",
+            help="Save this token to fmx's config for later runs, or leave the config alone. fmx asks when a new token arrives and neither flag is passed.",
         ),
     ] = None,
 ):
     """
     Expose a running bench on a public ngrok URL.
 
-    The tunnel rewrites the Host header on every request, so it reaches exactly one of the bench's hostnames: fm ngrok BENCH/DOMAIN reaches that one, and a bare fm ngrok BENCH reaches the bench's primary site. A bench serving several sites needs the domain named, because one tunnel cannot answer for all of them.
+    The tunnel rewrites the Host header on every request, so it reaches exactly one of the bench's hostnames: fmx ngrok BENCH/DOMAIN reaches that one, and a bare fmx ngrok BENCH reaches the bench's primary site. A bench serving several sites needs the domain named, because one tunnel cannot answer for all of them.
 
-    Needs an ngrok auth token: pass --auth-token, set NGROK_AUTHTOKEN, or save one in fm's config.
+    Needs an ngrok auth token: pass --auth-token, set NGROK_AUTHTOKEN, or save one in fmx's config.
     """
     check_bench_migration_required(address)
 

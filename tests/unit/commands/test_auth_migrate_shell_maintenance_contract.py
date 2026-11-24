@@ -327,7 +327,7 @@ def test_bare_status_on_an_unconfigured_bench_reports_the_model_defaults(out, tm
     assert r.card.meta == "not configured; bench defaults apply"
     assert r.card.facts["tools"] == "protected (default)"
     assert r.card.facts["web"] == "open (default)"
-    assert r.card.facts["mint credentials"] == "fm auth enable mybench --web"
+    assert r.card.facts["mint credentials"] == "fmx auth enable mybench --web"
     bench.save_bench_config.assert_not_called()
     bench.ensure_fm_nginx_confs.assert_not_called()
 
@@ -355,7 +355,7 @@ def test_status_stops_reporting_on_when_the_served_conf_is_missing(out, tmp_path
     r = _status_card(bench)
     assert r.card.meta != "on for: web (tools off)"
     assert r.card.active is False
-    assert "nginx is not currently serving an fm auth conf" in r.card.facts["web"]
+    assert "nginx is not currently serving an fmx auth conf" in r.card.facts["web"]
     # Credentials still appear: useful while repairing a gap just reported, not proof of enforcement.
     assert r.card.facts["user"] == "alice"
 
@@ -531,7 +531,7 @@ def test_enabling_web_without_tls_is_refused(out, tmp_path):
     assert r.exit.exit_code == 1
     body = joined(out.display_error)
     assert "has no TLS certificate" in body
-    assert "fm ssl add mybench" in body
+    assert "fmx ssl add mybench" in body
     bench.save_bench_config.assert_not_called()
 
 
@@ -580,8 +580,8 @@ def test_a_stale_nginx_conf_blocks_web_auth_and_names_the_bake_remedy(out, tmp_p
     assert r.exit.exit_code == 1
     body = joined(out.display_error)
     assert "predates the Authorization-header fix" in body
-    assert "fm bake mybench" in body
-    assert "fm switch mybench" in body
+    assert "fmx bake mybench" in body
+    assert "fmx switch mybench" in body
     bench.save_bench_config.assert_not_called()
 
 
@@ -590,9 +590,9 @@ def test_a_stale_nginx_conf_on_a_mount_bench_names_the_migrate_remedy(out, tmp_p
     r = _run_enable(bench, web=True)
     assert r.exit.exit_code == 1
     body = joined(out.display_error)
-    assert "fm migrate" in body
-    assert "fm restart mybench --nginx --recreate" in body
-    assert "fm bake" not in body
+    assert "fmx migrate" in body
+    assert "fmx restart mybench --nginx --recreate" in body
+    assert "fmx bake" not in body
 
 
 @pytest.mark.usefixtures("out")
@@ -783,7 +783,7 @@ def test_protecting_tools_on_a_bench_without_admin_tools_says_nothing_enforces_i
     assert _saved(bench).tools is True
     body = joined(out.warning)
     assert "Admin tools are disabled on mybench" in body
-    assert "fm tools enable mybench" in body
+    assert "fmx tools enable mybench" in body
 
 
 def test_no_admin_tools_warning_when_the_tools_locations_exist(out, tmp_path):
@@ -1020,7 +1020,7 @@ def test_nothing_to_do_when_no_bench_was_named_points_at_services_migrate(out, t
     r = _run_migrate(tmp_path, system_version="0.19.0", current_version="0.19.0")
     assert r.exit.exit_code == 0
     assert (
-        "✓ No benches to migrate. fm's global services & configuration are handled by fm services migrate."
+        "✓ No benches to migrate. fmx's global services & configuration are handled by fmx services migrate."
         in texts(out.print)
     )
     r.executor_cls.assert_not_called()
@@ -1084,7 +1084,7 @@ def test_a_stale_services_tier_is_refused_naming_the_command_that_fixes_it(out, 
     _bench_dir(tmp_path, "a.localhost")
     r = _run_migrate(tmp_path, address="a.localhost", system_version="0.18.0", current_version="0.19.0")
     assert r.exit.exit_code == 1
-    assert "Run 'fm services migrate' first" in joined(out.display_error)
+    assert "Run 'fmx services migrate' first" in joined(out.display_error)
     r.executor_cls.assert_not_called()
 
 
@@ -2020,13 +2020,13 @@ def test_status_reports_on_off_and_foreign_per_domain_without_reloading(out, tmp
     foreign_row = line_for(body, "alias.example.com")
     # Answer first, in words that mean something to an operator -- not fm's "vhost" jargon.
     assert "off" in foreign_row
-    assert "this domain already has nginx config fm did not write" in foreign_row
+    assert "this domain already has nginx config fmx did not write" in foreign_row
     plain_row = line_for(body, "plain.example.com")
     assert "off" in plain_row
-    assert "nginx config fm did not write" not in plain_row
+    assert "nginx config fmx did not write" not in plain_row
     clean_row = line_for(body, "clean.example.com")
     assert "off" in clean_row
-    assert "nginx config fm did not write" not in clean_row
+    assert "nginx config fmx did not write" not in clean_row
     services.nginx_controller.reload.assert_not_called()
 
 

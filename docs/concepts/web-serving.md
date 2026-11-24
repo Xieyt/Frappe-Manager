@@ -14,7 +14,7 @@ The bench's nginx does more than forward. It serves the site's own `public/` fil
 
 `/assets` is the interesting one, because where nginx looks depends on the [runtime](runtimes.md). Its document root is `/workspace/frappe-bench/sites`: on a **mount** bench that is the bind-mounted workspace, so nginx serves whatever `bench build` or `bench watch` last wrote to disk; on an **image** bench the container runs the release's paired `-nginx` image with the bundles baked in, and the image-mode binds are data-only, deliberately not covering `sites/assets`.
 
-A miss falls through to the web process, and that rescues a `dev` bench only: `bench serve` wraps the app in Frappe's static middleware and serves `/assets` itself, which is what covers the window after a `bench watch` rebuild emits content-hashed filenames nginx has not seen. Gunicorn imports the bare WSGI app with no static middleware, so on a `prod` bench a missing bundle is a 404 that nginx cannot cover for. Rebuild it (`fm shell mybench -c "bench build"`) on a mount bench; rebake on an image bench.
+A miss falls through to the web process, and that rescues a `dev` bench only: `bench serve` wraps the app in Frappe's static middleware and serves `/assets` itself, which is what covers the window after a `bench watch` rebuild emits content-hashed filenames nginx has not seen. Gunicorn imports the bare WSGI app with no static middleware, so on a `prod` bench a missing bundle is a 404 that nginx cannot cover for. Rebuild it (`fmx shell mybench -c "bench build"`) on a mount bench; rebake on an image bench.
 
 ## The web process: dev server vs Gunicorn
 
@@ -27,11 +27,11 @@ Which web process runs is decided by the bench's [environment](environments.md):
 | Hot reload | yes (Werkzeug's reloader for Python, `bench watch` for assets) | no |
 | On crash | stays down: supervisor does not restart the dev server | restarted by supervisor |
 
-Switching is a settings change: `fm update mybench --environment prod` (see [Environments](environments.md)).
+Switching is a settings change: `fmx update mybench --environment prod` (see [Environments](environments.md)).
 
 ## Gunicorn workers and threads
 
-fm sizes Gunicorn automatically:
+fmx sizes Gunicorn automatically:
 
 ```
 workers = min(CPU count, RAM in MB / 256)
@@ -62,9 +62,9 @@ Every value is read from `common_site_config.json` when present, otherwise compu
 The Gunicorn command line lives in a generated script, `config/fm-web-server.sh`, so a new value needs a regeneration pass before the restart picks it up:
 
 ```bash
-fm shell mybench -c "bench set-config -g gunicorn_workers 4"
-fm start mybench --reconfigure-supervisor   # rewrite config/fm-web-server.sh
-fm restart mybench --web --no-workers       # re-exec it
+fmx shell mybench -c "bench set-config -g gunicorn_workers 4"
+fmx start mybench --reconfigure-supervisor   # rewrite config/fm-web-server.sh
+fmx restart mybench --web --no-workers       # re-exec it
 ```
 
 !!! warning "Too few = slow, too many = OOM"
@@ -74,30 +74,32 @@ fm restart mybench --web --no-workers       # re-exec it
 
 TLS terminates at the global proxy, so the bench's nginx and Frappe both speak plain HTTP. Two headers carry what was lost, and both hops are configured to pass them:
 
-- **`X-Forwarded-Proto`.** fm's own HTTP→HTTPS redirect, which lives on the global proxy, does not trust this header by its mere presence: a peer-keyed `geo`/`map` pair decides `$fm_client_scheme` per request, using the forwarded value for a peer in `fm services trusted-proxies`' trusted set and the scheme of the connection fm actually received for everyone else. That is what makes the redirect unforgeable: a forged `X-Forwarded-Proto` from an untrusted address cannot skip it. The bench nginx and gunicorn are a separate story: they see the raw header the global proxy relays inward, unrewritten, and gunicorn is told to trust it at all only once a trusted set is configured (see the warning below). Frappe reads the header directly, not the WSGI scheme: `frappe.utils.get_url()` treats exactly the value `https` as HTTPS and anything else as HTTP, and that decides every absolute URL it builds (email links, redirects, OAuth callbacks). Setting `host_name` in the site config overrides all of it, which is why `fm ssl add` writes it only when the certified domain is the site's own canonical name, and leaves it alone for an alias.
-- **`X-Real-IP`.** The bench nginx only ever sees the global proxy's address, so fm writes a `real-ip.conf` overlay that trusts the fm frontend network and takes the client from `X-Real-IP`, which the proxy sets from its own `remote_addr`. fm re-materialises that overlay on every `fm start`, since nginx reads its includes once, at boot. Behind a CDN the proxy's own `remote_addr` is the edge, not the visitor: `fm services trusted-proxies set` is what teaches it otherwise.
+- **`X-Forwarded-Proto`.** fmx's own HTTP→HTTPS redirect, which lives on the global proxy, does not trust this header by its mere presence: a peer-keyed `geo`/`map` pair decides `$fm_client_scheme` per request, using the forwarded value for a peer in `fmx services trusted-proxies`' trusted set and the scheme of the connection fmx actually received for everyone else. That is what makes the redirect unforgeable: a forged `X-Forwarded-Proto` from an untrusted address cannot skip it.
+
+    The bench nginx and gunicorn are a separate story: they see the raw header the global proxy relays inward, unrewritten, and gunicorn is told to trust it at all only once a trusted set is configured (see the warning below). Frappe reads the header directly, not the WSGI scheme: `frappe.utils.get_url()` treats exactly the value `https` as HTTPS and anything else as HTTP, and that decides every absolute URL it builds (email links, redirects, OAuth callbacks). Setting `host_name` in the site config overrides all of it, which is why `fmx ssl add` writes it only when the certified domain is the site's own canonical name, and leaves it alone for an alias.
+- **`X-Real-IP`.** The bench nginx only ever sees the global proxy's address, so fmx writes a `real-ip.conf` overlay that trusts the fmx frontend network and takes the client from `X-Real-IP`, which the proxy sets from its own `remote_addr`. fmx re-materialises that overlay on every `fmx start`, since nginx reads its includes once, at boot. Behind a CDN the proxy's own `remote_addr` is the edge, not the visitor: `fmx services trusted-proxies set` is what teaches it otherwise.
 
 !!! warning "Gunicorn still sees the raw header"
-    `$fm_client_scheme` only protects fm's own redirect. Once a trusted set makes the global proxy relay `X-Forwarded-Proto` inward at all (`TRUST_DOWNSTREAM_PROXY`), gunicorn trusts whatever value arrives, including from a request that reaches fm directly, bypassing whatever sits in front of it. fm cannot rewrite the header itself; close the gap by making fm unreachable except through the front (`fm services ports --bind 127.0.0.1`) or a firewall rule.
+    `$fm_client_scheme` only protects fmx's own redirect. Once a trusted set makes the global proxy relay `X-Forwarded-Proto` inward at all (`TRUST_DOWNSTREAM_PROXY`), gunicorn trusts whatever value arrives, including from a request that reaches fmx directly, bypassing whatever sits in front of it. fmx cannot rewrite the header itself; close the gap by making fmx unreachable except through the front (`fmx services ports --bind 127.0.0.1`) or a firewall rule.
 
 ## Customizing the bench's nginx
 
-fm owns exactly one file in a bench's nginx config: `configs/nginx/conf/conf.d/default.conf`. It is **generated output**, rendered from the bench's recorded sites every time the nginx container boots, so anything you write into it is lost the next time the container starts. Everything else in that directory is yours and is never touched.
+fmx owns exactly one file in a bench's nginx config: `configs/nginx/conf/conf.d/default.conf`. It is **generated output**, rendered from the bench's recorded sites every time the nginx container boots, so anything you write into it is lost the next time the container starts. Everything else in that directory is yours and is never touched.
 
 | You want | Write | Applies to |
 | --- | --- | --- |
 | Behaviour for every site in the bench | `configs/nginx/conf/custom/<name>.conf` | inside every site's `server` block |
 | Behaviour for one site | `configs/nginx/conf/custom/<site>/<name>.conf` | inside that site's `server` block only |
 | Your own `server`, `map`, or `upstream` | `configs/nginx/conf/conf.d/<name>.conf` | the `http` block |
-| To take over one domain completely | `configs/nginx/conf/conf.d/<domain>.server.conf` | that domain, instead of fm's block |
+| To take over one domain completely | `configs/nginx/conf/conf.d/<domain>.server.conf` | that domain, instead of fmx's block |
 
 The first two are included from inside a `server` block, so they take directives like `client_max_body_size`, `add_header` or a `location`, and a `server { ... }` there is a syntax error. The third is included at `http` level and takes whole server blocks.
 
-The last row is the escape hatch. Naming a file after a domain **claims** it: fm leaves that domain out of its own render entirely, no map entry and no server block, so your file is the only thing serving it. Every other domain in the bench keeps being regenerated normally. `fm info` lists claimed domains, because a claimed domain no longer follows the bench's own settings and that is easy to forget months later.
+The last row is the escape hatch. Naming a file after a domain **claims** it: fmx leaves that domain out of its own render entirely, no map entry and no server block, so your file is the only thing serving it. Every other domain in the bench keeps being regenerated normally. `fmx info` lists claimed domains, because a claimed domain no longer follows the bench's own settings and that is easy to forget months later.
 
-Changes take effect when nginx re-reads its config. `fm restart --service nginx` is enough for a drop-in; a new or removed domain needs `fm restart` so the container is recreated with the new routing.
+Changes take effect when nginx re-reads its config. `fmx restart --service nginx` is enough for a drop-in; a new or removed domain needs `fmx restart` so the container is recreated with the new routing.
 
-If a render would produce a config nginx cannot load, fm keeps the previous one and says so on the container's logs rather than starting with broken routing. If the invalid file turns out to be one of yours, the message says that instead, so `fm logs` on a bench whose nginx will not start is the first place to look.
+If a render would produce a config nginx cannot load, fmx keeps the previous one and says so on the container's logs rather than starting with broken routing. If the invalid file turns out to be one of yours, the message says that instead, so `fmx logs` on a bench whose nginx will not start is the first place to look.
 
 ## See also
 

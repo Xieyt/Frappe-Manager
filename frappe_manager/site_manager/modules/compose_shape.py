@@ -486,10 +486,10 @@ def unsupported_redis_scheme(url: str) -> str | None:
         return None
     shown = f"{scheme}://" if scheme else "(no scheme)"
     return (
-        f"{display_redis_url(url)!r} uses {shown}, and fm only accepts redis:// and rediss://. "
+        f"{display_redis_url(url)!r} uses {shown}, and fmx only accepts redis:// and rediss://. "
         "Anything else is written verbatim into bench_config.toml and then into "
         "common_site_config.json, where nothing downstream can read it: redis-py raises ValueError at "
-        "connect time and node-redis (socketio) raises TypeError('Invalid protocol') -- and fm's own "
+        "connect time and node-redis (socketio) raises TypeError('Invalid protocol') -- and fmx's own "
         "readiness probe does not catch it either, because a sentinel or proxy still answers on its TCP "
         "port, so the failure would surface as a bare traceback mid-create instead of here. Frappe DOES "
         "support sentinel, but only through separate config keys (redis_cache_sentinel_enabled, "

@@ -42,7 +42,7 @@ jobs:
         PYAPP_UV_ENABLED: 1
         PYAPP_PYTHON_VERSION: '3.11'
         PYAPP_FULL_ISOLATION: 1
-        PYAPP_PROJECT_NAME: fm
+        PYAPP_PROJECT_NAME: frappe-manager
         PYAPP_EXEC_SPEC: frappe_manager.main:cli_entrypoint
         PYAPP_PIP_EXTRA_ARGS: typer[all] requests psutil ruamel-yaml tomlkit certbot pydantic email-validator jinja2 certbot-dns-cloudflare ngrok passlib
         PYAPP_DISTRIBUTION_EMBED: 1
@@ -53,21 +53,21 @@ jobs:
         mv pyapp-v* pyapp-latest
         cd pyapp-latest
         cargo build --release
-        mv target/release/pyapp ../fm && chmod +x ../fm
+        mv target/release/pyapp ../fmx && chmod +x ../fmx
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v7
       with:
         name: frappe_manager-${{ env.PYAPP_PROJECT_VERSION }}-linux-amd64
         path: |
-          fm
+          fmx
           LICENSE
           README.md
         retention-days: 5
 
     - name: Create release zip
       if: ${{ github.event.release && github.event.action == 'published' }}
-      run: zip frappe_manager-${{ env.PYAPP_PROJECT_VERSION }}-linux-amd64.zip "frappe_manager" "LICENSE" "README.md"
+      run: zip frappe_manager-${{ env.PYAPP_PROJECT_VERSION }}-linux-amd64.zip "fmx" "LICENSE" "README.md"
 
     - name: Attach files to release
       uses: softprops/action-gh-release@v3

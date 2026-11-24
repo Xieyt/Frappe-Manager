@@ -8,13 +8,13 @@ Two steps from nothing to a running Frappe bench on your machine.
 
     ---
 
-    Prerequisites, then install with `uv`, `pipx`, or `pip`. Also: dev builds, Windows under WSL 2, where fm keeps its files, and how to upgrade.
+    Prerequisites, then install with `uv`, `pipx`, or `pip`. Also: dev builds, Windows under WSL 2, where fmx keeps its files, and how to upgrade.
 
 -   :lucide-play:{ .lg .middle } &nbsp; **[Your first bench](quick-start.md)**
 
     ---
 
-    `fm create mybench`, open the site, change the admin password, and the handful of commands you will use every day.
+    `fmx create mybench`, open the site, change the admin password, and the handful of commands you will use every day.
 
 </div>
 
@@ -23,8 +23,8 @@ Two steps from nothing to a running Frappe bench on your machine.
 | Requirement | Detail |
 |---|---|
 | Docker | Engine 20.10+ with the Compose v2 plugin, daemon running |
-| Python | 3.13 or 3.14, to run the `fm` tool itself |
-| Git | fm checks every app repo and ref on the host before it builds |
+| Python | 3.13 or 3.14, to run the `fmx` tool itself |
+| Git | fmx checks every app repo and ref on the host before it builds |
 | Ports | 80 and 443 free for the shared nginx proxy |
 
 Details and the commands to check each one: [Before you install](installation.md#before-you-install).
@@ -33,7 +33,7 @@ Details and the commands to check each one: [Before you install](installation.md
 
 <div class="grid cards" markdown>
 
--   :lucide-layers:{ .lg .middle } &nbsp; **[How fm works](../concepts/index.md)**
+-   :lucide-layers:{ .lg .middle } &nbsp; **[How fmx works](../concepts/index.md)**
 
     ---
 

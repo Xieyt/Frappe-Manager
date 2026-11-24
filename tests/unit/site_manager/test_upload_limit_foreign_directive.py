@@ -85,7 +85,7 @@ class TestApplyUploadLimitClaimsForeignDirective:
         warned = " ".join(str(c.args[0]) for c in harness.bench.output.warning.call_args_list)
         assert SITE in warned
         assert "200m" in warned
-        assert "fm update --upload-limit" in warned
+        assert "fmx update --upload-limit" in warned
 
     def test_other_foreign_content_and_the_bootstrap_survive_byte_for_byte(self, harness):
         dropins, vhost_file = self._dropins_and_vhost_file(harness)

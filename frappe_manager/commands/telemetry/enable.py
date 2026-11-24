@@ -31,7 +31,7 @@ from ._helpers import apply_newrelic, describe_newrelic, require_license_key
     benchname="mybench",
 )
 @example(
-    "Throw away local agent tuning and restore fm's generated newrelic.ini",
+    "Throw away local agent tuning and restore fmx's generated newrelic.ini",
     "{benchname} newrelic --force-config",
     benchname="mybench",
 )
@@ -58,7 +58,7 @@ def enable(
         bool,
         typer.Option(
             "--force-config",
-            help="Overwrite the provider's on-disk agent config with fm's generated one, discarding local edits.",
+            help="Overwrite the provider's on-disk agent config with fmx's generated one, discarding local edits.",
             show_default=False,
         ),
     ] = False,
@@ -68,7 +68,7 @@ def enable(
 
     The license key is recorded in bench_config.toml and passed to the agent through the container environment, so a key rotation is just this command again with the new key.
 
-    The agent's own config file (config/newrelic.ini) is seeded once and then yours: fm never rewrites it, so a disable/enable cycle keeps your tuning. Use --force-config to take fm's generated version back.
+    The agent's own config file (config/newrelic.ini) is seeded once and then yours: fmx never rewrites it, so a disable/enable cycle keeps your tuning. Use --force-config to take fmx's generated version back.
     """
 
     services_manager = ctx.obj["services"]

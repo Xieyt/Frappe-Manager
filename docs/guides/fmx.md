@@ -1,11 +1,13 @@
 # fmx: in-container service manager
 
-`fmx` is a small CLI tool that lives **inside** every Frappe Manager container. While `fm` is the host-side tool you use to create, start, and manage benches from your terminal, `fmx` is what controls the individual processes *running inside* a bench: the web server, workers, scheduler, and socket server.
+`fmx` is the name of two different programs, and which one you are running depends on where you are standing. On your machine it is the host CLI: the tool you install, that creates and manages benches from your terminal. Inside a bench container it is a different, much smaller program: the in-container service manager this page describes, which controls the processes supervisord runs there (the web server, workers, scheduler, and socket server).
 
-You will not normally need `fmx` for day-to-day development. It becomes useful when you want to restart a single service without touching the whole bench, drain workers safely before a database migration, or debug a process that is stuck.
+You will not normally need the in-container one for day-to-day development. It becomes useful when you want to restart a single service without touching the whole bench, drain workers safely before a database migration, or debug a process that is stuck.
 
-!!! note "Two commands named fmx"
-    From v0.20.0 the host CLI is also installed as `fmx` (the old `fm` name is removed in 1.0.0), so the same name now covers both. On your machine, `fmx` runs Frappe Manager; inside a bench container (after `fm shell`), `fmx` is the service manager this page describes. The examples here use `fm shell`, which still works as `fmx shell`.
+!!! note "Same name, two programs"
+    The host CLI and the in-container service manager are separate programs that happen to share a name; nothing links them beyond that. `pyproject.toml` registers the host CLI as `fmx` (and, for now, the deprecated `fm`); the in-container one is a small script built into every bench image, with no connection to either.
+
+    The way to tell them apart in practice: if you are typing on your own machine, it is the host CLI. The moment you are inside a bench, via `fmx shell`, `fmx` means the in-container service manager instead. The examples on this page all run after `fmx shell`, so every `fmx ...` command below is the in-container one, not the host CLI.
 
 ## How it fits in
 
@@ -13,32 +15,32 @@ You will not normally need `fmx` for day-to-day development. It becomes useful w
 Your terminal
     │
     ▼
-fm (host CLI)
+fmx (host CLI, on your machine)
     │  docker exec / compose exec
     ▼
 frappe container
     │
     ▼
-fmx (in-container CLI)
+fmx (in-container service manager)
     │  Unix socket (supervisord)
     ▼
 supervisord → frappe · short-worker · long-worker · schedule · socketio
 ```
 
-`fm` manages Docker containers. `fmx` manages the supervisor-controlled processes **inside** one of those containers. Every bench shares the same container image, so `fmx` is always available.
+The host CLI manages Docker containers. The in-container service manager manages the supervisor-controlled processes **inside** one of those containers. Every bench shares the same container image, so it is always available there.
 
-## Running fmx
+## Running the in-container fmx
 
-From the host, pass a command through `fm shell`:
+From your machine, pass a command through the host CLI's `fmx shell`:
 
 ```bash
-fm shell mybench -c "fmx status"
+fmx shell mybench -c "fmx status"
 ```
 
-Or open an interactive shell first, then run fmx directly:
+The first `fmx` there is the host CLI; the second, quoted one is the in-container service manager. Or open an interactive shell first, then run it directly:
 
 ```bash
-fm shell mybench
+fmx shell mybench
 fmx status
 ```
 
@@ -101,7 +103,7 @@ fmx stop short-worker long-worker
 fmx stop long-worker -p long-worker_1
 ```
 
-Non-worker services (`frappe`, `schedule`, `socketio`) stop immediately. Worker services get a shorter version of the courtesy `fmx restart` gives them by default: each worker is sent SIGUSR1 (RQ's warm shutdown) and is only force-killed through supervisor if it is still running `--worker-kill-timeout` seconds later (default 15, polled every `--worker-kill-poll` seconds, default 3). A job that outlasts that window is interrupted; this grace window is not the same guarantee as `--drain-workers` below.
+Non-worker services (`frappe`, `schedule`, `socketio`) stop immediately. Worker services get a shorter version of the courtesy `fmx restart` gives them by default: each worker is sent SIGUSR1 (RQ's warm shutdown) and is only force-killed through supervisor if it is still running `--worker-kill-timeout` seconds later (default 15, polled every `--worker-kill-poll` seconds, default 3). A job that outlasts that window is interrupted. This grace window is not the same guarantee as `--drain-workers` below.
 
 ```bash
 # Give a worker longer to finish before the hard kill
@@ -110,7 +112,7 @@ fmx stop long-worker --worker-kill-timeout 30 --worker-kill-poll 2
 
 #### Draining is opt-in for `stop`
 
-`fmx stop` does not wait for in-flight jobs to finish; a worker's grace window (above) is bounded, not unbounded. If workers may be processing jobs you cannot afford to lose (email sends, report generation, file imports), drain them first:
+`fmx stop` does not wait for in-flight jobs to finish on its own; a worker's grace window above is bounded, not unbounded. If workers may be processing jobs you cannot afford to lose (email sends, report generation, file imports), drain them first:
 
 ```bash
 fmx stop --drain-workers
@@ -132,8 +134,8 @@ fmx stop --drain-workers --drain-workers-poll 10
 
 This is the most-used `fmx` command. It stops and then starts the targeted services in parallel. **Draining is the default**: workers stop picking up new jobs, fmx waits for in-flight jobs to finish (bounded at 300 seconds; `--drain-workers-timeout` tunes it, `0` waits indefinitely), then restarts. Workers idle for longer than `--skip-stale-timeout` (15 seconds) are skipped so a hung worker cannot block the wait, and if the wait runs out fmx resumes the workers and aborts the restart rather than interrupt a job.
 
-!!! note "`fm restart` and `fmx restart` are the same guarantee from two sides"
-    `fm restart BENCH` runs on the host and owns the drain: it suspends workers through fmx's RQ controller, waits up to [`[workers] drain_timeout`](../reference/configuration.md#workers) (300 seconds by default), and aborts the restart rather than kill a job that outlasts it. The fmx call it then makes inside each container passes `--no-drain-workers`, so nothing waits twice. Running `fmx restart` yourself gives you the same drain with the same 300 second default, scoped to the container you are in. The suspend flag lives in Redis, so workers restarted mid-drain come back suspended until the resume; ordering holds across the restart. The same gate guards `fm switch`.
+!!! note "`fmx restart` and `fmx restart` are the same guarantee from two sides"
+    `fmx restart BENCH` runs on the host and owns the drain: it suspends workers through fmx's RQ controller, waits up to [`[workers] drain_timeout`](../reference/configuration.md#workers) (300 seconds by default), and aborts the restart rather than kill a job that outlasts it. The fmx call it then makes inside each container passes `--no-drain-workers`, so nothing waits twice. Running `fmx restart` yourself gives you the same drain with the same 300 second default, scoped to the container you are in. The suspend flag lives in Redis, so workers restarted mid-drain come back suspended until the resume; ordering holds across the restart. The same gate guards `fmx switch`.
 
 === "Safe (default)"
 
@@ -223,15 +225,15 @@ fmx rq resume
 | `--debug` | Show full stack traces on errors |
 | `--version` | Print fmx version |
 
-## Where fmx comes from
+## Where the in-container fmx comes from
 
-`fmx` is built into the `ghcr.io/rtcamp/frappe-manager-frappe` Docker image; you do not install it separately. Its source code lives at `Docker/frappe/fmx/` inside the Frappe Manager repository.
+The in-container service manager is built into the `ghcr.io/rtcamp/frappe-manager-frappe` Docker image; you do not install it separately. Its source code lives at `Docker/frappe/fmx/` inside the Frappe Manager repository.
 
 It communicates with each supervisor instance through a Unix socket at `/fm-sockets/{service}.sock` inside the container. The `fm-sockets` Docker volume is shared between the frappe container and other service containers so they can all be managed through the same interface.
 
 ## VS Code integration
 
-When you use `fm code mybench` to open a bench in VS Code, the generated `.vscode/tasks.json` includes an `fm-kill-port` task that runs:
+When you use `fmx code mybench` to open a bench in VS Code, the generated `.vscode/tasks.json` includes an `fm-kill-port` task that runs:
 
 ```bash
 fmx stop frappe && sleep 2

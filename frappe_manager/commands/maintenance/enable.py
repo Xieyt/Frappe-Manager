@@ -73,7 +73,7 @@ def enable(
         list[str],
         typer.Option(
             "--allow-ip",
-            help="Client IP that reaches the real site (repeatable; single addresses, no CIDR). Behind a CDN see fm services trusted-proxies.",
+            help="Client IP that reaches the real site (repeatable; single addresses, no CIDR). Behind a CDN see fmx services trusted-proxies.",
             show_default=False,
         ),
     ] = [],
@@ -89,7 +89,7 @@ def enable(
         str | None,
         typer.Option(
             "--message",
-            help="Text shown on fm's built-in maintenance page.",
+            help="Text shown on fmx's built-in maintenance page.",
             show_default=False,
         ),
     ] = None,
@@ -120,7 +120,7 @@ def enable(
     """
     Put a bench's domains, aliases included, behind a maintenance page.
 
-    fm maintenance enable BENCH covers every hostname the bench serves. fm maintenance enable BENCH/SITE covers that one site's own name and its aliases, leaving the bench's other sites serving: the page is written per domain in the shared proxy, so one site can be down while its neighbours are up.
+    fmx maintenance enable BENCH covers every hostname the bench serves. fmx maintenance enable BENCH/SITE covers that one site's own name and its aliases, leaving the bench's other sites serving: the page is written per domain in the shared proxy, so one site can be down while its neighbours are up.
 
     Enabling prints a secret bypass URL: open it once and a cookie lets you through to the real site for a day while everyone else gets the page (visit /fm-bypass/off to drop it sooner).
 

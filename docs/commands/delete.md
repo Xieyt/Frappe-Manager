@@ -1,4 +1,4 @@
-# `fm delete`
+# `fmx delete`
 
 Delete a whole bench, or one site out of one.
 
@@ -6,12 +6,12 @@ BENCH deletes the bench: every site in it, its containers and volumes, its whole
 
 BENCH/SITE deletes just that site: its schema, its certificate, its proxy entries and its files. The bench and its other sites keep running.
 
-The database is decided separately. fm can drop a site's schema and user from the database server it manages, but a schema on a server fm does not own is always left in place, --delete-fm-managed-db or not. A schema fm cannot account for, one whose name is unreadable or whose drop failed, stops the deletion with the bench directory intact, because that directory holds the only record of the schema.
+The database is decided separately. fmx can drop a site's schema and user from the database server it manages, but a schema on a server fmx does not own is always left in place, --delete-fm-managed-db or not. A schema fmx cannot account for, one whose name is unreadable or whose drop failed, stops the deletion with the bench directory intact, because that directory holds the only record of the schema.
 
 **Usage**:
 
 ```console
-$ fm delete BENCH(/SITE) [OPTIONS]
+$ fmx delete BENCH(/SITE) [OPTIONS]
 ```
 
 **Arguments**:
@@ -22,8 +22,8 @@ $ fm delete BENCH(/SITE) [OPTIONS]
 
 * `--all-sites`: Required to delete a bench that serves more than one site, and it means every one of them. A single-site bench does not need it, and a bench/site address refuses it because that address already names exactly one site.  [default: false]
 * `-y, --yes`: Delete without the removal confirmation, including the typed-name confirmation a multi-site bench asks for. The database question is asked anyway, and --all-sites is still required.  [default: false]
-* `--delete-fm-managed-db/--no-delete-fm-managed-db`: Drop the schema and user from the database server fm manages, or keep them. A schema on a server fm does not own is never dropped, with or without this flag. fm asks when neither is passed.
-* `--delete-backups`: Also delete the removed site's recorded database dumps. Off by default: a dump is the last copy of something, and once its history row is gone fm can no longer offer to prune it, so the paths are printed instead.  [default: false]
+* `--delete-fm-managed-db/--no-delete-fm-managed-db`: Drop the schema and user from the database server fmx manages, or keep them. A schema on a server fmx does not own is never dropped, with or without this flag. fmx asks when neither is passed.
+* `--delete-backups`: Also delete the removed site's recorded database dumps. Off by default: a dump is the last copy of something, and once its history row is gone fmx can no longer offer to prune it, so the paths are printed instead.  [default: false]
 * `--dry-run`: Print the deletion plan and exit without deleting anything; never prompts.  [default: false]
 
 ## Examples
@@ -31,7 +31,7 @@ $ fm delete BENCH(/SITE) [OPTIONS]
 ### Delete a bench and its database
 
 ```bash
-fm delete mybench --delete-fm-managed-db
+fmx delete mybench --delete-fm-managed-db
 ```
 
 ### Delete one site out of a bench
@@ -39,15 +39,15 @@ fm delete mybench --delete-fm-managed-db
 Only that site is removed. The bench and its other sites keep running, so no --all-sites is needed: the address already names exactly one site.
 
 ```bash
-fm delete mybench/a.example.com
+fmx delete mybench/a.example.com
 ```
 
 ### Delete a bench that serves several sites
 
-fm lists every site it is about to destroy, then asks for the bench name typed back.
+fmx lists every site it is about to destroy, then asks for the bench name typed back.
 
 ```bash
-fm delete mybench --all-sites
+fmx delete mybench --all-sites
 ```
 
 ### Delete the bench but keep the database
@@ -55,13 +55,13 @@ fm delete mybench --all-sites
 The bench is gone; the schema stays on its server.
 
 ```bash
-fm delete mybench --no-delete-fm-managed-db
+fmx delete mybench --no-delete-fm-managed-db
 ```
 
 ### Delete unattended
 
 ```bash
-fm delete mybench --yes --delete-fm-managed-db
+fmx delete mybench --yes --delete-fm-managed-db
 ```
 
 ### Delete a multi-site bench unattended
@@ -69,5 +69,5 @@ fm delete mybench --yes --delete-fm-managed-db
 --yes skips the confirmation; --all-sites is still required, so no script deletes more than it named.
 
 ```bash
-fm delete mybench --all-sites --yes --delete-fm-managed-db
+fmx delete mybench --all-sites --yes --delete-fm-managed-db
 ```

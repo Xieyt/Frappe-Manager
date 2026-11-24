@@ -200,7 +200,7 @@ def prune(
     """
     Reclaim this bench's disk: old deploy releases, old backup sessions, oversized logs.
 
-    Plan-first: the full plan (every path that would be touched) is printed, then one confirmation covers it; a bare Enter aborts, --yes skips the question, --dry-run stops after the plan. Runs all three categories by default; narrow with --only. Retention comes from the \\[prune] table (bench overriding host) and \\[switch].keep_releases; flags override for one run. Log rotation copies to <name>.log.<timestamp>.gz and truncates the live file in place, because the writing processes hold it open. Nothing in fm cleans up on its own: this command (and fm services prune for the host tier) is the only trigger.
+    Plan-first: the full plan (every path that would be touched) is printed, then one confirmation covers it; a bare Enter aborts, --yes skips the question, --dry-run stops after the plan. Runs all three categories by default; narrow with --only. Retention comes from the \\[prune] table (bench overriding host) and \\[switch].keep_releases; flags override for one run. Log rotation copies to <name>.log.<timestamp>.gz and truncates the live file in place, because the writing processes hold it open. Nothing in fmx cleans up on its own: this command (and fmx services prune for the host tier) is the only trigger.
     """
     from frappe_manager.commands.deploy import _reject_impossible_keep
     from frappe_manager.site_manager.modules.deploy_orchestrator import DeployError, DeployOrchestrator

@@ -54,7 +54,7 @@ def test_a_stopped_bench_is_named_before_its_last_log_is_shown(world):
     logs(_ctx(), benchname="mybench", service=None, follow=False)
 
     assert "is not running" in _warnings(world)
-    assert "fm start mybench" in _warnings(world)
+    assert "fmx start mybench" in _warnings(world)
     # Still shown, and still exit 0: reading a stopped bench's log is the documented behaviour.
     world.bench.logs.assert_called_once_with(False, None)
 

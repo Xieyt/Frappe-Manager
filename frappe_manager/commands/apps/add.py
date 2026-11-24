@@ -21,7 +21,7 @@ _PANEL_CARE = "Care (what happens to in-flight work)"
 @example(
     "Fetch an app's code onto the bench",
     "{benchname} erpnext:version-15",
-    detail="Records the app on the bench and installs it into nothing; any site created afterwards picks it up. Install it into an existing site with 'fm apps add {benchname}/SITE ...' or 'fm apps add {benchname}/all ...'.",
+    detail="Records the app on the bench and installs it into nothing; any site created afterwards picks it up. Install it into an existing site with 'fmx apps add {benchname}/SITE ...' or 'fmx apps add {benchname}/all ...'.",
     benchname="mybench",
 )
 @example(
@@ -58,7 +58,7 @@ def add_apps(
         str | None,
         typer.Option(
             "--github-token",
-            help="GitHub token for a private app repository. Used for this run only; fm does not store it.",
+            help="GitHub token for a private app repository. Used for this run only; fmx does not store it.",
             show_default=False,
         ),
     ] = None,
@@ -75,9 +75,9 @@ def add_apps(
     r"""
     Fetch app code onto a bench and install it into its site(s).
 
-    Fetching an app's code and installing it into a site's database are different things. A plain fm apps add BENCH fetches the code and adds the app to the bench's sites/apps.txt, so any site created afterwards gets it, and installs it into nothing. It does not write an \[\[apps]] entry in bench_config.toml -- that is a bake config's job, which is why fm apps list reports such an app as present on disk but not recorded. fm apps add BENCH/SITE installs and migrates that one site, and fm apps add BENCH/all does every site the bench serves, reporting failures per site and exiting non-zero without stopping at the first.
+    Fetching an app's code and installing it into a site's database are different things. A plain fmx apps add BENCH fetches the code and adds the app to the bench's sites/apps.txt, so any site created afterwards gets it, and installs it into nothing. It does not write an \[\[apps]] entry in bench_config.toml -- that is a bake config's job, which is why fmx apps list reports such an app as present on disk but not recorded. fmx apps add BENCH/SITE installs and migrates that one site, and fmx apps add BENCH/all does every site the bench serves, reporting failures per site and exiting non-zero without stopping at the first.
 
-    An image-runtime bench ships app changes by baking a standalone image with the apps: fm bake --apps APP:REF --app-image REPO:TAG, then fm switch.
+    An image-runtime bench ships app changes by baking a standalone image with the apps: fmx bake --apps APP:REF --app-image REPO:TAG, then fmx switch.
     """
 
     services_manager = ctx.obj["services"]
@@ -93,7 +93,7 @@ def add_apps(
     if bench.bench_config.runtime == BenchRuntime.image:
         output.display_error(
             f"{bench.name} is image runtime; apps ship by baking them into a standalone image -- "
-            f"'fm bake --apps APP:REF --app-image REPO:TAG', then 'fm switch {bench.name} <image>'.",
+            f"'fmx bake --apps APP:REF --app-image REPO:TAG', then 'fmx switch {bench.name} <image>'.",
         )
         raise typer.Exit(1)
 
@@ -158,7 +158,7 @@ def add_apps(
     if failed:
         output.display_error(
             f"Apps grafted, but these sites failed: {', '.join(failed)} (see the errors above). "
-            f"Retry with 'fm apps add {bench.name}/<site> ...' once fixed."
+            f"Retry with 'fmx apps add {bench.name}/<site> ...' once fixed."
         )
         raise typer.Exit(1)
 
@@ -167,5 +167,5 @@ def add_apps(
     else:
         output.print(
             f"Grafted app code into the bench: {', '.join(a.name for a in apps_overrides)}. "
-            f"Install it with 'fm apps add {bench.name}/all ...' or name one site."
+            f"Install it with 'fmx apps add {bench.name}/all ...' or name one site."
         )

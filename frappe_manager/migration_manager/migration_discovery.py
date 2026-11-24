@@ -68,8 +68,8 @@ class MigrationDiscovery:
                 exception_str = capture_and_format_exception()
                 self.logger.error(f"Failed to register migration {module_name}: {exception_str}")
                 raise FrappeManagerException(
-                    f"Migration module '{module_name}' failed to load: {e}. This is a broken fm "
-                    f"installation, not a problem with your benches or config; reinstall fm "
+                    f"Migration module '{module_name}' failed to load: {e}. This is a broken fmx "
+                    f"installation, not a problem with your benches or config; reinstall fmx "
                     f"(uv tool install --force frappe-manager) and try again."
                 ) from e
 

@@ -379,7 +379,7 @@ def get_lock_sql(schema: str) -> str:
 
 def lock_refusal(schema: str) -> str:
     return (
-        f"another fm create appears to be provisioning this schema ({schema}): the advisory lock"
+        f"another fmx create appears to be provisioning this schema ({schema}): the advisory lock"
         f" {lock_name(schema)!r} is already held. Wait for that run to finish, or check with"
         " whoever is running it, and retry."
     )
@@ -433,7 +433,7 @@ def probe_stage_one(
                 CheckStatus.fail,
                 "no database credentials were supplied, so nothing could be probed. Pass"
                 " --db-password for a schema that already exists, or --db-admin-user with"
-                " --db-admin-password so fm can have Frappe create the schema and the user.",
+                " --db-admin-password so fmx can have Frappe create the schema and the user.",
             )
         )
         return ProbeResult(tuple(checks), SchemaState(False, 0, False, ()), False, False, False)
@@ -449,7 +449,7 @@ def probe_stage_one(
                     CheckStatus.fail,
                     "the supplied CA did not verify this server, or the certificate cannot name"
                     f" {host}: {summarize(settings.text, *secrets)}. The certificate has to name"
-                    " the host fm dials: the mariadb client verifies the hostname whenever a CA is"
+                    " the host fmx dials: the mariadb client verifies the hostname whenever a CA is"
                     " set and offers no way to turn that off, so --db-no-verify-hostname does not"
                     " relax this probe (it applies to Frappe's own driver at runtime). Use a"
                     " certificate that names this endpoint, or dial the name it already carries.",
@@ -542,7 +542,7 @@ def probe_stage_one(
             ProbeCheck(
                 CHECK_ADMIN_GRANTS,
                 CheckStatus.ok,
-                "no admin credentials were supplied, so fm will not provision and no privileged"
+                "no admin credentials were supplied, so fmx will not provision and no privileged"
                 " connection is opened at all",
             )
         )
@@ -659,7 +659,7 @@ def _character_set_check(variables: dict[str, str]) -> ProbeCheck:
         CheckStatus.warn,
         f"character_set_server is {charset or 'unknown'} and collation_server is"
         f" {collation or 'unknown'}, not {WANTED_CHARACTER_SET} / {WANTED_COLLATION}. Warning"
-        " only, since Frappe forces both per connection and per table, but fm sets them on its"
+        " only, since Frappe forces both per connection and per table, but fmx sets them on its"
         " own container and a managed provider takes them from a parameter group.",
     )
 
@@ -762,7 +762,7 @@ def _db_user_check(
         return ProbeCheck(
             CHECK_DB_USER_EXISTS,
             CheckStatus.fail,
-            f"the login {user!r}@'%' already exists and fm does not know its password. Frappe's"
+            f"the login {user!r}@'%' already exists and fmx does not know its password. Frappe's"
             " create_user is CREATE USER IF NOT EXISTS, so the account would keep the password it"
             " has and the site would be unconnectable, while Frappe still logs the misleading"
             " 'Created or updated user'. Pass --db-password with that login's existing password,"
@@ -837,7 +837,7 @@ def _tls_enforcement(
                 CHECK_SERVER_ENFORCES_TLS,
                 CheckStatus.fail,
                 f"{host} enforces TLS ({evidence}) and no --db-ca was given. There is no"
-                " opportunistic TLS in Frappe's driver or in the client fm shells out to, so"
+                " opportunistic TLS in Frappe's driver or in the client fmx shells out to, so"
                 " every later connection, including the site bootstrap, would fail. Pass --db-ca"
                 " with the server's CA bundle.",
             ),
@@ -990,7 +990,7 @@ def _app_parity_check(state: SchemaState, *, bench_apps: tuple[str, ...]) -> Pro
         f"the site has {', '.join(missing)} installed but this bench does not carry"
         f" {'them' if len(missing) > 1 else 'it'}. The site will fail at runtime on doctypes from"
         " an absent app. Not blocking, since attach writes nothing to the database: add them"
-        " afterwards with fm apps add <bench> <app>.",
+        " afterwards with fmx apps add <bench> <app>.",
     )
 
 
@@ -1185,20 +1185,20 @@ def credential_refusal(credentials: CredentialInputs, *, attach: bool, schema_ex
     if not credentials.site_password_given and not credentials.admin_given:
         return (
             "no database credentials given. Either pass --db-password, for a schema that already"
-            " exists with a login fm can use, or pass --db-admin-user with --db-admin-password so"
+            " exists with a login fmx can use, or pass --db-admin-user with --db-admin-password so"
             " Frappe can create the schema, the login and the grant."
         )
     if schema_exists and credentials.admin_given:
         target = credentials.db_name or "the target schema"
         if credentials.site_password_given:
             return (
-                f"schema {target!r} already exists, so fm cannot create its login with"
-                " --db-password: it would have to ALTER USER, which means fm owning SQL against a"
+                f"schema {target!r} already exists, so fmx cannot create its login with"
+                " --db-password: it would have to ALTER USER, which means fmx owning SQL against a"
                 " database it does not own. Admin credentials are only for the provisioning path."
                 " Drop --db-admin-user/--db-admin-password and pass --db-password alone."
             )
         return (
-            f"schema {target!r} already exists, so there is nothing to provision, and fm would"
+            f"schema {target!r} already exists, so there is nothing to provision, and fmx would"
             " have to ALTER USER to set a password it knows, which means owning SQL again. Pass"
             " --db-password with the existing login's password and drop the admin credentials."
         )
@@ -1239,20 +1239,20 @@ def decide_flow(  # noqa: PLR0911 - one return per row of the design's decision 
             return FlowDecision(
                 Flow.refuse,
                 f"--attach-existing-site was given but {target} does not exist{where}: there is"
-                " nothing to attach. Drop the flag and fm will create the site.",
+                " nothing to attach. Drop the flag and fmx will create the site.",
             )
         if state.table_count == 0:
             return FlowDecision(
                 Flow.refuse,
                 f"--attach-existing-site was given but {target}{where} holds no tables: there is"
-                " nothing to attach. Drop the flag and fm will create the site.",
+                " nothing to attach. Drop the flag and fmx will create the site.",
             )
         if not state.is_frappe:
             reason = result.check(CHECK_FRAPPE_SCHEMA)
             return FlowDecision(
                 Flow.refuse,
                 f"{target}{where} has {state.table_count} tables but is not a Frappe schema, so"
-                " fm will not attach to it: attaching would build a site directory around someone"
+                " fmx will not attach to it: attaching would build a site directory around someone"
                 f" else's data and report success. {reason.detail if reason else ''}".strip(),
             )
         return FlowDecision(
@@ -1271,12 +1271,12 @@ def decide_flow(  # noqa: PLR0911 - one return per row of the design's decision 
     if state.table_count == 0:
         return FlowDecision(
             Flow.adopt_empty,
-            f"{target}{where} exists and holds no tables: fm will use it as is with new-site"
+            f"{target}{where} exists and holds no tables: fmx will use it as is with new-site"
             " --no-setup-db, and no admin connection is opened at all.",
         )
     return FlowDecision(
         Flow.refuse,
-        f"{target}{where} already has {state.table_count} tables. fm will not create a site in a"
+        f"{target}{where} already has {state.table_count} tables. fmx will not create a site in a"
         " schema that is not empty, because new-site bootstraps the database unconditionally and"
         " that drops the core tables. Pass --attach-existing-site to attach to the site it"
         " already holds, or point --db-name at an empty or absent schema.",

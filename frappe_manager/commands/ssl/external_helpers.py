@@ -74,7 +74,7 @@ def _refuse_if_already_served(services_manager, domain: str, output) -> None:
             output.display_error(
                 f"'{domain}' is served by bench '{bench_name}', so it is not an external domain. "
                 f"--standalone is for domains with no bench behind them; issue this one against the bench "
-                f"with 'fm ssl add {bench_name}/{domain}'."
+                f"with 'fmx ssl add {bench_name}/{domain}'."
             )
             raise typer.Exit(1)
 
@@ -82,7 +82,7 @@ def _refuse_if_already_served(services_manager, domain: str, output) -> None:
         output.display_error(
             f"'{domain}' already has a backend in the proxy (a container publishing VIRTUAL_HOST={domain}), "
             f"so it needs no standalone placeholder: adding one would answer 503 in front of that container. "
-            f"Point 'fm ssl add --standalone' at a domain with no backend yet."
+            f"Point 'fmx ssl add --standalone' at a domain with no backend yet."
         )
         raise typer.Exit(1)
 
@@ -136,8 +136,8 @@ def _add_external_certificate(
     if external_manager.domain_exists(domain):
         output.display_error(f"Certificate already exists for external domain '{domain}'")
         output.print("To update certificate:", emoji_code="")
-        output.print(f"  1. Remove existing: fm ssl remove --standalone {domain}", emoji_code="")
-        output.print(f"  2. Add new: fm ssl add --standalone {domain}", emoji_code="")
+        output.print(f"  1. Remove existing: fmx ssl remove --standalone {domain}", emoji_code="")
+        output.print(f"  2. Add new: fmx ssl add --standalone {domain}", emoji_code="")
         raise typer.Exit(1)
 
     _refuse_if_already_served(services_manager, domain, output)
@@ -330,7 +330,7 @@ def _add_external_certificate(
     except Exception as e:
         output.display_error(
             f"Failed to add certificate for {domain}: {e}. If this left an nginx configuration "
-            f"behind, 'fm ssl remove --standalone {domain}' cleans it up."
+            f"behind, 'fmx ssl remove --standalone {domain}' cleans it up."
         )
         raise typer.Exit(1)
 
@@ -351,8 +351,8 @@ def _remove_external_certificate(ctx: typer.Context, domain: str, yes: bool):
         orphan = _build_standalone_nginx(services_manager)
         if orphan.config_state(domain) is not None:
             output.warning(
-                f"'{domain}' has an fm nginx configuration but no certificate recorded: "
-                f"left behind by an interrupted 'fm ssl add --standalone'."
+                f"'{domain}' has an fmx nginx configuration but no certificate recorded: "
+                f"left behind by an interrupted 'fmx ssl add --standalone'."
             )
             if not yes:
                 choice = output.prompt_ask(
@@ -420,7 +420,7 @@ def _remove_external_certificate(ctx: typer.Context, domain: str, yes: bool):
     except Exception as e:
         output.display_error(
             f"Failed to remove certificate for {domain}: {e}. Re-running "
-            f"'fm ssl remove --standalone {domain}' finds and cleans up anything left behind."
+            f"'fmx ssl remove --standalone {domain}' finds and cleans up anything left behind."
         )
         raise typer.Exit(1)
 
@@ -638,14 +638,14 @@ def _list_external_certificates(ctx: typer.Context):
         output.print("No external domains or SSL certificates configured", emoji_code=":information:")
         output.print("", emoji_code="")
         output.print("To add an external certificate:", emoji_code="")
-        output.print("  fm ssl add --standalone <domain>", emoji_code="")
+        output.print("  fmx ssl add --standalone <domain>", emoji_code="")
         return
 
     output.print_data(railcard.cards([_external_certificate_card(row) for row in rows]))
 
     if any(row["status"] == "no_ssl" for row in rows):
         output.info("\n[fm.warn]💡 Tip: Add SSL certificates for non-SSL domains:[/fm.warn]", emoji_code="")
-        output.info("[fm.muted]  fm ssl add --standalone <domain>[/fm.muted]", emoji_code="")
+        output.info("[fm.muted]  fmx ssl add --standalone <domain>[/fm.muted]", emoji_code="")
 
 
 def _renew_external_certificate(ctx: typer.Context, domain: str, test_ca: bool, force: bool = False):
@@ -660,7 +660,7 @@ def _renew_external_certificate(ctx: typer.Context, domain: str, test_ca: bool, 
 
     if not external_manager.domain_exists(domain):
         output.display_error(f"No external certificate found for domain '{domain}'")
-        output.print("To list external certificates: fm ssl list --standalone", emoji_code="")
+        output.print("To list external certificates: fmx ssl list --standalone", emoji_code="")
         raise typer.Exit(2)
 
     # The HTTP-01 challenge is answered by the `location ^~ /.well-known/acme-challenge/` inside

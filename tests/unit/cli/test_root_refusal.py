@@ -166,7 +166,7 @@ def test_message_fits_a_default_width_terminal():
     "Docker daemon not running. Please start docker service".
     """
     source = Path("frappe_manager/main.py").read_text()
-    start = source.index("fm must not run as root")
+    start = source.index("fmx must not run as root")
     end = source.index("raise SystemExit(1)", start)
     literal_chars = sum(len(part) for part in source[start:end].split('"')[::2])
 

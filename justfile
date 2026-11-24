@@ -280,9 +280,9 @@ readme-preview file="README.md" port="3939":
     fi
     gh markdown-preview {{file}} --port {{port}}
 
-# Regenerate the README hero image from REAL fm output on a live bench.
+# Regenerate the README hero image from REAL fmx output on a live bench.
 # Captures over a pty (rich needs a tty for colour), drops spinner frames,
-# redacts the two passwords `fm info` prints, then renders with charm freeze.
+# redacts the two passwords `fmx info` prints, then renders with charm freeze.
 # `freeze` comes from the use_comma shim in .envrc; no manual install needed.
 # Host/bench/checkout come from .env (gitignored) so no real host is ever committed:
 # FM_HERO_SSH, FM_HERO_BENCH, FM_HERO_SRC. See .env.example. Override per run:
@@ -299,7 +299,7 @@ readme-hero host=env_var_or_default("FM_HERO_SSH", "") bench=env_var_or_default(
     command -v freeze >/dev/null || { echo "freeze not on PATH: run 'direnv allow' (needs nix comma), or 'nix run nixpkgs#charm-freeze'"; exit 1; }
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
-    ssh -tt "$host" "export COLUMNS=100 TERM=xterm-256color; cd $src && ./.venv/bin/fm info $bench" > "$tmp/raw.ansi"
+    ssh -tt "$host" "export COLUMNS=100 TERM=xterm-256color; cd $src && ./.venv/bin/fmx info $bench" > "$tmp/raw.ansi"
     python3 - "$tmp/raw.ansi" "$tmp/hero.ansi" "$bench" <<'PY'
     import re, sys
     raw = open(sys.argv[1], encoding="utf8", errors="replace").read()
@@ -314,16 +314,19 @@ readme-hero host=env_var_or_default("FM_HERO_SSH", "") bench=env_var_or_default(
             continue            # spinner frame leftovers
         lines.append(line)
     body = "\n".join(lines)
-    # `fm info` prints the site DB password and the admin-tools basic-auth password.
-    # Never ship either in a committed image. The ANSI colour codes sit inside these
-    # lines, so match on the COLOUR-STRIPPED text, then replace the literal token in
-    # the coloured body. The schema name itself is not a secret and stays readable.
+    # `fmx info` prints three secrets: the site DB password, the admin-tools basic-auth
+    # password, and the Administrator login, which is a minted random string now and no
+    # longer the literal `admin` this redaction was first written against. Never ship any
+    # of them in a committed image. The ANSI colour codes sit inside these lines, so match
+    # on the COLOUR-STRIPPED text, then replace the literal token in the coloured body.
+    # Every `name / secret` pair in the access block is redacted, which is why the rule
+    # keys on the separator rather than on a list of row labels: a new credential row
+    # would otherwise ship in the clear. The schema name before the slash is not a secret.
     secrets = set()
     for line in body.split("\n"):
         plain = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", line)
-        if re.search(r"^\s*\S*\s*(db|auth)\b", plain):
-            for tok in re.findall(r"/\s+(\S{8,})", plain):
-                secrets.add(tok)
+        for tok in re.findall(r"/\s+(\S{8,})\s*$", plain):
+            secrets.add(tok)
     for tok in secrets:
         body = body.replace(tok, "\u2022" * 16)
     plain_body = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", body)
@@ -331,9 +334,9 @@ readme-hero host=env_var_or_default("FM_HERO_SSH", "") bench=env_var_or_default(
     if still_there:
         sys.exit(f"REFUSING to render: secret still present after redaction: {still_there}")
     bench = sys.argv[3]
-    hero = (f"\x1b[1;32m$\x1b[0m \x1b[1;37mfm create {bench} --apps erpnext\x1b[0m\n"
+    hero = (f"\x1b[1;32m$\x1b[0m \x1b[1;37mfmx create {bench} --apps erpnext\x1b[0m\n"
             "\x1b[2m\u2026bench created, containers up, ERPNext installed\x1b[0m\n\n"
-            f"\x1b[1;32m$\x1b[0m \x1b[1;37mfm info {bench}\x1b[0m\n" + body + "\n")
+            f"\x1b[1;32m$\x1b[0m \x1b[1;37mfmx info {bench}\x1b[0m\n" + body + "\n")
     open(sys.argv[2], "w").write(hero)
     print(f"redacted {len(secrets)} secret(s)")
     PY

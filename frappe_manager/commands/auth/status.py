@@ -91,7 +91,7 @@ def status(
                 hint_when_off=True,
                 source=f"inherited from bench '{bench.name}'",
             )
-            card.fact("own auth", f"fm auth enable {scope} --web")
+            card.fact("own auth", f"fmx auth enable {scope} --web")
             output.print_data(card)
             return
         from frappe_manager.output_manager import railcard
@@ -102,7 +102,7 @@ def status(
         card = railcard.Card(scope, "not configured; bench defaults apply", active=True)
         card.fact("tools", "protected (default)")
         card.fact("web", "open (default)")
-        card.fact("mint credentials", f"fm auth enable {bench.name} --web")
+        card.fact("mint credentials", f"fmx auth enable {bench.name} --web")
         output.print_data(card)
         return
 

@@ -22,7 +22,7 @@ from ._helpers import route_sites
 @example(
     "Unroute every site the bench serves",
     "{benchname}/all",
-    detail="The Adminer and Mailpit containers keep running; stop them with a bare 'fm tools disable BENCH'.",
+    detail="The Adminer and Mailpit containers keep running; stop them with a bare 'fmx tools disable BENCH'.",
     benchname="mybench",
 )
 def disable(

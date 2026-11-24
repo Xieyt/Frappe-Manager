@@ -76,7 +76,7 @@ class FMLogsConfig(BaseModel):
     container_max_size: str = Field(
         default="10m",
         description="Max size of one container log file before docker rotates it (docker's own "
-        "size syntax: 10m, 512k, 1g). Applied to every service fm writes into a compose file.",
+        "size syntax: 10m, 512k, 1g). Applied to every service fmx writes into a compose file.",
     )
 
     container_max_files: int = Field(
@@ -172,7 +172,7 @@ class FMOutputConfig(BaseModel):
 
 
 class FMNetworkConfig(BaseModel):
-    """Subnets fm's own shared networks occupy on this host."""
+    """Subnets fmx's own shared networks occupy on this host."""
 
     # extra="allow": see the design note on FMValidationConfig above; same file, same reasoning.
     model_config = ConfigDict(extra="allow")
@@ -565,7 +565,7 @@ class FMConfigManager(BaseModel):
             warn_or_log(
                 "metadata_manager",
                 f"fm_config.toml has unrecognised key(s) {', '.join(all_unknown_keys)}; "
-                "check for a typo, since fm will not use them.",
+                "check for a typo, since fmx will not use them.",
             )
 
         return fm_config_instance

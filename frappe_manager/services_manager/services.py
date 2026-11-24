@@ -104,7 +104,7 @@ def _port_hint(error: Exception) -> str:
     """
     text = str(error).lower()
     if "port is already allocated" in text or "address already in use" in text:
-        return "\nRun 'fm services ports --http <port> --https <port>' to publish fm elsewhere, then retry."
+        return "\nRun 'fmx services ports --http <port> --https <port>' to publish fmx elsewhere, then retry."
     return ""
 
 
@@ -203,10 +203,10 @@ class ServicesManager:
             self.compose_file_manager.write_to_file()
 
             if needed:
-                self.output.change_head(f"Starting fm's {service}: a site on this host uses it")
+                self.output.change_head(f"Starting fmx's {service}: a site on this host uses it")
                 self.docker_client.compose.up(services=[service], detach=True, pull="missing")
             else:
-                self.output.effect(f"Stopped fm's {service}: no site on this host uses it")
+                self.output.effect(f"Stopped fmx's {service}: no site on this host uses it")
                 self.docker_client.compose.rm(services=[service], stop=True, force=True)
 
     def check_postgres_datadir_major(self) -> None:
@@ -240,7 +240,7 @@ class ServicesManager:
             return
 
         self.output.display_error(
-            f"fm's postgres data was written by PostgreSQL {on_disk}, and fm now runs {wanted}. "
+            f"fmx's postgres data was written by PostgreSQL {on_disk}, and fmx now runs {wanted}. "
             f"Postgres does not upgrade a datadir in place, so starting it would fail with "
             f"'database files are incompatible with server'. Dump every database with the {on_disk} "
             f"image, move {marker.parent} aside, and restore into the new one."
@@ -266,7 +266,7 @@ class ServicesManager:
                 # A bare FileNotFoundError from this depth named neither the file nor the fix.
                 raise DatabaseServicePasswordNotFound(
                     "postgres",
-                    f"No postgres root password at {secret}. Run 'fm services migrate' to mint one.",
+                    f"No postgres root password at {secret}. Run 'fmx services migrate' to mint one.",
                 )
             return DatabaseServerServiceInfo(
                 host="postgres",
@@ -375,8 +375,8 @@ class ServicesManager:
             fm_config.export_to_toml()
 
     def entrypoint_checks(self, start=False):
-        # A directory with no compose file is NOT an install: `fm self uninstall` leaves one behind
-        # whenever nginx-proxy's root-owned cache dirs defeat the removal, and the next `fm create`
+        # A directory with no compose file is NOT an install: `fmx self uninstall` leaves one behind
+        # whenever nginx-proxy's root-owned cache dirs defeat the removal, and the next `fmx create`
         # then refused with "global services has taken a down" instead of provisioning. `create()`
         # is mkdir-exist_ok throughout, so re-running it over the husk is safe.
         if not self.path.exists() or not self.compose_path.exists():
@@ -424,7 +424,7 @@ class ServicesManager:
         if "global-db" in old_names and "mariadb" not in old_names:
             if command not in MIGRATION_COMMANDS and command.split(" ")[0] != "self":
                 self.output.display_error("The global services predate the v1.0.0 rename (global-db -> mariadb). "
-                    "Run 'fm services migrate' to cut this install over.")
+                    "Run 'fmx services migrate' to cut this install over.")
                 raise typer.Exit(1)
             return
 

@@ -23,7 +23,7 @@ def remove_domain(
     """
     Remove an alias domain from whichever site of the bench serves it.
 
-    Takes the DOMAIN you are removing, not the site it belongs to: fm looks up which site serves it. That is the mirror of fm domain add, which takes the SITE you are adding to, because the domain does not exist yet to be named. Same rule as fm ssl remove BENCH/DOMAIN.
+    Takes the DOMAIN you are removing, not the site it belongs to: fmx looks up which site serves it. That is the mirror of fmx domain add, which takes the SITE you are adding to, because the domain does not exist yet to be named. Same rule as fmx ssl remove BENCH/DOMAIN.
     """
     output = get_global_output_handler()
 
@@ -34,8 +34,8 @@ def remove_domain(
     if extra:
         bench = (address or "").split("/")[0]
         output.display_error(
-            f"fm domain remove takes one address, the domain itself: fm domain remove BENCH/DOMAIN. "
-            f"Did you mean 'fm domain remove {bench}/{extra[0]}'?"
+            f"fmx domain remove takes one address, the domain itself: fmx domain remove BENCH/DOMAIN. "
+            f"Did you mean 'fmx domain remove {bench}/{extra[0]}'?"
         )
         raise typer.Exit(2)
 
@@ -47,7 +47,7 @@ def remove_domain(
     bench = Bench.get_object(address, services_manager, output_handler=output)
 
     if not domain:
-        output.display_error(f"fm domain remove needs a domain: use {bench.name}/DOMAIN.")
+        output.display_error(f"fmx domain remove needs a domain: use {bench.name}/DOMAIN.")
         raise typer.Exit(2)
 
     if not bench.running:
@@ -68,7 +68,7 @@ def remove_domain(
     if owner_site is None:
         if resolve_known_name(domain, sites) in sites:
             output.display_error(
-                f"'{domain}' is the site's own domain, not an alias; fm domain remove only drops aliases."
+                f"'{domain}' is the site's own domain, not an alias; fmx domain remove only drops aliases."
             )
         else:
             known = ", ".join(f"'{s}'" for s in sorted(sites)) or "no sites"
@@ -93,12 +93,12 @@ def remove_domain(
             output.effect(f"Removed the dev certificate for {domain}; it regenerates if you add the domain back")
         else:
             output.display_error(
-                f"'{domain}' holds a {cert.ssl_type.value} certificate, which fm will not discard on your behalf: "
-                f"a Let's Encrypt one costs a rate-limited reissue and a custom one fm cannot recreate, "
+                f"'{domain}' holds a {cert.ssl_type.value} certificate, which fmx will not discard on your behalf: "
+                f"a Let's Encrypt one costs a rate-limited reissue and a custom one fmx cannot recreate, "
                 f"since it stores the bytes and never the files you imported."
             )
             output.print(
-                f"Remove it first: 'fm ssl remove {bench.name}/{domain}', then run this again.", emoji_code=""
+                f"Remove it first: 'fmx ssl remove {bench.name}/{domain}', then run this again.", emoji_code=""
             )
             raise typer.Exit(1)
 

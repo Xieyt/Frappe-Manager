@@ -198,7 +198,7 @@ class BenchInfo:
             card.fact(
                 "",
                 "[fm.warn]newer build published[/fm.warn] "
-                f"[fm.muted]{_short_digest(published)} · pull with 'fm self update-images'[/fm.muted]",
+                f"[fm.muted]{_short_digest(published)} · pull with 'fmx self update-images'[/fm.muted]",
             )
 
     @staticmethod
@@ -247,7 +247,7 @@ class BenchInfo:
             if password
             # Nothing mints later any more, so a claimed surface with no credential is an
             # incomplete config rather than a pending step: say so, and name what fixes it.
-            else f"{prefix}{user} [fm.muted]/ no password recorded · fm auth enable[/fm.muted]"
+            else f"{prefix}{user} [fm.muted]/ no password recorded · fmx auth enable[/fm.muted]"
             for prefix, user, password in shown
         )
         extras = [
@@ -755,7 +755,7 @@ class BenchInfo:
             if len(rows) > 1:
                 orphaned = sum(1 for row in rows if row.get("orphaned"))
                 counted = f"{len(rows)} certificates" + (f", {orphaned} orphaned" if orphaned else "")
-                extra = f" [fm.muted]·[/fm.muted] {counted} [fm.muted]· fm ssl list {self.bench_name}[/fm.muted]"
+                extra = f" [fm.muted]·[/fm.muted] {counted} [fm.muted]· fmx ssl list {self.bench_name}[/fm.muted]"
             card.fact("https", f"{ssl_service_type.upper()} [fm.muted]·[/fm.muted] {expiry}{extra}")
         elif front:
             # Public TLS without an fm certificate is a real, ongoing half-state, not "off": the
@@ -763,7 +763,7 @@ class BenchInfo:
             # to reach. `fm ssl add --dev` is the fix.
             card.fact(
                 "https",
-                "[fm.muted]your front's · fm holds none, so this bench's own self-calls fail; fm ssl add --dev[/fm.muted]",
+                "[fm.muted]your front's · fmx holds none, so this bench's own self-calls fail; fmx ssl add --dev[/fm.muted]",
             )
         else:
             card.fact("https", "[fm.muted]not enabled[/fm.muted]")
@@ -791,7 +791,7 @@ class BenchInfo:
                 where = (
                     f"external {engines[site]} · {database.host}:{database.resolved_port}"
                     if database
-                    else f"fm's {engines[site]}"
+                    else f"fmx's {engines[site]}"
                 )
                 marker = "  [fm.ok]● primary[/fm.ok]" if site == primary else ""
                 # Same precedence rule the JSON payload reads (`effective_upload_limit`,
@@ -814,7 +814,7 @@ class BenchInfo:
         unmanaged = self.unmanaged_site_dirs()
         if unmanaged:
             card.fact("unmanaged", " [fm.muted]·[/fm.muted] ".join(f"sites/{name}/" for name in unmanaged))
-            card.fact("", "[fm.muted]not in bench_config.toml; fm will not touch their schemas[/fm.muted]")
+            card.fact("", "[fm.muted]not in bench_config.toml; fmx will not touch their schemas[/fm.muted]")
 
         # The MIRROR of the row above: `[sites]` records a site with no directory (removed by hand, or a
         # create failed part-way). A recorded site with no `site_config.json` still gets enumerated,
@@ -830,7 +830,7 @@ class BenchInfo:
                 # the record being all that is left).
                 card.fact(
                     "",
-                    f"[fm.muted]finish the removal:[/fm.muted] fm delete {config.name}/{missing[0]}",
+                    f"[fm.muted]finish the removal:[/fm.muted] fmx delete {config.name}/{missing[0]}",
                 )
         # One row per site that has aliases, because a flat list cannot say which hostname reaches
         # which schema. The site goes in the VALUE, not the label: the label column is 14 characters
@@ -853,7 +853,7 @@ class BenchInfo:
         )
         if claimed:
             card.fact("claimed", ", ".join(claimed))
-            card.fact("", "[fm.muted]served by your own conf.d file, not by fm[/fm.muted]")
+            card.fact("", "[fm.muted]served by your own conf.d file, not by fmx[/fm.muted]")
         abs_path = self.bench_path.absolute()
         card.fact("dir", f"[fm.muted][link=file://{abs_path}]{abs_path}[/link][/fm.muted]")
 
@@ -1035,7 +1035,7 @@ class BenchInfo:
         )
         card.section("disk")
         if actionable:
-            card.fact("status", f"{summary}  [fm.info]fm prune {self.bench_name}[/fm.info]")
+            card.fact("status", f"{summary}  [fm.info]fmx prune {self.bench_name}[/fm.info]")
         else:
             card.fact("status", f"[fm.muted]{summary}[/fm.muted]")
 

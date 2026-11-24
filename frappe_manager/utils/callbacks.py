@@ -329,7 +329,7 @@ def _resolve_bench(sitename: str | None) -> str:
                 "Bench name is required in non-interactive mode",
                 suggestions=[
                     "Specify the bench name as a positional argument",
-                    "Run 'fm list' to see available benches",
+                    "Run 'fmx list' to see available benches",
                 ],
             ) from e
 
@@ -339,7 +339,7 @@ def _resolve_bench(sitename: str | None) -> str:
         # which names a selection the operator never made and sites they were never shown.
         raise MissingArgumentError(
             "No benches exist yet on this host",
-            suggestions=["Create one with 'fm create <name>'"],
+            suggestions=["Create one with 'fmx create <name>'"],
         )
 
     # A bench name is a name, not a domain: it is taken as typed. `validate_sitename` still runs,

@@ -1,45 +1,47 @@
 # Deployment
 
-fm runs a bench in one of two **runtimes**:
+fmx runs a bench in one of two **runtimes**:
 
 | Runtime | What runs | For |
 |---|---|---|
 | `mount` | your editable workspace, bind-mounted into containers | development |
 | `image` | an immutable, pre-built app image (code + venv + assets baked in) | production |
 
-This section covers the image lifecycle: **bake** an image, **deploy** it, **roll back**, keep the release history **pruned**, and how fm moves traffic without dropping requests.
+This page covers the image lifecycle: **bake** an image, **deploy** it, **roll back**, keep the release history **pruned**, and how fmx moves traffic without dropping requests.
 
 ## Your first deploy
 
-`fm bake`, `fm switch`, and `fm prune` operate on a bench in the **image runtime**, and all three run on the host that owns the bench. This walkthrough assumes you already have one: create it with `fm create prodbench --runtime image --app-image REPO:TAG` (see [Runtimes](../concepts/runtimes.md) for what that flag pins). After that, every release is a bake and a switch.
+`fmx bake`, `fmx switch`, and `fmx prune` operate on a bench in the **image runtime**, and all three run on the host that owns the bench. This walkthrough assumes you already have one: create it with `fmx create prodbench --runtime image --app-image REPO:TAG` (see [Runtimes](../concepts/runtimes.md) for what that flag pins). After that, every release is a bake and a switch.
 
 1. **Bake the first image:**
 
     ```bash
-    fm bake mybench
+    fmx bake mybench
     ```
 
-    A bake builds a **pair**: the app image `local/mybench:<timestamp>-<git sha>` (code, venv, assets) and `local/mybench-nginx:<same tag>`, which is the same tag with `-nginx` on the repo and carries the built bundles for the bench's nginx to serve. By default only the app image is named on the command line and fm derives the second name; either way bake stamps the pairing as an `fm.nginx.image` label on the app image, so the two travel, deploy and prune together.
+    A bake produces a **pair**: the app image (`local/mybench:<timestamp>-<git sha>` by default, holding code, venv and assets) and its nginx counterpart `local/mybench-nginx:<same tag>`, the same tag with `-nginx` added to the repo, carrying the built bundles the bench's nginx serves. Only the app image needs naming on the command line; fmx derives the second name and stamps the pairing as an `fm.nginx.image` label on the app image, so the two travel, deploy and prune together.
 
-2. **Switch onto it.** The deploy pipeline migrates your existing site onto the image (site data and DB carry over):
+2. **Switch onto it.** The deploy pipeline migrates your existing site onto the image, and site data and the database carry over:
 
     ```bash
-    fm switch mybench local/mybench:<tag>
+    fmx switch mybench local/mybench:<tag>
     ```
 
 3. **Every release after that is bake then switch:**
 
     ```bash
-    fm bake mybench --app-image local/mybench:v2
-    fm switch mybench local/mybench:v2
+    fmx bake mybench --app-image local/mybench:v2
+    fmx switch mybench local/mybench:v2
     ```
 
-    `--app-image` names the app image the bake produces: give it a full ref and the ref you bake is the ref you switch to; give it a bare repo, or leave it off and let the bench's `image` repo stand, and the bake generates and prints `local/mybench:<timestamp>-<git sha>` for you to pass along. (`--base-image REF` is the other direction: the image this one is built *from*.) The switch then runs the full pipeline, and you will see its steps in order: fetch, a pre-flight boot check, the compose re-pin, the migrate decision, the worker drain, the DB dump, the migrate, the swap, a health gate, and finalize. If anything fails before the swap, the old stack never stopped serving.
+    `--app-image` names the app image the bake produces. Give it a full ref and that's the ref you switch to. Give it a bare repo, or leave it off and let the bench's `image` repo stand, and the bake generates `local/mybench:<timestamp>-<git sha>` and prints it for you to pass along. `--base-image REF` is the other direction: the image this one is built *from*.
+
+    The switch then runs the full pipeline, and you'll see its steps in order: fetch, a pre-flight boot check, the compose re-pin, the migrate decision, the worker drain, the DB dump, the migrate, the swap, a health gate, and finalize. If anything fails before the swap, the old stack never stopped serving.
 
 4. **Verify it:**
 
     ```bash
-    fm info mybench
+    fmx info mybench
     ```
 
     The **deploys** section lists every release, newest first, with its migrate status and whether a DB dump was taken.
@@ -47,24 +49,24 @@ This section covers the image lifecycle: **bake** an image, **deploy** it, **rol
 That's the whole loop. The rest of this page explains what happened underneath; the pages linked at the bottom cover [rolling back](rollback.md), [image transports and architectures](transports.md), and [every config key](../reference/configuration.md#deploy-tables).
 
 !!! tip "Baking outside the bench"
-    The first image does not have to come from `fm bake` on this host: CI can build and push one (`fm bake --apps ... --app-image ... --push`), and `fm create --app-image` points the new bench straight at it. `--app-image` names the release the bench starts on rather than pinning it there: the repo half becomes the bench's `image` key and the full reference becomes `[deployments].current.app_image`, which every later `fm switch` rewrites.
+    The first image doesn't have to come from `fmx bake` on this host: CI can build and push one (`fmx bake --apps ... --app-image ... --push`), and `fmx create --app-image` points the new bench straight at it. `--app-image` names the release the bench starts on rather than pinning it there. The repo half becomes the bench's `image` key, and the full reference becomes `[deployments].current.app_image`, which every later `fmx switch` rewrites.
 
 ## The lifecycle at a glance
 
 ```mermaid
 flowchart LR
-    W[bench workspace / app repos] -->|fm bake| I[immutable image\nrepo:timestamp-sha]
-    I -->|fm switch IMAGE| R
-    R -->|fm switch --previous| P[previous release]
-    R -->|fm prune / --keep N| H[trimmed history,\ndumps, images]
+    W[bench workspace / app repos] -->|fmx bake| I[immutable image\nrepo:timestamp-sha]
+    I -->|fmx switch IMAGE| R
+    R -->|fmx switch --previous| P[previous release]
+    R -->|fmx prune / --keep N| H[trimmed history,\ndumps, images]
 ```
 
-- `fm bake <bench> [--app-image REF] [--nginx-image REF] [--base-image REF]`: build the image pair only, deploying nothing (prints both images). `--app-image` is the app image produced; `--base-image` is what it is built from, the command-line form of [`[build].base_image`](../reference/configuration.md#deploy-tables).
-- `fm switch <bench> <image>`: deploy an already-built image (no bake).
-- `fm switch <bench> --previous`: roll back (same pipeline pointed backwards, migrate disabled).
-- `fm prune <bench> --only releases`: plan then remove old releases (the bare command also trims backup sessions and rotates logs; prints the full plan first, then one confirmation covers it -- default No, `--yes` skips it, `--dry-run` stops after the plan); release pruning is also available inline as prompt-free `--keep N` on `fm switch` (the flag itself is the consent, since you just chose to run the switch).
+- `fmx bake <bench> [--app-image REF] [--nginx-image REF] [--base-image REF]`: build the image pair only, deploying nothing (prints both images). `--app-image` is the app image produced; `--base-image` is what it's built from, the command-line form of [`[build].base_image`](../reference/configuration.md#deploy-tables).
+- `fmx switch <bench> <image>`: deploy an already-built image (no bake).
+- `fmx switch <bench> --previous`: roll back (same pipeline pointed backwards, migrate disabled).
+- `fmx prune <bench> --only releases`: plan then remove old releases (the bare command also trims backup sessions and rotates logs). It prints the full plan first, then one confirmation covers it: default No, `--yes` skips it, `--dry-run` stops after the plan. Release pruning is also available inline as prompt-free `--keep N` on `fmx switch`: the flag itself is the consent, since you just chose to run the switch.
 
-Every deploy is recorded in the bench's `bench_config.toml` under `[deployments]`: `current` and `previous` releases (each carrying its app and nginx image, deploy timestamp, migrate status and any DB dumps taken), a `history` row per past release, and the timestamp of the last successful deploy. See [every deploy key](../reference/configuration.md#deployments) for the full shape. `fm info <bench>` shows the whole history in its **deploys** section.
+Every deploy is recorded in the bench's `bench_config.toml` under `[deployments]`: `current` and `previous` releases (each carrying its app and nginx image, deploy timestamp, migrate status and any DB dumps taken), a `history` row per past release, and the timestamp of the last successful deploy. See [every deploy key](../reference/configuration.md#deployments) for the full shape. `fmx info <bench>` shows the whole history in its **deploys** section.
 
 ## The switch pipeline
 
@@ -94,14 +96,14 @@ flowchart TD
 
 Key properties:
 
-- **Aborts are safe.** Any failure before the swap restores the compose snapshot, clears the maintenance page and resumes the RQ workers: the old stack never stopped serving, a later plain `compose up` cannot jump images, and the bench is not left silently processing no background jobs. A failure *in* the swap unwinds the page and the workers the same way; the swap paths restore their own compose.
-- **A failed migrate never swaps.** `bench migrate` is transactional/resumable, so the default is keep-old and re-run after fixing.
-- **The DB dump is exact.** It is taken after the workers have drained (and, when a schema step put it up, with requests already on the maintenance page), so restoring it loses nothing that happened before the migrate.
-- **Drain and dump are not migrate-only.** By default workers are drained and the DB dump is taken on every deploy, even with `--no-migrate`; if in-flight jobs do not finish within `[workers].drain_timeout` the deploy aborts before backup/migrate/swap (workers resumed, old stack still serving), so the dump is never taken while a worker is mid-write. Raise the timeout, or set `[workers].drain = false` to deploy without waiting at all, accepting that in-flight jobs die when the worker containers are replaced. The drain is tuned in the [`[workers]` table](../reference/configuration.md#workers) and `backup_db` (including its `"auto"` mode) in the [`[switch]` table](../reference/configuration.md#deploy-tables).
+- **Aborts are safe.** Any failure before the swap restores the compose snapshot, clears the maintenance page and resumes the RQ workers. The old stack never stopped serving, a later plain `compose up` can't jump images, and the bench is never left silently processing no background jobs. A failure *in* the swap unwinds the page and the workers the same way; the swap paths restore their own compose.
+- **A failed migrate never swaps.** `bench migrate` is transactional and resumable, so the default is keep-old and re-run after fixing.
+- **The DB dump is exact.** It's taken after the workers have drained, and, when a schema step put it up, with requests already on the maintenance page, so restoring it loses nothing that happened before the migrate.
+- **Drain and dump aren't migrate-only.** By default workers are drained and the DB dump is taken on every deploy, even with `--no-migrate`. If in-flight jobs don't finish within `[workers].drain_timeout`, the deploy aborts before backup, migrate and swap (workers resumed, old stack still serving), so the dump is never taken while a worker is mid-write. Raise the timeout, or set `[workers].drain = false` to deploy without waiting at all, accepting that in-flight jobs die when the worker containers are replaced. The drain is tuned in the [`[workers]` table](../reference/configuration.md#workers), and `backup_db` (including its `"auto"` mode) in the [`[switch]` table](../reference/configuration.md#deploy-tables).
 
 ## The rolling web swap
 
-When the version overlap is safe, fm runs old and new web replicas side by side and drains the old before removing it, which minimises dropped requests (about one per swap under continuous load) instead of the recreate blip:
+When the version overlap is safe, fmx runs old and new web replicas side by side and drains the old before removing it. That minimises dropped requests, about one per swap under continuous load, instead of the recreate blip:
 
 ```mermaid
 sequenceDiagram
@@ -127,7 +129,7 @@ sequenceDiagram
     Note over NF,NN: socketio/schedule/workers follow (out of the HTTP path)
 ```
 
-The stop → reload → remove order exists because app-nginx resolves its `upstream frappe` once at config load: killing a replica without a reload would leave a dead IP that black-holes connections.
+The stop then reload then remove order exists because app-nginx resolves its `upstream frappe` once at config load: killing a replica without a reload would leave a dead IP that black-holes connections.
 
 **When is rolling eligible?** (`--rolling`/`--no-rolling` overrides the rules)
 
@@ -138,11 +140,11 @@ The stop → reload → remove order exists because app-nginx resolves its `upst
 | migrate/restore **under** the maintenance page (both replicas serve the 503) | rolling |
 | migrate/restore with the maintenance page disabled | recreate |
 
-In every case rolling also needs the old web tier running to swap alongside; when nothing is serving, fm falls back to the recreate swap even if `--rolling` was passed (with a warning).
+In every case rolling also needs the old web tier running to swap alongside; when nothing is serving, fmx falls back to the recreate swap even if `--rolling` was passed (with a warning).
 
-Honest caveat: rolling minimises downtime, it does not close it -- a request can still land on an address the swap just removed before the shared proxy's own config reload catches up, costing about one request per swap under continuous load. Nor is it zero-**skew**: during the overlap a request may see old assets with new code or vice-versa. Eligibility guarantees both versions are DB-compatible, so the skew cannot 500. For zero request loss, use `--no-rolling` with a maintenance window.
+Honest caveat: rolling minimises downtime, it doesn't close it. A request can still land on an address the swap just removed, before the shared proxy's own config reload catches up: about one request per swap under continuous load. Nor is it zero-**skew**: during the overlap a request may see old assets with new code, or vice versa. Eligibility guarantees both versions are DB-compatible, so the skew can't 500. For zero request loss, use `--no-rolling` with a maintenance window.
 
-The same engine powers `fm restart --rolling`: a minimal-downtime web-tier recreate on the *current* image (fresh containers, no release change), with the same request-drop caveat above. It needs an image bench; on a mount bench web restarts already go through supervisor, which is faster.
+The same engine powers `fmx restart --rolling`: a minimal-downtime web-tier recreate on the *current* image (fresh containers, no release change), with the same request-drop caveat above. It needs an image bench; on a mount bench, web restarts already go through supervisor, which is faster.
 
 ## Switch hooks
 
@@ -168,7 +170,7 @@ There are two kinds. **Phase hooks** bracket a step and run only if that step ru
 
 Every hook also gets `SITE_NAME`, `BENCH_PATH` and `DEPLOY_IMAGE` (the image being deployed). Only `before_migrate` is a gate; the rest are best-effort at the tail, so a broken `after_migrate`/`after_switch` is warned and the deploy's own result stands.
 
-The mental model: `before_/after_migrate` and `before_/after_restart` bracket the two things that can go wrong (the **schema change** and the **code swap**), and `after_switch` fires last, telling you the **outcome**.
+The mental model: `before_/after_migrate` and `before_/after_restart` bracket the two things that can go wrong, the **schema change** and the **code swap**, and `after_switch` fires last, telling you the **outcome**.
 
 ```toml
 [switch.hooks.host]
@@ -181,22 +183,22 @@ esac
 '''
 ```
 
-`after_switch` is also where an **external database** fm does not own is reconciled after a rollback: fm restores only its own logical dumps, so a managed-DB snapshot restore belongs here. See [Snapshots around a deploy](../guides/external-database.md#snapshots-around-a-deploy).
+`after_switch` is also where an **external database** fmx doesn't own gets reconciled after a rollback: fmx restores only its own logical dumps, so a managed-DB snapshot restore belongs here. See [Snapshots around a deploy](../guides/external-database.md#snapshots-around-a-deploy).
 
 ## Releases, history, and pruning
 
 ```bash
-fm info mybench          # deploys section: every release, newest first, with migrate status
-fm prune mybench --dry-run        # plan only, never prompts
-fm prune mybench --keep 3         # prints the plan, then asks (default: no) before deleting; --yes skips the question
-fm switch mybench local/mybench:<tag> --keep 7   # prune inline after a successful switch, prompt-free: the flag is the consent
+fmx info mybench                                  # deploys section: every release, newest first, with migrate status
+fmx prune mybench --dry-run                       # plan only, never prompts
+fmx prune mybench --keep 3                        # prints the plan, then asks (default: no) before deleting; --yes skips the question
+fmx switch mybench local/mybench:<tag> --keep 7   # prune inline after a successful switch, prompt-free: the flag is the consent
 ```
 
 Pruning splits two concerns:
 
 - **History rows** are audit lines: the newest N are kept (`--keep`, or [`[switch].keep_releases`](../reference/configuration.md#deploy-tables)).
-- **Artifacts are refcounted**: a DB dump dir is deleted only when no kept row references it; an image (and its paired `-nginx` assets image) is removed only when neither a kept row nor the protected set (current, previous, seed, base) references it.
-- **`fm prune` is plan-first**: it prints every path it would touch, then one confirmation covers all of it (default No, a bare Enter aborts; `--yes` skips the question, `--dry-run` stops after the plan and never prompts). The inline `--keep N` on `fm switch` skips that prompt entirely -- passing the flag on a switch you just chose to run is the consent.
+- **Artifacts are refcounted**: a DB dump directory is deleted only when no kept row references it; an image (and its paired `-nginx` assets image) is removed only when neither a kept row nor the protected set (current, previous, seed, base) references it.
+- **`fmx prune` is plan-first**: it prints every path it would touch, then one confirmation covers all of it (default No, a bare Enter aborts; `--yes` skips the question, `--dry-run` stops after the plan and never prompts). The inline `--keep N` on `fmx switch` skips that prompt entirely: passing the flag on a switch you already chose to run is the consent.
 
 Nothing a running or rollback-reachable release needs can be pruned.
 

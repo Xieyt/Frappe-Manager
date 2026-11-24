@@ -65,7 +65,7 @@ def _web_enforcement(bench, site: str | None, entry, config: WebAuthConfig) -> t
     if own_entry and not bench.nginx_conf_serves_per_site():
         return False, (
             "recorded, but this bench's nginx conf predates one server block per site so it cannot "
-            "enforce a site's own auth; run 'fm migrate' to re-render it"
+            "enforce a site's own auth; run 'fmx migrate' to re-render it"
         )
     check_site = site if site is not None else (bench.bench_config.site_names[0] if bench.bench_config.sites else None)
     if check_site is None:
@@ -75,7 +75,7 @@ def _web_enforcement(bench, site: str | None, entry, config: WebAuthConfig) -> t
     if web_auth_enforced(bench, check_site):
         return True, None
     return False, (
-        "recorded, but nginx is not currently serving an fm auth conf for it; re-run 'fm auth enable' to re-apply"
+        "recorded, but nginx is not currently serving an fmx auth conf for it; re-run 'fmx auth enable' to re-apply"
     )
 
 
@@ -180,7 +180,7 @@ def apply_auth(
 
     if rotate and password is not None:
         output.display_error(
-            "--rotate cannot be combined with --password (either pick the password yourself or let fm mint one)"
+            "--rotate cannot be combined with --password (either pick the password yourself or let fmx mint one)"
         )
         raise typer.Exit(code=2)
 
@@ -206,7 +206,7 @@ def apply_auth(
 
     if site and tools_named:
         output.display_error(
-            f"--tools cannot take a site part: one Adminer and one Mailpit serve the whole bench, on every hostname '{bench.name}' has, so acting on them for '{site}' alone would leave the same tools open on the others. Run 'fm auth enable {bench.name} --tools' to protect them for the bench."
+            f"--tools cannot take a site part: one Adminer and one Mailpit serve the whole bench, on every hostname '{bench.name}' has, so acting on them for '{site}' alone would leave the same tools open on the others. Run 'fmx auth enable {bench.name} --tools' to protect them for the bench."
         )
         raise typer.Exit(code=2)
 
@@ -215,13 +215,13 @@ def apply_auth(
     # there would be silent, and the status command would report a prompt nobody serves.
     if site and not bench.nginx_conf_serves_per_site():
         output.display_error(
-            f"Bench '{bench.name}' nginx conf predates one server block per site, so '{site}' cannot carry auth of its own yet: nginx would include none of it and the site would keep following the bench. Run 'fm migrate' to re-render it, or recreate the nginx container with 'fm restart {bench.name} --nginx --recreate'. 'fm auth enable {bench.name}' for the whole bench works today."
+            f"Bench '{bench.name}' nginx conf predates one server block per site, so '{site}' cannot carry auth of its own yet: nginx would include none of it and the site would keep following the bench. Run 'fmx migrate' to re-render it, or recreate the nginx container with 'fmx restart {bench.name} --nginx --recreate'. 'fmx auth enable {bench.name}' for the whole bench works today."
         )
         raise typer.Exit(code=1)
 
     if site and entry is None:
         output.display_error(
-            f"Bench '{bench.name}' records no entry for site '{site}', so its own auth has nowhere to live. Run 'fm auth enable {bench.name}' to set the auth every site of the bench follows."
+            f"Bench '{bench.name}' records no entry for site '{site}', so its own auth has nowhere to live. Run 'fmx auth enable {bench.name}' to set the auth every site of the bench follows."
         )
         raise typer.Exit(code=1)
 
@@ -263,7 +263,7 @@ def apply_auth(
                 # Certificate lookup is keyed by DOMAIN (`SSLCertificate.domain`), while the
                 # `fm ssl add` hint below takes BENCH then the domain separately.
                 output.display_error(
-                    f"Domain '{guarded_domain}' has no TLS certificate: basic auth sends the credentials base64-encoded on every request, so on the web surface they would travel in the clear in front of every path including /api. Add HTTPS with 'fm ssl add {bench.name}/{guarded_domain}', or pass --insecure to accept that."
+                    f"Domain '{guarded_domain}' has no TLS certificate: basic auth sends the credentials base64-encoded on every request, so on the web surface they would travel in the clear in front of every path including /api. Add HTTPS with 'fmx ssl add {bench.name}/{guarded_domain}', or pass --insecure to accept that."
                 )
                 raise typer.Exit(code=1)
             output.warning(
@@ -283,11 +283,11 @@ def apply_auth(
         # An absent conf is rendered fresh from the current image on next start.
         if default_conf.is_file() and "$fm_upstream_auth" not in default_conf.read_text():
             if bench.bench_config.runtime == BenchRuntime.image:
-                remedy = f"Re-bake the bench image so nginx picks up the fix: 'fm bake {bench.name}' followed by 'fm switch {bench.name}'."
+                remedy = f"Re-bake the bench image so nginx picks up the fix: 'fmx bake {bench.name}' followed by 'fmx switch {bench.name}'."
             else:
-                remedy = f"Run 'fm migrate' to re-render it, or recreate the nginx container with 'fm restart {bench.name} --nginx --recreate'."
+                remedy = f"Run 'fmx migrate' to re-render it, or recreate the nginx container with 'fmx restart {bench.name} --nginx --recreate'."
             output.display_error(
-                f"Bench '{bench.name}' nginx conf ({default_conf}) predates the Authorization-header fix: with web auth on, nginx would forward the credentials it just checked and frappe would reject every authenticated request with 401. {remedy} The tools surface is unaffected, so 'fm auth enable {bench.name} --tools' works today."
+                f"Bench '{bench.name}' nginx conf ({default_conf}) predates the Authorization-header fix: with web auth on, nginx would forward the credentials it just checked and frappe would reject every authenticated request with 401. {remedy} The tools surface is unaffected, so 'fmx auth enable {bench.name} --tools' works today."
             )
             raise typer.Exit(code=1)
 
@@ -382,7 +382,7 @@ def apply_auth(
     # reporting it as protected without this would be a lie.
     if not site and applied.tools and not bench.bench_config.admin_tools:
         output.warning(
-            f"Admin tools are disabled on {bench.name}, so nothing enforces the tools surface yet; it applies once you run 'fm tools enable {bench.name}'"
+            f"Admin tools are disabled on {bench.name}, so nothing enforces the tools surface yet; it applies once you run 'fmx tools enable {bench.name}'"
         )
 
     card = build_auth_card(

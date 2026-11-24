@@ -1,7 +1,7 @@
 import shutil
 import sys
 
-"""`fm ssl ca status`: which stores trust fm's dev CA, asked of the stores themselves."""
+"""`fmx ssl ca status`: which stores trust fmx's dev CA, asked of the stores themselves."""
 
 from typer_examples import example
 
@@ -12,14 +12,14 @@ from frappe_manager.ssl_manager.trust_store_manager import TrustStoreManager
 
 
 @example(
-    "Is fm's dev CA trusted on this host?",
+    "Is fmx's dev CA trusted on this host?",
     "",
 )
 def ca_status(json_results: JsonResultOption = False, fields: JsonFieldsOption = None):
     """
-    Show fm's dev CA and every trust store on this host that currently trusts it.
+    Show fmx's dev CA and every trust store on this host that currently trusts it.
 
-    Each store is asked directly (the keychain, the system CA directories, each browser's NSS database), never the .installed marker fm writes next to the CA: that marker records only that one install once succeeded, not where, and not whether it is still there. A CA fm believes it installed but no store actually holds is the case this command exists to surface, and `fm ssl ca install` is the fix.
+    Each store is asked directly (the keychain, the system CA directories, each browser's NSS database), never the .installed marker fmx writes next to the CA: that marker records only that one install once succeeded, not where, and not whether it is still there. A CA fmx believes it installed but no store actually holds is the case this command exists to surface, and `fmx ssl ca install` is the fix.
     """
     output = get_global_output_handler()
     if json_results:
@@ -82,13 +82,13 @@ def ca_status(json_results: JsonResultOption = False, fields: JsonFieldsOption =
 
     if paths.sentinel.exists() and not entries:
         output.warning(
-            "fm recorded a successful trust install, but no store has the CA now. "
-            "Run 'fm ssl ca install' to put it back."
+            "fmx recorded a successful trust install, but no store has the CA now. "
+            "Run 'fmx ssl ca install' to put it back."
         )
     if entries and not paths.cert.exists():
         output.warning(
             "The CA is trusted by this host but its certificate file is gone. "
-            "Run 'fm ssl ca remove' to stop trusting a CA you no longer hold."
+            "Run 'fmx ssl ca remove' to stop trusting a CA you no longer hold."
         )
 
     # Firefox never reads the host trust store, so "trusted" above can be true while Firefox shows
@@ -98,6 +98,6 @@ def ca_status(json_results: JsonResultOption = False, fields: JsonFieldsOption =
     if manager.nss_profiles_present() and not shutil.which("certutil"):
         hint = "brew install nss" if sys.platform == "darwin" else "install the 'libnss3-tools' package"
         output.warning(
-            f"Firefox is installed and keeps its own certificate store, which fm cannot write to "
-            f"without 'certutil'. Run '{hint}', then 'fm ssl ca install'."
+            f"Firefox is installed and keeps its own certificate store, which fmx cannot write to "
+            f"without 'certutil'. Run '{hint}', then 'fmx ssl ca install'."
         )

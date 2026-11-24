@@ -48,7 +48,7 @@ def _blast_radius(schemas, delete_fm_managed_db: bool | None = True) -> list[str
         if delete_fm_managed_db is True:
             rows.append((f"{_plural(len(fm_owned), 'schema')} dropped", label))
         elif delete_fm_managed_db is False:
-            rows.append((f"{_plural(len(fm_owned), 'schema')} kept", f"{label}  (fm's own, --delete-fm-managed-db drops)"))
+            rows.append((f"{_plural(len(fm_owned), 'schema')} kept", f"{label}  (fmx's own, --delete-fm-managed-db drops)"))
         else:
             rows.append((f"{_plural(len(fm_owned), 'schema')} undecided", f"{label}  (you will be asked)"))
 
@@ -61,7 +61,7 @@ def _blast_radius(schemas, delete_fm_managed_db: bool | None = True) -> list[str
         if not s.droppable and not s.unreadable
     ]
     if kept:
-        rows.append((f"{_plural(len(kept), 'schema')} kept", f"{', '.join(kept)}  (external, not fm's)"))
+        rows.append((f"{_plural(len(kept), 'schema')} kept", f"{', '.join(kept)}  (external, not fmx's)"))
 
     unreadable = [s.site for s in schemas if s.unreadable]
     if unreadable:
@@ -139,7 +139,7 @@ def _site_schemas(bench_service: BenchService, benchname: str) -> list:
 @example(
     "Delete a bench that serves several sites",
     "{benchname} --all-sites",
-    detail="fm lists every site it is about to destroy, then asks for the bench name typed back.",
+    detail="fmx lists every site it is about to destroy, then asks for the bench name typed back.",
     benchname="mybench",
 )
 @example(
@@ -182,14 +182,14 @@ def delete(
         bool | None,
         typer.Option(
             "--delete-fm-managed-db/--no-delete-fm-managed-db",
-            help="Drop the schema and user from the database server fm manages, or keep them. A schema on a server fm does not own is never dropped, with or without this flag. fm asks when neither is passed.",
+            help="Drop the schema and user from the database server fmx manages, or keep them. A schema on a server fmx does not own is never dropped, with or without this flag. fmx asks when neither is passed.",
         ),
     ] = None,
     delete_backups: Annotated[
         bool,
         typer.Option(
             "--delete-backups",
-            help="Also delete the removed site's recorded database dumps. Off by default: a dump is the last copy of something, and once its history row is gone fm can no longer offer to prune it, so the paths are printed instead.",
+            help="Also delete the removed site's recorded database dumps. Off by default: a dump is the last copy of something, and once its history row is gone fmx can no longer offer to prune it, so the paths are printed instead.",
         ),
     ] = False,
     dry_run: Annotated[
@@ -204,7 +204,7 @@ def delete(
 
     BENCH/SITE deletes just that site: its schema, its certificate, its proxy entries and its files. The bench and its other sites keep running.
 
-    The database is decided separately. fm can drop a site's schema and user from the database server it manages, but a schema on a server fm does not own is always left in place, --delete-fm-managed-db or not. A schema fm cannot account for, one whose name is unreadable or whose drop failed, stops the deletion with the bench directory intact, because that directory holds the only record of the schema.
+    The database is decided separately. fmx can drop a site's schema and user from the database server it manages, but a schema on a server fmx does not own is always left in place, --delete-fm-managed-db or not. A schema fmx cannot account for, one whose name is unreadable or whose drop failed, stops the deletion with the bench directory intact, because that directory holds the only record of the schema.
     """
 
     if not address:
@@ -233,7 +233,7 @@ def delete(
         # The bench is loaded first, so a name that resolves to nothing fails as "not found"
         # rather than offering to destroy whatever it did find.
         output.warning(
-            f"Removing the site '{site}' from bench '{address}' drops its schema when the schema is fm's to drop, removes its certificate and deletes its files. The bench and its other sites keep running."
+            f"Removing the site '{site}' from bench '{address}' drops its schema when the schema is fmx's to drop, removes its certificate and deletes its files. The bench and its other sites keep running."
         )
         if dry_run:
             output.print("Dry run: nothing deleted.", emoji_code="")
@@ -271,14 +271,14 @@ def delete(
     if delete_fm_managed_db is None and any(s.droppable for s in schemas) and not output.is_interactive():
         raise MissingArgumentError(
             f"Bench '{address}' has {_plural(len([s for s in schemas if s.droppable]), 'schema')} on a database "
-            "server fm manages, and nothing has said what to do with them.",
+            "server fmx manages, and nothing has said what to do with them.",
             suggestions=["Pass --delete-fm-managed-db to drop them, or --no-delete-fm-managed-db to keep them."],
         )
 
     if len(schemas) > 1 and not all_sites:
         names = ", ".join(s.site for s in schemas)
         output.display_error(
-            f"Bench '{address}' serves {_plural(len(schemas), 'site')}: {names}. Deleting the bench destroys every one of them. Pass --all-sites to say that is what you mean, or delete one site at a time with 'fm delete {address}/{schemas[0].site}'."
+            f"Bench '{address}' serves {_plural(len(schemas), 'site')}: {names}. Deleting the bench destroys every one of them. Pass --all-sites to say that is what you mean, or delete one site at a time with 'fmx delete {address}/{schemas[0].site}'."
         )
         raise typer.Exit(1)
 

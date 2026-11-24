@@ -108,7 +108,7 @@ def bench_lock(param: str = "benchname", shared: bool = False, operation: str | 
                 if handle is None:
                     from frappe_manager.output_manager import get_global_output_handler
 
-                    culprit = read_holder(path) or "another fm operation"
+                    culprit = read_holder(path) or "another fmx operation"
                     get_global_output_handler().display_error(f"Bench {bench_name} is busy: {culprit} is running on it. Let it finish, then re-run.")
                     raise typer.Exit(1)
             try:

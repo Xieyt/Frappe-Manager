@@ -55,9 +55,9 @@ def disable(
     """
     Stop a surface asking for a password, keeping the credentials for later.
 
-    --web and --tools select which surfaces this acts on, and naming one says nothing about the other: 'fm auth disable BENCH --web' leaves the admin tools prompting. Naming neither acts on both.
+    --web and --tools select which surfaces this acts on, and naming one says nothing about the other: 'fmx auth disable BENCH --web' leaves the admin tools prompting. Naming neither acts on both.
 
-    Credentials and allow lists are kept, so 'fm auth enable' afterwards asks for nothing.
+    Credentials and allow lists are kept, so 'fmx auth enable' afterwards asks for nothing.
     """
 
     both = not web and not tools

@@ -662,7 +662,7 @@ def test_a_bench_without_admin_tools_is_told_how_to_turn_them_on(tmp_path):
     harness.reraising_orchestrator().create_bench()
 
     printed = " ".join(str(call) for call in harness.output.print.call_args_list)
-    assert "fm tools enable" in printed
+    assert "fmx tools enable" in printed
     assert SITE in printed
 
 
@@ -676,7 +676,7 @@ def test_a_bench_with_admin_tools_already_on_gets_no_hint(tmp_path):
     harness.reraising_orchestrator().create_bench()
 
     printed = " ".join(str(call) for call in harness.output.print.call_args_list)
-    assert "fm tools enable" not in printed
+    assert "fmx tools enable" not in printed
 
 
 def test_a_failed_phase_six_offers_to_remove_the_bench(tmp_path):
@@ -1686,7 +1686,7 @@ def test_the_phase_six_skip_tells_the_operator_how_to_migrate_by_hand(tmp_path):
     assert orchestrator._skip_phase6_for_attach() is True
 
     printed = " ".join(str(call) for call in harness.output.print.call_args_list)
-    assert f"fm shell {SITE}" in printed
+    assert f"fmx shell {SITE}" in printed
     assert f"bench --site {SITE} migrate" in printed
     assert harness.events.has("install_apps_to_site") is False
 
@@ -2116,7 +2116,7 @@ def test_the_migrate_remedy_addresses_the_site_instead_of_naming_it_twice(tmp_pa
         orchestrator.create_bench()
 
     warned = " ".join(str(call) for call in harness.output.warning.call_args_list)
-    assert f"fm shell {SITE}/{SITE} -- bench migrate" in warned
+    assert f"fmx shell {SITE}/{SITE} -- bench migrate" in warned
     # The `--site` flag is what needed a second copy of the name kept in step with the first.
     assert "--site" not in warned
 
@@ -2318,7 +2318,7 @@ def test_a_non_interactive_failure_leaves_the_bench_with_a_message_instead_of_cr
     warned = " ".join(str(call) for call in harness.output.warning.call_args_list)
     assert "Non-interactive" in warned
     assert str(harness.bench.path) in warned
-    assert f"fm delete {SITE} --yes" in warned
+    assert f"fmx delete {SITE} --yes" in warned
     assert "phase 5 died" not in str(harness.output.display_error.call_args_list)
 
 
@@ -2795,7 +2795,7 @@ def test_added_aliases_come_with_the_command_that_gets_them_a_certificate(tmp_pa
 
     # BENCH/DOMAIN, not "BENCH DOMAIN": the two-argument form fm used to print is rejected by
     # click before fm sees it, so the advice could not be run as given.
-    assert f"fm ssl add {SITE}/a.example.com" in str(harness.output.print.call_args_list)
+    assert f"fmx ssl add {SITE}/a.example.com" in str(harness.output.print.call_args_list)
 
 
 def test_removing_an_alias_needs_no_certificate_advice(tmp_path):
@@ -2806,7 +2806,7 @@ def test_removing_an_alias_needs_no_certificate_advice(tmp_path):
 
     assert _aliases(harness) == []
     assert f"Removed aliases from '{SITE}': a.example.com" in str(harness.output.effect.call_args_list)
-    assert "fm ssl add" not in str(harness.output.print.call_args_list)
+    assert "fmx ssl add" not in str(harness.output.print.call_args_list)
 
 
 def test_a_failure_puts_the_alias_list_back_the_way_it_was(tmp_path):

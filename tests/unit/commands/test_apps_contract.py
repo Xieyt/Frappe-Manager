@@ -179,7 +179,7 @@ class TestAddressScope:
         world.bench.app_manager._container_run.assert_not_called()
         world.bench.restart_web_containers_services.assert_not_called()
         world.bench.restart_workers_containers_services.assert_not_called()
-        assert any("Install it with 'fm apps add" in p for p in world.prints)
+        assert any("Install it with 'fmx apps add" in p for p in world.prints)
 
     def test_one_site_installs_migrates_and_restarts(self, world):
         world.run(site="site-a")
@@ -233,8 +233,8 @@ class TestImageRuntimeRedirect:
 
         assert exc.value.exit_code == 1
         assert len(world.errors) == 1
-        assert "fm bake" in world.errors[0]
-        assert "fm switch" in world.errors[0]
+        assert "fmx bake" in world.errors[0]
+        assert "fmx switch" in world.errors[0]
         world.bench.app_manager.graft_apps.assert_not_called()
         world.orchestrator.drain_workers.assert_not_called()
 

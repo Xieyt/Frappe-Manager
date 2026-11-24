@@ -1,6 +1,6 @@
 # Logs and debugging
 
-Three kinds of log: what the `fm` CLI itself did, what a bench's Frappe processes wrote to disk, and what a container printed to stdout.
+Three kinds of log: what the `fmx` CLI itself did, what a bench's Frappe processes wrote to disk, and what a container printed to stdout.
 
 ## Log locations
 
@@ -11,15 +11,15 @@ Three kinds of log: what the `fm` CLI itself did, what a bench's Frappe processe
 | **Bench nginx** | `~/frappe/sites/<bench>/configs/nginx/logs/` (`access.log`, `error.log`) |
 | **Global MariaDB** | `~/frappe/services/mariadb/logs/` |
 | **Global nginx proxy** | `~/frappe/services/nginx-proxy/logs/` |
-| **Any container** | `fm logs <bench> --service <service>` |
+| **Any container** | `fmx logs <bench> --service <service>` |
 
-Redis is per bench, not a global service, so it has no directory under `~/frappe/services/`. Its output is container output only: `fm logs <bench> --service redis-cache`.
+Redis is per bench, not a global service, so it has no directory under `~/frappe/services/`. Its output is container output only: `fmx logs <bench> --service redis-cache`.
 
 ---
 
 ## `fm.log` {#fm-log}
 
-Everything every `fm` invocation did, at `DEBUG` by default. This is the file to reach for when a command failed and the console output was not enough.
+Everything every `fmx` invocation did, at `DEBUG` by default. This is the file to reach for when a command failed and the console output was not enough.
 
 ```bash
 tail -f ~/frappe/logs/fm.log
@@ -46,6 +46,20 @@ Every record is stamped with the ambient context at emit time, so the tags appea
 grep 'corr=a8c2a3de' ~/frappe/logs/fm.log
 ```
 
+A child process fmx runs (docker, acme.sh, git, bench itself) carries one more tag, `cmd=<id>`: a 4-character id separate from `corr=`, needed because one invocation opens dozens of child commands and `corr=` alone cannot tell their lines apart. The same id tags the command's start line, every line of its output (`out` or `err` for the stream it came from), and its exit line:
+
+```
+[2026-08-24 13:15:43,500] DEBUG: [corr=a8c2a3de] [component=subprocess] [cmd=a3f1] COMMAND: docker compose up -d
+[2026-08-24 13:15:43,612] DEBUG: [corr=a8c2a3de] [component=subprocess] [cmd=a3f1 out] Creating network fm-frontend-network
+[2026-08-24 13:15:43,890] DEBUG: [corr=a8c2a3de] [component=subprocess] [cmd=a3f1 err] Pulling mariadb:11.8
+[2026-08-24 13:15:44,021] DEBUG: [corr=a8c2a3de] [component=subprocess] [cmd=a3f1] RETURN CODE: 0
+```
+
+```bash
+# Everything one child process printed, in order
+grep 'cmd=a3f1' ~/frappe/logs/fm.log
+```
+
 Lines tagged `[component=output] [OUTPUT]` are the mirror of what was printed to your terminal, so the file is a superset of the console.
 
 ### Rotation {#fm-log-rotation}
@@ -67,29 +81,42 @@ Accepts `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Anything else raises a 
 
 ---
 
-## `fm logs`
+## `fmx logs`
 
 ```bash
 # The bench's web server log files
-fm logs mybench
+fmx logs mybench
 
 # Stream them
-fm logs mybench -f
+fmx logs mybench -f
 
 # A container's docker logs instead
-fm logs mybench --service nginx -f
+fmx logs mybench --service nginx -f
 ```
 
-Without `--service`, `fm logs` reads the bench's log **files** from the host, so it works whether or not the bench is running:
+Without `--service`, `fmx logs` reads the bench's log **files** from the host, so it works whether or not the bench is running:
 
 - **dev**: `web.dev.log`
 - **prod**: `web.error.log`, then `web.log`
 
 Existing content is printed file by file, then `-f` polls all of them for new lines. Files that do not exist yet are skipped; if none exist you get `No log files found.`
 
-With `--service`, the logs come from docker and that container has to be running, otherwise `fm logs` reports that the service is not running and prints nothing.
+With `--service`, the logs come from docker and that container has to be running, otherwise `fmx logs` reports that the service is not running and prints nothing.
 
 `--service` accepts any service in the bench's compose files: `docker-compose.yml` (`frappe`, `nginx`, `socketio`, `schedule`, `redis-cache`, `redis-queue`), `docker-compose.workers.yml` (`short-worker`, `long-worker`, plus one per custom queue), and `docker-compose.admin-tools.yml` (`adminer`, `mailpit`) when admin tools are enabled. An unknown name prints the bench's actual list.
+
+---
+
+## Container log caps {#container-log-caps}
+
+Docker's `json-file` driver never rotates on its own, so without a cap a container's stdout grows on disk for as long as the container lives, in a place `fmx prune` cannot reach: it rotates the bench and nginx log files below, not what docker itself stores. Every service fmx writes into a compose file, the bench's web tier and workers, admin tools, and the shared MariaDB and proxy, keeps three 10 MB log files by default.
+
+Move the default, or give one service its own ceiling, in `fm_config.toml`: [`logs.container_max_size` / `container_max_files`](configuration.md#logs-container-caps) apply to every service, [`logs.containers.<service>`](configuration.md#logs-containers) overrides one. A compose file fmx already wrote is read, never re-rendered, so a cap you edited by hand stays put; `fmx migrate` and `fmx services migrate` add the default cap to a pre-1.0.0 compose file that declared none, leaving a service that already has a logging block alone.
+
+```bash
+# What docker is actually capping, per service
+fmx compose mybench config | grep -A2 logging
+```
 
 ---
 
@@ -124,11 +151,11 @@ Bench nginx writes a structured JSON access log, in the same format as the globa
 
 `status`, `bytes` and `request_time` are numbers. The `upstream*` fields are strings because nginx writes `-` there when there was no upstream (a maintenance-page 503, for example) and a comma-separated list when it retried.
 
-`client` is the visitor's address, not the proxy's: a `real-ip.conf` overlay tells bench nginx to trust `X-Real-IP` from the FM frontend network. It is re-materialised on every `fm start`.
+`client` is the visitor's address, not the proxy's: a `real-ip.conf` overlay tells bench nginx to trust `X-Real-IP` from the FM frontend network. It is re-materialised on every `fmx start`.
 
-`scheme` is the VISITOR's scheme, not the connection the logging nginx received. Behind a TLS-terminating front every hop inside fm is plain HTTP, so recording the connection would log `http` for every request on a fully HTTPS site. Both layers read it from `$fm_client_scheme`, which is the forwarded value when the request came through a trusted proxy (`fm services trusted-proxies`) and the real connection otherwise, so a forged header from an untrusted address cannot change what is logged.
+`scheme` is the VISITOR's scheme, not the connection the logging nginx received. Behind a TLS-terminating front every hop inside fmx is plain HTTP, so recording the connection would log `http` for every request on a fully HTTPS site. Both layers read it from `$fm_client_scheme`, which is the forwarded value when the request came through a trusted proxy (`fmx services trusted-proxies`) and the real connection otherwise, so a forged header from an untrusted address cannot change what is logged.
 
-An existing install keeps the format its proxy was created with until `fm services migrate` brings it up to the one your fm version ships, because a container reads its environment once, at creation. Bench nginx has the format baked into its image, so that half follows the bench image.
+An existing install keeps the format its proxy was created with until `fmx services migrate` brings it up to the one your fmx version ships, because a container reads its environment once, at creation. Bench nginx has the format baked into its image, so that half follows the bench image.
 
 ```bash
 # Slowest requests
@@ -145,17 +172,17 @@ jq -r 'select(.status >= 500) | .path' \
 
 ---
 
-## Console verbosity flags
+## Flags before the subcommand
 
-These are options on `fm` itself, so they go before the subcommand.
+Seven options sit on `fmx` itself rather than on a command, so they all go before it. `fmx --help` lists the same set.
 
 ### `--verbose` / `-v`
 
-Raises how much fm tells you on screen. It does not put the log file on your terminal.
+Raises how much fmx tells you on screen. It does not put the log file on your terminal.
 
 ```bash
-fm -v start mybench      # what fm changed, and the commands it ran
-fm -vv start mybench     # the above, plus why it chose what it chose
+fmx -v start mybench      # what fmx changed and the commands it ran
+fmx -vv start mybench     # the above, plus why it chose what it chose
 ```
 
 `-v` shows effects: a certificate copied, a CA installed into a trust store, a site's `host_name` updated. `-vv` adds reasoning: which challenge type was picked, which lookup was attempted, which cleanup was skipped and why.
@@ -163,7 +190,7 @@ fm -vv start mybench     # the above, plus why it chose what it chose
 ### `--log-level`
 
 ```bash
-fm --log-level debug create mybench
+fmx --log-level debug create mybench
 ```
 
 Accepts `debug`, `info`, `warning` and `error`; anything else exits 1 with the valid list. It is the same dial as `-v`: `info` matches `-v`, `debug` matches `-vv`, and passing it overrides the flag.
@@ -171,20 +198,45 @@ Accepts `debug`, `info`, `warning` and `error`; anything else exits 1 with the v
 !!! note "The log file is separate"
     Neither flag changes what reaches `~/frappe/logs/fm.log`, which always records at `logs.file_level`, and neither puts log records on your screen. Results, tables and prompts are unaffected by both.
 
+### `--no-color`
+
+```bash
+fmx --no-color list
+```
+
+Renders without colour. Setting `NO_COLOR` in the environment does the same.
+
+### `--progress auto|plain|none`
+
+```bash
+fmx --progress plain create mybench    # one line per step, nothing redrawn
+fmx --progress none create mybench     # no progress output at all
+```
+
+`auto` (the default) animates when you are at a terminal and no CI is detected. `--non-interactive` and `--events json` both imply `plain`, so a CI log never gets an animation it cannot render.
+
 ### `--non-interactive` / `-n`
 
 Fails instead of prompting, naming the flag that would have supplied the answer. Use it in CI.
 
 ```bash
-fm -n create mybench --apps erpnext --environment prod
+fmx -n create mybench --apps erpnext --environment prod
 ```
+
+### `--events json`
+
+```bash
+fmx --events json restart mybench.localhost > run.jsonl
+```
+
+Streams what fmx does as it happens: one JSON line per event, ending in a terminal exit event. It implies `--non-interactive`. This is a different question from a command's own `--json` (`fmx list --json`), which is that command's result rather than a live stream of everything fmx did; see [the event vocabulary](../commands/index.md#the-event-vocabulary) for the full schema.
 
 ### `--version` / `-V`
 
 Prints the version and nothing else:
 
 ```console
-$ fm --version
+$ fmx --version
 1.0.0
 ```
 
@@ -194,7 +246,7 @@ $ fm --version
 
 Frappe does not rotate its own logs, and FM does not rotate them on a schedule. Two options, and on a long-lived Linux server you want the first:
 
-**logrotate (Linux servers).** The OS rotates matching logs nightly whether or not anyone runs fm:
+**logrotate (Linux servers).** The OS rotates matching logs nightly whether or not anyone runs fmx:
 
 ```
 # /etc/logrotate.d/frappe-manager
@@ -212,6 +264,6 @@ Frappe does not rotate its own logs, and FM does not rotate them on a schedule. 
 
 `copytruncate` matters here: the processes hold their log files open and will not reopen them, so renaming out from under them would silently stop the logging.
 
-**`fm prune` (everywhere else, or until you set that up).** [`fm prune BENCH --only logs`](../commands/prune.md) rotates the bench's frappe and nginx logs on demand: files over `rotate_logs_over` (10 MB by default) are gzipped to `<name>.log.<timestamp>.gz` and truncated in place, keeping `keep_log_archives` archives per file. [`fm services prune --only logs`](../commands/services.md#fm-services-prune) does the same for the shared mariadb and nginx-proxy logs. Thresholds live in the [`[prune]`](configuration.md#fm-prune) config table. If logrotate already keeps a file small, `fm prune` finds nothing to do; the two coexist safely.
+**`fmx prune` (everywhere else, or until you set that up).** [`fmx prune BENCH --only logs`](../commands/prune.md) rotates the bench's frappe and nginx logs on demand: files over `rotate_logs_over` (10 MB by default) are gzipped to `<name>.log.<timestamp>.gz` and truncated in place, keeping `keep_log_archives` archives per file. [`fmx services prune --only logs`](../commands/services.md#fmx-services-prune) does the same for the shared mariadb and nginx-proxy logs. Thresholds live in the [`[prune]`](configuration.md#fm-prune) config table. If logrotate already keeps a file small, `fmx prune` finds nothing to do; the two coexist safely.
 
 **See also:** [Configuration reference](configuration.md), [Architecture reference](architecture.md)

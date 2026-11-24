@@ -56,7 +56,7 @@ def enable(
     """
     Start the admin tools (Adminer at /adminer, Mailpit at /mailpit), or route a site to them.
 
-    BENCH starts the one container pair the bench has, seeding its compose file on first use; this only routes, so protecting what it starts is a separate 'fm auth enable BENCH --tools' call. BENCH/SITE only adds the routes for that site's hostnames, leaving the containers as they were; BENCH/all restores the routes for every site the bench serves.
+    BENCH starts the one container pair the bench has, seeding its compose file on first use; this only routes, so protecting what it starts is a separate 'fmx auth enable BENCH --tools' call. BENCH/SITE only adds the routes for that site's hostnames, leaving the containers as they were; BENCH/all restores the routes for every site the bench serves.
     """
 
     services_manager = ctx.obj["services"]
@@ -109,5 +109,5 @@ def enable(
     auth = bench.bench_config.auth
     if auth is None or not auth.tools:
         output.warning(
-            f"Nothing protects the admin tools yet; run 'fm auth enable {bench.name} --tools' to require a password"
+            f"Nothing protects the admin tools yet; run 'fmx auth enable {bench.name} --tools' to require a password"
         )

@@ -1,15 +1,15 @@
-# `fm restart`
+# `fmx restart`
 
 Restart bench services: web and workers by default, redis and nginx on request.
 
-Workers drain first: fm waits up to \[workers].drain_timeout for in-flight jobs, and rather than kill a job that overruns it resumes the workers and aborts the restart before any service is touched. --no-drain skips the wait and interrupts running jobs, --force kills everything fast, and a run naming --service skips the drain as well.
+Workers drain first: fmx waits up to \[workers].drain_timeout for in-flight jobs, and rather than kill a job that overruns it resumes the workers and aborts the restart before any service is touched. --no-drain skips the wait and interrupts running jobs, --force kills everything fast, and a run naming --service skips the drain as well.
 
-Restart bounces what is already running, and a stopped bench is fm start's job: unlike a restart, start also reconciles the bench nginx config and the global proxy entry.
+Restart bounces what is already running, and a stopped bench is fmx start's job: unlike a restart, start also reconciles the bench nginx config and the global proxy entry.
 
 **Usage**:
 
 ```console
-$ fm restart BENCH [OPTIONS]
+$ fmx restart BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -33,13 +33,13 @@ $ fm restart BENCH [OPTIONS]
 ### Restart web and workers
 
 ```bash
-fm restart mybench
+fmx restart mybench
 ```
 
 ### Restart workers only
 
 ```bash
-fm restart mybench --workers --no-web
+fmx restart mybench --workers --no-web
 ```
 
 ### Restart without waiting for in-flight jobs
@@ -47,7 +47,7 @@ fm restart mybench --workers --no-web
 Interrupted jobs land in the failed-jobs registry.
 
 ```bash
-fm restart mybench --no-drain
+fmx restart mybench --no-drain
 ```
 
 ### Restart one service
@@ -55,13 +55,13 @@ fm restart mybench --no-drain
 Repeatable, and it skips the drain.
 
 ```bash
-fm restart mybench --service socketio
+fmx restart mybench --service socketio
 ```
 
 ### Rolling web restart
 
 ```bash
-fm restart mybench --rolling
+fmx restart mybench --rolling
 ```
 
 ## See also

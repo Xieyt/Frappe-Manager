@@ -185,7 +185,7 @@ class BenchSupervisor:
                 message=(
                     f"Supervisord for {service} did not start accepting commands within "
                     f"{wait_timeout * interval}s; the container is up but its entrypoint has not "
-                    f"finished. Check 'fm logs {self.bench_name}' for where it stopped."
+                    f"finished. Check 'fmx logs {self.bench_name}' for where it stopped."
                 ),
             )
 

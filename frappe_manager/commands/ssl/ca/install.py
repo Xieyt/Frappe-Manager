@@ -14,9 +14,9 @@ from frappe_manager.ssl_manager.trust_store_manager import TrustStoreManager
 )
 def ca_install():
     """
-    Install fm's dev CA into this host's OS and browser trust stores.
+    Install fmx's dev CA into this host's OS and browser trust stores.
 
-    fm installs the CA by itself the first time it issues a dev certificate, and only once. This command is the way back when that one attempt did not stick or no longer covers everything: a sudo prompt that was declined, a browser profile created afterwards, a restored machine. It is safe to run repeatedly.
+    fmx installs the CA by itself the first time it issues a dev certificate, and only once. This command is the way back when that one attempt did not stick or no longer covers everything: a sudo prompt that was declined, a browser profile created afterwards, a restored machine. It is safe to run repeatedly.
 
     A CA that does not exist yet is not created here: it is minted the first time a bench asks for a dev certificate.
     """

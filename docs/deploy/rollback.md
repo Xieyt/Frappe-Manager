@@ -1,32 +1,32 @@
 # Rollback
 
-The deploy went bad. Here is the way back:
+The deploy went bad. Here's the way back:
 
 ```bash
-fm switch mybench --previous                 # code rollback; migrate disabled automatically
-fm switch mybench --previous --restore-db    # code AND database back together
+fmx switch mybench --previous                 # code rollback; migrate disabled automatically
+fmx switch mybench --previous --restore-db    # code AND database back together
 ```
 
 Need to go further back than one release?
 
 ```bash
-fm switch mybench local/mybench:<older-tag> --no-migrate   # further than one release
+fmx switch mybench local/mybench:<older-tag> --no-migrate   # further than one release
 ```
 
-`fm info` lists the images this bench has run. An older image only works if it is still on the daemon: `fm prune` protects the current and previous images, the seed and base images, and whatever the kept history rows reference, and removes the rest.
+`fmx info` lists the images this bench has run. An older image only works if it's still on the daemon: `fmx prune` protects the current and previous images, the seed and base images, and whatever the kept history rows reference, and removes the rest.
 
-Rollbacks run the same [switch pipeline](index.md#the-switch-pipeline) as forward deploys, pointed backwards: the same snapshots, health gate, and abort safety apply.
+Rollbacks run the same [switch pipeline](index.md#the-switch-pipeline) as forward deploys, pointed backwards. The same snapshots, health gate, and abort safety apply.
 
 ## What the flags do
 
-- `--previous` disables migrate for the run (old code must never migrate a newer schema); override with an explicit `--migrate`. It is exclusive with an explicit IMAGE: pass one or the other.
-- `--restore-db` restores the DB dump recorded on the **current** (bad) deploy's own record and imports it before the swap; a restore is schema-grade, so it runs under the maintenance window like a migrate. Rows written after the bad deploy went live are discarded; that is why it is never implicit. It fails up front, before anything is touched, when the current deploy has no recorded dump; dumps live under `<bench>/backups/deploy-*/`.
-- After a rollback, `[deployments].previous.app_image` points at the image you just left; running `fm switch --previous` again re-deploys it (deliberate: rollback of a rollback is a redo).
+- **`--previous`** disables migrate for the run: old code must never migrate a newer schema. Override with an explicit `--migrate`. It's exclusive with an explicit IMAGE: pass one or the other.
+- **`--restore-db`** restores the DB dump recorded on the **current** (bad) deploy's own record, and imports it before the swap. A restore is schema-grade, so it runs under the maintenance window like a migrate does. Rows written after the bad deploy went live are discarded, which is why it's never implicit. It fails up front, before anything is touched, when the current deploy has no recorded dump. Dumps live under `<bench>/backups/deploy-*/`.
+- After a rollback, `[deployments].previous.app_image` points at the image you just left. Running `fmx switch --previous` again re-deploys it: rollback of a rollback is a redo, deliberately.
 
 ## What to check after
 
 ```bash
-fm info mybench
+fmx info mybench
 ```
 
 - The **deploys** section should show the release you rolled back to as current, with the history intact.

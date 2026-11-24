@@ -1,4 +1,4 @@
-# `fm logs`
+# `fmx logs`
 
 Show a bench's web server log, or a container's log with --service.
 
@@ -7,7 +7,7 @@ Without --service this reads the bench's log files on the host, so it works whet
 **Usage**:
 
 ```console
-$ fm logs BENCH [OPTIONS]
+$ fmx logs BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -24,19 +24,19 @@ $ fm logs BENCH [OPTIONS]
 ### Read the bench's web server log
 
 ```bash
-fm logs mybench
+fmx logs mybench
 ```
 
 ### Follow it live
 
 ```bash
-fm logs mybench -f
+fmx logs mybench -f
 ```
 
 ### Read a container's logs instead
 
 ```bash
-fm logs mybench --service nginx -f
+fmx logs mybench --service nginx -f
 ```
 
 ## See also

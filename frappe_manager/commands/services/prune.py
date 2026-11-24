@@ -100,9 +100,9 @@ def prune_services(
     ] = False,
 ):
     """
-    Reclaim the host tier's disk: fm's own backup sessions and the shared services' logs.
+    Reclaim the host tier's disk: fmx's own backup sessions and the shared services' logs.
 
-    Plan-first: the full plan (every path that would be touched) is printed, then one confirmation covers it; a bare Enter aborts, --yes skips the question, --dry-run stops after the plan. Covers ~/frappe/backups (migration sessions and services_<date> wholesale backups) and the shared services' log files. Retention comes from the \\[prune] table in fm_config.toml; flags override for one run. fm.log is not touched: it rotates itself. The bench tier has its own command, fm prune BENCH.
+    Plan-first: the full plan (every path that would be touched) is printed, then one confirmation covers it; a bare Enter aborts, --yes skips the question, --dry-run stops after the plan. Covers ~/frappe/backups (migration sessions and services_<date> wholesale backups) and the shared services' log files. Retention comes from the \\[prune] table in fm_config.toml; flags override for one run. fm.log is not touched: it rotates itself. The bench tier has its own command, fmx prune BENCH.
     """
     if only is not None and only not in ("backups", "logs"):
         raise typer.BadParameter(f"Unknown category '{only}': expected backups or logs.")

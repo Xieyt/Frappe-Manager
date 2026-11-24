@@ -283,7 +283,7 @@ def test_the_refusal_names_the_flag_that_unblocks_it(two_sites):
 def test_the_refusal_offers_the_single_site_address_as_the_other_way_out(two_sites):
     """An operator who meant one site should not have to go and look the syntax up."""
     said = _run([BENCH, "--yes"], root=two_sites, sites=[SITE_A, SITE_B]).said
-    assert f"fm delete {BENCH}/{SITE_A}" in said
+    assert f"fmx delete {BENCH}/{SITE_A}" in said
 
 
 def test_a_multi_site_bench_with_all_sites_and_yes_deletes(two_sites):
@@ -397,7 +397,7 @@ def test_an_external_schema_is_named_as_kept_with_its_host(two_sites):
     said = _run([BENCH, "--all-sites", "--delete-fm-managed-db"], root=two_sites, sites=[SITE_A, SITE_B], schemas=schemas, answer="no").said
     assert "1 schema kept" in said
     assert "prod_erp on rds.internal" in said
-    assert "external, not fm's" in said
+    assert "external, not fmx's" in said
 
 
 def test_an_external_schema_is_not_counted_among_the_dropped(two_sites):

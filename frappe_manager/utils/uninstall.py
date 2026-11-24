@@ -46,7 +46,7 @@ class Scope(str, Enum):
 
 
 def _needs_sudo(path: Path) -> bool:
-    """A directory fm cannot write cannot be emptied: rmtree stops at the first unlink. Bind
+    """A directory fmx cannot write cannot be emptied: rmtree stops at the first unlink. Bind
     mounts the containers created are root-owned -- nginx-proxy's cache, mariadb's datadir."""
     if not path.is_dir():
         return not os.access(path.parent, os.W_OK | os.X_OK)

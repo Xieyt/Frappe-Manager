@@ -243,7 +243,7 @@ def _plan_redis(
         if url and revert:
             raise typer.BadParameter(
                 f"--redis-{flag} and --no-redis-{flag} are opposite intents: one points that side at an "
-                "external server, the other brings it back to fm's own container."
+                "external server, the other brings it back to fmx's own container."
             )
 
     if not (redis_cache or redis_queue or no_redis_cache or no_redis_queue or no_redis):
@@ -282,7 +282,7 @@ def _plan_redis(
         current.queue if current else None,
     ):
         plan.already.append(
-            "redis is already " + (_describe_redis(current) if current else "fm's own per-bench containers")
+            "redis is already " + (_describe_redis(current) if current else "fmx's own per-bench containers")
         )
         return
 
@@ -336,17 +336,17 @@ def _describe_redis(redis: RedisConfig | None) -> str:
     half actually moved.
     """
     if redis is None:
-        return "fm's own per-bench containers"
-    local = "fm's own container"
+        return "fmx's own per-bench containers"
+    local = "fmx's own container"
     return f"cache {redis.cache or local}, queue {redis.queue or local}"
 
 
 def _refuse_immutable_runtime(bench: Bench, output) -> None:
     output.display_error(
         f"{bench.name} is image runtime; code, apps, Python/Node and developer mode are immutable -- "
-        "ship changes with 'fm bake' then 'fm switch'. "
-        "'fm update' on an image bench still changes environment, restart policy and the database CA, "
-        "and APM is 'fm telemetry enable'.",
+        "ship changes with 'fmx bake' then 'fmx switch'. "
+        "'fmx update' on an image bench still changes environment, restart policy and the database CA, "
+        "and APM is 'fmx telemetry enable'.",
     )
     raise typer.Exit(1)
 
@@ -397,8 +397,8 @@ def plan_update(
         database_config = config.get_database_config()
         if database_config is None:
             output.display_error(
-                f"{bench.site_name} has no \\[database] entry in bench_config.toml: the bench uses the fm-managed "
-                "'mariadb' container, whose TLS material fm owns, so there is no external CA to refresh.",
+                f"{bench.site_name} has no \\[database] entry in bench_config.toml: the bench uses the fmx-managed "
+                "'mariadb' container, whose TLS material fmx owns, so there is no external CA to refresh.",
             )
             raise typer.Exit(1)
 

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import typer
 from typer_examples import example
 
@@ -22,19 +24,19 @@ from frappe_manager.site_manager.bench_service import BenchService
 )
 def stop(
     ctx: typer.Context,
-    global_only: bool = typer.Option(
-        False, "--global-only", help="Stop the global services only, leaving every bench running."
-    ),
-    benches_only: bool = typer.Option(
-        False, "--benches-only", help="Stop every bench only, leaving the global services running."
-    ),
+    global_only: Annotated[
+        bool, typer.Option("--global-only", help="Stop the global services only, leaving every bench running.")
+    ] = False,
+    benches_only: Annotated[
+        bool, typer.Option("--benches-only", help="Stop every bench only, leaving the global services running.")
+    ] = False,
 ):
     """
     Stop every bench on this host, then the global services (nginx-proxy, mariadb).
 
-    Nothing fm manages is left running unless you narrow the blast radius with --benches-only or --global-only.
+    Nothing fmx manages is left running unless you narrow the blast radius with --benches-only or --global-only.
 
-    A bench that fails to stop does not abort the run: the remaining benches and the global services are still stopped, and fm ends by naming what is still up and exiting non-zero.
+    A bench that fails to stop does not abort the run: the remaining benches and the global services are still stopped, and fmx ends by naming what is still up and exiting non-zero.
     """
     services_manager: ServicesManager = ctx.obj["services"]
     verbose = ctx.obj["verbose"]
@@ -87,7 +89,7 @@ def stop(
 
     if benches_failed:
         output.display_error(
-            f"Still running: {', '.join(benches_failed)}. Retry with 'fm stop <bench>' for each, "
+            f"Still running: {', '.join(benches_failed)}. Retry with 'fmx stop <bench>' for each, "
             "or see the errors above for the cause."
         )
         raise typer.Exit(1)

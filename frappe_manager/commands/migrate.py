@@ -35,7 +35,7 @@ class MigrationFailureAction(str, Enum):
 @example(
     "Migrate every bench",
     "all",
-    detail="'all' goes where a bench name goes: it is an address meaning every bench fm manages, not a flag.",
+    detail="'all' goes where a bench name goes: it is an address meaning every bench fmx manages, not a flag.",
 )
 @example(
     "Migrate every bench unattended",
@@ -106,7 +106,7 @@ def migrate(
     ] = None,
 ):
     """
-    Bring benches up to the current version. Benches only: fm's own global services & configuration are migrated by fm services migrate, never implicitly by this command, and this command refuses to run while they are behind.
+    Bring benches up to the current version. Benches only: fmx's own global services & configuration are migrated by fmx services migrate, never implicitly by this command, and this command refuses to run while they are behind.
 
     Most bench commands refuse to run against a bench that is behind, so migrate first: the exceptions are stop and delete, which must keep working on a bench you cannot migrate, and the image commands bake, switch and prune.
     """
@@ -135,8 +135,8 @@ def migrate(
     global_services_version = fm_config_manager.get_system_migration_version()
     if global_services_version < current_version:
         output.display_error(
-            f"fm's global services & configuration are behind (v{global_services_version} < v{current_version}). "
-            "Run 'fm services migrate' first."
+            f"fmx's global services & configuration are behind (v{global_services_version} < v{current_version}). "
+            "Run 'fmx services migrate' first."
         )
         raise typer.Exit(1)
 
@@ -146,7 +146,7 @@ def migrate(
     benches_failed = []
 
     if not target_benches:
-        output.print("✓ No benches to migrate. fm's global services & configuration are handled by fm services migrate.")
+        output.print("✓ No benches to migrate. fmx's global services & configuration are handled by fmx services migrate.")
         raise typer.Exit(0)
 
     if target_benches:

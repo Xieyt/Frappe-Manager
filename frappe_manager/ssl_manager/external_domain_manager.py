@@ -138,7 +138,7 @@ class ExternalDomainConfigManager:
                 warn_or_log(
                     "external_domain_manager",
                     f"external_domains.toml: '[domains.{key}]' could not be read (a required "
-                    "field is missing or malformed); fm will not manage or renew its certificate "
+                    "field is missing or malformed); fmx will not manage or renew its certificate "
                     "until this is fixed. The entry is kept as-is on disk.",
                 )
                 continue
@@ -147,7 +147,7 @@ class ExternalDomainConfigManager:
                 warn_or_log(
                     "external_domain_manager",
                     f"external_domains.toml: '{config.domain}' has unrecognised key(s) "
-                    f"{', '.join(sorted(config.model_extra))}; check for a typo, since fm will not use them.",
+                    f"{', '.join(sorted(config.model_extra))}; check for a typo, since fmx will not use them.",
                 )
 
             domains[config.domain] = config

@@ -46,9 +46,9 @@ def _print_plan(output, plan: TeardownPlan, *, keep_backups: bool, keep_images: 
         for image in plan.images:
             output.print(f"rmi         {image}", emoji_code="", prefix="  ")
     elif not keep_images:
-        output.print("Images   : none of fm's images are present", emoji_code="")
+        output.print("Images   : none of fmx's images are present", emoji_code="")
     if plan.trust:
-        output.print("Trust    : fm's dev CA is removed from", emoji_code="")
+        output.print("Trust    : fmx's dev CA is removed from", emoji_code="")
         for entry in plan.trust:
             suffix = "  (needs sudo)" if entry.privileged else ""
             output.print(f"untrust     {entry.store}: {entry.location}{suffix}", emoji_code="", prefix="  ")
@@ -59,7 +59,7 @@ def _print_plan(output, plan: TeardownPlan, *, keep_backups: bool, keep_images: 
         # does not exist on such a host, in the one line that claims something SURVIVES.
         output.print(f"Kept     : {CLI_DIR / 'backups'}", emoji_code="")
     if keep_images:
-        output.print("Kept     : fm's docker images (--keep-images)", emoji_code="")
+        output.print("Kept     : fmx's docker images (--keep-images)", emoji_code="")
     # An image another project's container runs is not fm's to delete, and `rmi -f` would untag
     # it out from under a stopped container. Name the holder: that is what makes it checkable.
     for image, container in plan.images_in_use:
@@ -108,11 +108,15 @@ def _remove_path(path: Path, failures: list[str], *, docker=None, image: str | N
             path.unlink(missing_ok=True)
     except OSError as e:
         # mariadb's data directory and nginx-proxy's cache are bind mounts the containers created
-        # as root, so a plain rmtree hits EACCES. fm refuses to run as root itself (main.py), so
+        # as root, so a plain rmtree hits EACCES. fmx refuses to run as root itself (main.py), so
         # the escalation is a sudo child, the same way the dev-CA tier already removes its anchor.
         # Leaving the husk behind is not cosmetic: a services directory with no compose file in it
-        # made the next `fm create` refuse with "global services has taken a down".
-        result = subprocess.run(["sudo", "rm", "-rf", str(path)], capture_output=True, text=True, check=False)  # noqa: S603, S607
+        # made the next `fmx create` refuse with "global services has taken a down".
+        # `-n` because stderr is captured: a sudo that wants a password would print its prompt
+        # into that buffer and wait on a tty the operator sees nothing on, so a teardown would
+        # look hung mid-run. Refusing immediately hands the path to the container tier below,
+        # which is the case that tier exists for.
+        result = subprocess.run(["sudo", "-n", "rm", "-rf", str(path)], capture_output=True, text=True, check=False)  # noqa: S603, S607
         if result.returncode == 0 and not path.exists():
             return
         if docker is not None and image and _container_rm(docker, image, path):
@@ -127,24 +131,24 @@ def _remove_path(path: Path, failures: list[str], *, docker=None, image: str | N
     detail="The plan names every bench, container, network, volume, path, image and trust store, with sizes. Read it before running the real thing.",
 )
 @example(
-    "Remove every trace of fm from this host",
+    "Remove every trace of fmx from this host",
     "",
     detail="Prints the same plan, then asks for the word 'uninstall' typed back.",
 )
 @example(
     "Start over with a clean slate, keep the host set up",
     "--only benches",
-    detail="Destroys every bench and its databases; the shared services, fm's config and its images stay, so the next 'fm create' does not re-pull or re-provision anything.",
+    detail="Destroys every bench and its databases; the shared services, fmx's config and its images stay, so the next 'fmx create' does not re-pull or re-provision anything.",
 )
 @example(
-    "Remove fm but keep the images for a reinstall",
+    "Remove fmx but keep the images for a reinstall",
     "--keep-images --keep-backups",
-    detail="Keeps fm's images and the stock mariadb/postgres/redis/proxy set, so reinstalling costs no pull, and the backups directory survives to be restored into the new install.",
+    detail="Keeps fmx's images and the stock mariadb/postgres/redis/proxy set, so reinstalling costs no pull, and the backups directory survives to be restored into the new install.",
 )
 @example(
     "Untrust the dev CA on a host where ~/frappe was already deleted by hand",
     "--only trust",
-    detail="A root CA outlives the directory its key lived in: deleting ~/frappe leaves your browsers and keychain trusting a CA nobody controls any more. Needs neither docker nor a readable fm config.",
+    detail="A root CA outlives the directory its key lived in: deleting ~/frappe leaves your browsers and keychain trusting a CA nobody controls any more. Needs neither docker nor a readable fmx config.",
 )
 def uninstall(
     only: Annotated[
@@ -157,16 +161,11 @@ def uninstall(
     ] = None,
     keep_images: Annotated[
         bool,
-        typer.Option(
-            "--keep-images",
-            help="Leave every docker image fm pulled or built on disk (fm's own and the stock mariadb/postgres/redis/nginx-proxy/mailpit/adminer set).",
-        ),
+        typer.Option("--keep-images", help="Leave every docker image fmx pulled or built on disk (fmx's own and the stock mariadb/postgres/redis/nginx-proxy/mailpit/adminer set)."),
     ] = False,
     keep_backups: Annotated[
         bool,
-        typer.Option(
-            "--keep-backups", help="Leave the backups directory in fm's home (~/frappe/backups by default) on disk."
-        ),
+        typer.Option("--keep-backups", help="Leave the backups directory in fmx's home (~/frappe/backups by default) on disk."),
     ] = False,
     yes: Annotated[
         bool,
@@ -178,21 +177,21 @@ def uninstall(
     ] = False,
 ):
     """
-    Remove everything fm put on this host: benches, shared services, its own files, and its dev CA.
+    Remove everything fmx put on this host: benches, shared services, its own files, and its dev CA.
 
-    This destroys every bench and every database in fm's own mariadb and postgres, with no undo and no backup taken. A schema on a database server fm does not own is never touched, and neither is any data outside the four tiers below.
+    This destroys every bench and every database in fmx's own mariadb and postgres, with no undo and no backup taken. A schema on a database server fmx does not own is never touched, and neither is any data outside the four tiers below.
 
-    What each --only tier owns, by where the state actually lives (paths below assume fm's default home; FRAPPE_MANAGER_HOME moves all of it, and the plan always prints resolved paths):
+    What each --only tier owns, by where the state actually lives (paths below assume fmx's default home; FRAPPE_MANAGER_HOME moves all of it, and the plan always prints resolved paths):
     - benches   ~/frappe/sites/<bench>, its containers, network and volumes
     - services  ~/frappe/services, the shared db/proxy containers and volumes
-    - host      the rest of ~/frappe, ~/.cache/fm, and every image fm pulled or built
-    - trust     fm's dev root CA, in the OS and browser trust stores
+    - host      the rest of ~/frappe, ~/.cache/fm, and every image fmx pulled or built
+    - trust     fmx's dev root CA, in the OS and browser trust stores
 
-    So 'host' is fm's own files (fm_config.toml, logs, locks, backups) plus the cache directory outside ~/frappe that a hand-rolled cleanup always misses, and its images, which belong to the machine rather than to any one bench. And 'trust' is the tier that outlives 'rm -rf ~/frappe': a root CA whose private key sat in a deleted directory stays trusted by your browser forever. That tier is also why this command needs neither docker nor a config fm can still parse.
+    So 'host' is fmx's own files (fm_config.toml, logs, locks, backups) plus the cache directory outside ~/frappe that a hand-rolled cleanup always misses, and its images, which belong to the machine rather than to any one bench. And 'trust' is the tier that outlives 'rm -rf ~/frappe': a root CA whose private key sat in a deleted directory stays trusted by your browser forever. That tier is also why this command needs neither docker nor a config fmx can still parse.
 
-    Plan-first: every object in scope is listed with its size before anything happens, then one typed confirmation covers all of it, and --dry-run stops after the plan. Everything fm made is included by default, its images with it; --keep-images and --keep-backups opt back out. The image set is read from fm's own compose templates and from the containers being removed, not guessed from a name, so mariadb, redis, nginx-proxy, mailpit, adminer and postgres go too -- except any image some other container on this host still runs, which is kept and named in the plan.
+    Plan-first: every object in scope is listed with its size before anything happens, then one typed confirmation covers all of it, and --dry-run stops after the plan. Everything fmx made is included by default, its images with it; --keep-images and --keep-backups opt back out. The image set is read from fmx's own compose templates and from the containers being removed, not guessed from a name, so mariadb, redis, nginx-proxy, mailpit, adminer and postgres go too -- except any image some other container on this host still runs, which is kept and named in the plan.
 
-    fm's own package is not uninstalled here: the command to do that is printed at the end, because a running process cannot reliably delete the environment it is executing from.
+    fmx's own package is not uninstalled here: the command to do that is printed at the end, because a running process cannot reliably delete the environment it is executing from.
     """
     output = get_global_output_handler()
     scopes = set(only) if only else set(Scope)
@@ -204,11 +203,11 @@ def uninstall(
         output.warning("Docker is not running: containers, networks, volumes and images will be left as they are.")
         docker = None
 
-    with spinner(output, "Reading what fm has on this host"):
+    with spinner(output, "Reading what fmx has on this host"):
         plan = plan_teardown(docker, scopes, keep_backups=keep_backups, include_images=not keep_images)
 
     if plan.is_empty():
-        output.print("Nothing of fm's is on this host.", emoji_code="")
+        output.print("Nothing of fmx's is on this host.", emoji_code="")
         return
 
     output.warning("This removes the following, permanently:")
@@ -306,7 +305,7 @@ def uninstall(
         removed, trust_failures = TrustStoreManager(output).uninstall()
         failures += trust_failures
         if removed:
-            output.effect(f"Removed fm's dev CA from {len(removed)} trust store(s)")
+            output.effect(f"Removed fmx's dev CA from {len(removed)} trust store(s)")
 
     if failures:
         for failure in failures:
@@ -320,11 +319,11 @@ def uninstall(
             # was skipped wholesale rather than failing, so `failures` is empty and the clean-host
             # line would print over objects that are all still there.
             output.warning(
-                "fm's files are gone, but docker was unreachable: its containers, volumes, "
+                "fmx's files are gone, but docker was unreachable: its containers, volumes, "
                 "networks and images were not touched. Re-run this with docker running to remove them."
             )
         else:
-            output.effect("fm's state is gone from this host.", emoji_code=":wastebasket:")
+            output.effect("fmx's state is gone from this host.", emoji_code=":wastebasket:")
         output.print(_package_removal_hint(), emoji_code="", soft_wrap=True, highlight=False)
 
 
@@ -333,5 +332,5 @@ def _package_removal_hint() -> str:
     from frappe_manager.utils.helpers import _running_from_uv_tool
 
     if _running_from_uv_tool():
-        return "To remove fm itself:\n  uv tool uninstall frappe-manager"
-    return "To remove fm itself:\n  pip uninstall frappe-manager"
+        return "To remove fmx itself:\n  uv tool uninstall frappe-manager"
+    return "To remove fmx itself:\n  pip uninstall frappe-manager"

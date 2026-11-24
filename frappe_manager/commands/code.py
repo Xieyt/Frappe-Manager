@@ -36,7 +36,7 @@ def code(
         typer.Option(
             "--extension",
             "-e",
-            help="Extra VSCode extension to install alongside fm's defaults, e.g. ms-python.python (repeatable).",
+            help="Extra VSCode extension to install alongside fmx's defaults, e.g. ms-python.python (repeatable).",
             callback=code_command_extensions_callback,
             show_default=False,
         ),
@@ -61,16 +61,16 @@ def code(
         bool,
         typer.Option(
             "--attach/--no-attach",
-            help="Launch VSCode on THIS machine and attach it to the bench's container. --no-attach prepares the bench and stops, which is what a server wants: connect later with Remote-SSH plus 'Dev Containers: Attach to Running Container'. Without the flag fm attaches when the 'code' CLI is available and prepares-and-explains when it is not.",
+            help="Launch VSCode on THIS machine and attach it to the bench's container. --no-attach prepares the bench and stops, which is what a server wants: connect later with Remote-SSH plus 'Dev Containers: Attach to Running Container'. Without the flag fmx attaches when the 'code' CLI is available and prepares-and-explains when it is not.",
         ),
     ] = True,
 ):
     """
     Prepare a bench for VSCode and attach to its running frappe container.
 
-    Preparing is the durable half and always happens: the container carries fm's devcontainer metadata (extensions, the user VSCode runs as, editor settings), and VSCode applies it however you connect. Needs the bench up; --force-start starts it.
+    Preparing is the durable half and always happens: the container carries fmx's devcontainer metadata (extensions, the user VSCode runs as, editor settings), and VSCode applies it however you connect. Needs the bench up; --force-start starts it.
 
-    Attaching launches VSCode on THIS machine, so it needs the 'code' CLI on PATH. Without it fm prepares the bench and tells you how to connect from another one -- Remote-SSH to this host, then 'Dev Containers: Attach to Running Container' -- which is the normal way to use a bench on a server. --no-attach asks for that explicitly.
+    Attaching launches VSCode on THIS machine, so it needs the 'code' CLI on PATH. Without it fmx prepares the bench and tells you how to connect from another one -- Remote-SSH to this host, then 'Dev Containers: Attach to Running Container' -- which is the normal way to use a bench on a server. --no-attach asks for that explicitly.
 
     --debugger writes the debug configuration and installs ruff. An image-mode bench has no mounted workspace, so both live inside that container only and are lost on the next deploy or switch.
     """
@@ -87,7 +87,7 @@ def code(
         output.warning(
             "Image-mode bench has no live-mounted workspace: VSCode edits target the "
             "immutable app image and do not persist. Use this to reproduce+observe only; "
-            "ship real code changes with 'fm bake' then 'fm switch'.",
+            "ship real code changes with 'fmx bake' then 'fmx switch'.",
         )
 
     if force_start:

@@ -482,7 +482,7 @@ def test_the_refusal_points_at_the_site_config_when_the_schema_is_unreadable(tmp
 
     assert f"sites/{SITE}/site_config.json" in message
     assert f"sites/{BENCH}/site_config.json" not in message
-    assert f"fm delete {BENCH} --yes --no-delete-fm-managed-db" in message
+    assert f"fmx delete {BENCH} --yes --no-delete-fm-managed-db" in message
 
 
 def test_the_refusal_keeps_the_bench_directory_and_says_so(tmp_path):

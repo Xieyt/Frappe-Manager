@@ -246,7 +246,7 @@ def test_the_refusal_names_the_address_that_does_work(listing):
     with pytest.raises(typer.Exit):
         list_certificates(listing.ctx, address=BENCH, standalone=False)
 
-    assert f"fm ssl list {BENCH}" in listing.errors()
+    assert f"fmx ssl list {BENCH}" in listing.errors()
 
 
 def test_list_all_reports_a_failing_bench_and_lists_the_rest(listing):

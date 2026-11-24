@@ -16,7 +16,7 @@ from frappe_manager.site_manager.site import Bench
     "Read one fact out of it",
     "{benchname} --json",
     benchname="mybench",
-    detail="fm info mybench --json | jq -r '.result.url'",
+    detail="fmx info mybench --json | jq -r '.result.url'",
 )
 def info(
     ctx: typer.Context,
@@ -27,7 +27,7 @@ def info(
     """
     Show a bench's URL, credentials, apps, deploy history and live service state.
 
-    Every secret on the card is printed in cleartext: the administrator password, the site database password, and the basic auth password while a surface is protected. The shared mariadb root credentials moved to fm services info.
+    Every secret on the card is printed in cleartext: the administrator password, the site database password, and the basic auth password while a surface is protected. The shared mariadb root credentials moved to fmx services info.
     """
 
     check_bench_migration_required(benchname)

@@ -759,4 +759,4 @@ class BenchDockerOps:
                 self.output.display_error(f"Docker image '{image}' is not available locally")
 
             bench_name = self.config.container_name_prefix.replace("-", ".")
-            raise BenchOperationRequiredDockerImagesNotAvailable(bench_name, "fm self update-images")
+            raise BenchOperationRequiredDockerImagesNotAvailable(bench_name, "fmx self update-images")

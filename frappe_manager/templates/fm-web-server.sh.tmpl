@@ -24,7 +24,7 @@ GUNICONF
     fi
 
     if [[ ! -f "$NR_INI" ]]; then
-        echo "ERROR: New Relic is enabled but $NR_INI is missing. Run 'fm update' to regenerate it." >&2
+        echo "ERROR: New Relic is enabled but $NR_INI is missing. Run 'fmx telemetry enable {{ bench_name }} newrelic' to regenerate it." >&2
         exit 1
     fi
 

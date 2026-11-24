@@ -1,4 +1,4 @@
-# How fm works
+# How fmx works
 
 A **bench** is one Frappe site with everything it needs, running as its own set of containers: the web process, an nginx in front of it, background workers, a scheduler, socketio, and a cache and a queue Redis.
 
@@ -16,7 +16,7 @@ They combine freely, and all four combinations are useful:
 | **`mount`** | The daily development loop: edit code, see it live | Simple production: editable code, production web server |
 | **`image`** | Testing a release image locally | Immutable production: deploys, rollbacks, rolling swaps |
 
-Almost every later question, whether you can edit code in place, whether a change needs a rebuild, how a restart behaves, resolves to one of these two axes.
+Most other questions about a bench, can you edit code in place, does a change need a rebuild, how does a restart behave, come down to these two axes.
 
 <div class="grid cards" markdown>
 
@@ -36,14 +36,14 @@ Almost every later question, whether you can edit code in place, whether a chang
 
 ## What is shared and what is not
 
-One machine runs many benches. They share exactly two things:
+One machine runs many benches. They share:
 
-- **One MariaDB server** holding every bench's database.
+- **A MariaDB server and a Postgres server**, each holding every bench's databases on that engine. Each one starts only once some bench on the host actually uses it, and stops again if nothing does, so a host with no Postgres site never runs a Postgres container.
 - **One nginx proxy** on ports 80 and 443, routing each request to the right bench by domain.
 
-`fm services` manages those two. Everything else belongs to a single bench.
+`fmx services` manages all three. Everything else belongs to a single bench.
 
-A bench can opt out of the shared database at create time by pointing at an external server; afterwards only its CA is editable, with `fm update --db-ca`. Redis is more flexible, and each side moves independently at create time or later: `fm update --redis-cache` and `--redis-queue` point a side at an external server, and `--no-redis-cache`, `--no-redis-queue`, or `--no-redis` bring it back to fm's own container.
+A bench can skip the shared database at create time by pointing at an external server; after that, only the CA is editable, with `fmx update --db-ca`. Redis is more flexible: either side, cache or queue, can move to an external server at create time or later, and back again. `fmx update --redis-cache` and `--redis-queue` point a side out; `--no-redis-cache`, `--no-redis-queue`, or `--no-redis` bring it back to fmx's own container.
 
 ## How a bench actually runs
 

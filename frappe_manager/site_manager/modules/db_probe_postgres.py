@@ -318,10 +318,10 @@ def _schema_state(
         return state, ProbeCheck(
             CHECK_SCHEMA_STATE,
             CheckStatus.fail,
-            "could not determine whether the database exists; fm will not create over an unknown state",
+            "could not determine whether the database exists; fmx will not create over an unknown state",
         )
     if not database_exists:
-        detail = "the database does not exist yet; fm will create it"
+        detail = "the database does not exist yet; fmx will create it"
     elif table_count == 0:
         detail = "the database exists and is empty"
     elif state.is_frappe:

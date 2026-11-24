@@ -79,7 +79,7 @@ def update(
         typer.Option(
             "--environment",
             "-e",
-            help="Switch the bench between dev and prod serving (FRAPPE_ENV), recreating the frappe container. Admin tools and developer mode are left as they are; use 'fm tools enable'/'fm tools disable' or --developer-mode to change those.",
+            help="Switch the bench between dev and prod serving (FRAPPE_ENV), recreating the frappe container. Admin tools and developer mode are left as they are; use 'fmx tools enable'/'fmx tools disable' or --developer-mode to change those.",
             show_default=False,
             rich_help_panel=_PANEL_BENCH,
         ),
@@ -150,7 +150,7 @@ def update(
         str | None,
         typer.Option(
             "--redis-cache",
-            help="Point the bench's framework cache at an external redis, e.g. redis://r.example:6379/0. Independent of the queue: the cache can stay on fm's own container while the queue moves out, or the other way round.",
+            help="Point the bench's framework cache at an external redis, e.g. redis://r.example:6379/0. Independent of the queue: the cache can stay on fmx's own container while the queue moves out, or the other way round.",
             show_default=False,
             rich_help_panel=_PANEL_REDIS,
         ),
@@ -168,7 +168,7 @@ def update(
         bool,
         typer.Option(
             "--no-redis-cache",
-            help="Bring the framework cache back to fm's own per-bench redis container, leaving the queue as it is.",
+            help="Bring the framework cache back to fmx's own per-bench redis container, leaving the queue as it is.",
             show_default=False,
             rich_help_panel=_PANEL_REDIS,
         ),
@@ -177,7 +177,7 @@ def update(
         bool,
         typer.Option(
             "--no-redis-queue",
-            help="Bring the queue and realtime back to fm's own per-bench redis container, leaving the cache as it is.",
+            help="Bring the queue and realtime back to fmx's own per-bench redis container, leaving the cache as it is.",
             show_default=False,
             rich_help_panel=_PANEL_REDIS,
         ),
@@ -195,7 +195,7 @@ def update(
         bool,
         typer.Option(
             "--no-redis",
-            help="Bring BOTH sides back to fm's own per-bench redis containers.",
+            help="Bring BOTH sides back to fmx's own per-bench redis containers.",
             show_default=False,
             rich_help_panel=_PANEL_REDIS,
         ),
@@ -246,9 +246,9 @@ def update(
     """
     Change a bench's settings.
 
-    Not bench update: app code ships with fm bake then fm switch. Apps are managed with fm apps add, alias domains with fm domain, admin tools with fm tools, APM with fm telemetry.
+    Not bench update: app code ships with fmx bake then fmx switch. Apps are managed with fmx apps add, alias domains with fmx domain, admin tools with fmx tools, APM with fmx telemetry.
 
-    Most options change the whole bench. --db-ca is the one Site Option below, and a plain fm update BENCH applies it to the bench's primary site; name the site with fm update BENCH/SITE when the bench serves more than one. --upload-limit follows the same address: fm update BENCH sets the bench-wide default, which a site that has set its own survives, and fm update BENCH/SITE sets only that site's limit, naming the sites a bench-wide change left alone.
+    Most options change the whole bench. --db-ca is the one Site Option below, and a plain fmx update BENCH applies it to the bench's primary site; name the site with fmx update BENCH/SITE when the bench serves more than one. --upload-limit follows the same address: fmx update BENCH sets the bench-wide default, which a site that has set its own survives, and fmx update BENCH/SITE sets only that site's limit, naming the sites a bench-wide change left alone.
 
     The whole update is decided before any of it is applied, so an invalid flag changes nothing and a value that already matches is reported instead of reapplied. The plan is printed and confirmed before anything is touched; --yes skips the question and --dry-run prints the plan and exits without touching the bench. An update with nothing to do never asks.
     """
@@ -436,8 +436,8 @@ def _apply_plan(bench: Bench, plan: UpdatePlan, output) -> None:
         if plan.writes_bench_config or plan.upload_limit is not None:
             output.warning(
                 f"{bench.name}'s settings are already recorded in bench_config.toml; only the container "
-                f"half failed. Re-run this command, or 'fm restart {bench.name}', to bring the containers "
-                "in line -- fm renders containers FROM the recorded config, so nothing is lost.",
+                f"half failed. Re-run this command, or 'fmx restart {bench.name}', to bring the containers "
+                "in line -- fmx renders containers FROM the recorded config, so nothing is lost.",
             )
         raise
 
@@ -506,7 +506,7 @@ def _wait_for_empty_queue(bench: Bench, plan: UpdatePlan, output, orchestrator) 
             # this loop polls every few seconds and a warning per poll is noise.
             warned_unreadable = True
             output.warning(
-                f"Cannot read the queue at {current_queue}, so fm cannot tell whether it is draining. "
+                f"Cannot read the queue at {current_queue}, so fmx cannot tell whether it is draining. "
                 "This will wait indefinitely; Ctrl-C and check that redis is reachable."
             )
         remaining = sum(depth) if depth else "an unknown number of"
@@ -579,7 +579,7 @@ def _apply_container_work(bench: Bench, plan: UpdatePlan, output) -> None:
             if url
         ]
         if moved_out:
-            output.change_head(f"Removing fm's own {', '.join(moved_out)}")
+            output.change_head(f"Removing fmx's own {', '.join(moved_out)}")
             bench.docker_client.compose.rm(services=moved_out, stop=True, force=True)
             remaining = {status.get("Service") for status in bench.docker_client.compose.get_all_services_status()}
             removed = [service for service in moved_out if service not in remaining]
@@ -657,7 +657,7 @@ def _install_db_ca(bench: Bench, plan: UpdatePlan, output) -> None:
         output.warning(
             f"{bench.site_name} was configured without database TLS: sites/{bench.site_name}/site_config.json "
             "carries no db_ssl_ca, so Frappe keeps connecting WITHOUT TLS -- this CA only serves the "
-            "dumps fm takes (my.cnf and ca-bundle.pem). Add db_ssl_ca to that site config to turn "
+            "dumps fmx takes (my.cnf and ca-bundle.pem). Add db_ssl_ca to that site config to turn "
             "TLS on for the site itself.",
         )
 

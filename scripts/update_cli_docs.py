@@ -13,14 +13,22 @@ sys.path.insert(0, str(project_root))
 
 console = Console()
 
-# Related-guide links appended to generated command pages.
-# Keyed by the output file stem in docs/commands/; URLs are relative to docs/commands/.
+# The name every generated command page and the README table tell the reader to type. Both
+# `fm` and `fmx` install and run (pyproject's [project.scripts] registers both), but this is
+# what we TELL people to type, so it is the name baked into generated titles, usage lines and
+# examples.
+PROG = "fmx"
+
+# Related-guide links appended to generated command pages. Keyed by the output file stem the
+# generator itself produces for a ROOT command or group (the only pages it writes: see the loop
+# in generate_all_docs); URLs are relative to docs/commands/. A key naming anything else, such
+# as a subcommand page the generator never emits, can never fire, and `_check_related_guides`
+# below makes that an error instead of a silent no-op.
 RELATED_GUIDES: dict[str, list[tuple[str, str]]] = {
     "switch": [("Deployment", "../deploy/index.md"), ("Rollback", "../deploy/rollback.md")],
     "bake": [("Deployment", "../deploy/index.md")],
     "prune": [("Deployment", "../deploy/index.md")],
     "ssl": [("HTTPS certificates", "../guides/ssl.md")],
-    "ssl-dns-config-cloudflare": [("HTTPS certificates", "../guides/ssl.md")],
     "ngrok": [("Domains and remote access", "../guides/domains.md")],
     "create": [("Runtimes: mount vs image", "../concepts/runtimes.md")],
     "restart": [("fmx: in-container services", "../guides/fmx.md")],
@@ -31,6 +39,18 @@ RELATED_GUIDES: dict[str, list[tuple[str, str]]] = {
     "migrate": [("Migrations", "../reference/migrations.md")],
     "logs": [("Logs and debugging", "../reference/logs.md")],
 }
+
+
+def _check_related_guides(structure: dict) -> None:
+    """Every RELATED_GUIDES key must name a root command or group the generator actually
+    produces a page for. `ssl-dns-config-cloudflare` sat here after that page was removed (the
+    generator only ever emits root-level pages, so a subcommand key like that one never fired),
+    pointing at a file nothing else referenced either. Caught here instead of staying dead.
+    """
+    valid = {c["name"] for c in structure["commands"]} | {g["name"] for g in structure["groups"]}
+    stale = sorted(set(RELATED_GUIDES) - valid)
+    if stale:
+        raise ValueError(f"RELATED_GUIDES names commands/groups the generator does not produce: {stale}")
 
 
 # The published, versioned command pages -- not the GitHub wiki, which is unversioned and has
@@ -190,6 +210,17 @@ def extract_param_info(param_name: str, param: inspect.Parameter) -> dict[str, A
                     info["metavar"] = typer_info.metavar
 
     if not info["is_option"] and not info["is_argument"]:
+        # A parameter declared the old way (`check: bool = typer.Option(...)`) carries its
+        # OptionInfo as the DEFAULT, not inside an Annotated, so the Annotated branch above
+        # never sees it and the flag vanishes from the page while `--help` still shows it.
+        # `fmx self update-images --check` shipped undocumented exactly this way. Refuse,
+        # rather than generate a page that is quietly missing a flag.
+        if isinstance(default_val, typer.models.ParameterInfo):
+            raise SystemExit(
+                f"{param_name}: declare typer parameters as Annotated[T, typer.Option(...)] = default. "
+                f"The {type(default_val).__name__} form is invisible to this generator and the flag would "
+                f"be missing from the generated page."
+            )
         if default_val != inspect.Parameter.empty:
             if default_val is not ... and str(default_val) != "Ellipsis":
                 info["default"] = str(default_val)
@@ -313,7 +344,7 @@ def format_examples(examples: list[dict], command_path: list[str], level: int, b
             detail_formatted = detail.format(**template_vars)
             md += f"{detail_formatted}\n\n"
 
-        cmd = f"fm {' '.join(command_path)}"
+        cmd = f"{PROG} {' '.join(command_path)}"
         if code and code.strip():
             code_formatted = code.format(**template_vars)
             cmd += f" {code_formatted}"
@@ -326,7 +357,7 @@ def format_examples(examples: list[dict], command_path: list[str], level: int, b
 def generate_command_markdown(cmd_info: dict, examples_data: dict, level: int = 1) -> str:
     heading = "#" * level
     command_path = cmd_info["path"]
-    full_command = "fm " + " ".join(command_path)
+    full_command = PROG + " " + " ".join(command_path)
 
     md = f"{heading} `{full_command}`\n\n"
 
@@ -412,7 +443,7 @@ def _anchor(command: str) -> str:
 def generate_group_markdown(group_info: dict, examples_data: dict, level: int = 1) -> str:
     heading = "#" * level
     group_path = group_info["path"]
-    full_command = "fm " + " ".join(group_path)
+    full_command = PROG + " " + " ".join(group_path)
 
     md = f"{heading} `{full_command}`\n\n"
 
@@ -558,11 +589,11 @@ def update_readme_command_reference(readme_path: Path, structure: dict) -> bool:
     all_items.sort(key=lambda x: x[0])
 
     for cmd_name, desc, link in all_items:
-        table_lines.append(f"| `fm {cmd_name}` | {desc} | [Wiki: {cmd_name.title()}]({link}) |\n")
+        table_lines.append(f"| `{PROG} {cmd_name}` | {desc} | [Wiki: {cmd_name.title()}]({link}) |\n")
 
     table_lines.append("\n")
     table_lines.append(
-        "> 💡 **Tip**: Use `fm <command> --help` to see detailed options and examples for any command.\n"
+        f"> 💡 **Tip**: Use `{PROG} <command> --help` to see detailed options and examples for any command.\n"
     )
 
     new_table = "".join(table_lines)
@@ -593,6 +624,7 @@ def generate_all_docs(output_dir: Path, update_readme: bool = False) -> dict:
     console.print("[green]✓[/green] Loaded examples from command decorators (if any)")
 
     structure = extract_typer_structure(app)
+    _check_related_guides(structure)
     console.print(
         f"[green]✓[/green] Extracted {len(structure['commands'])} commands and {len(structure['groups'])} groups"
     )

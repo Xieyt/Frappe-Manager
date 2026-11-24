@@ -1222,7 +1222,7 @@ class MigrationV100(MigrationBase):
             self.output.warning(
                 f"Per-site upload limits on {', '.join(sorted(site_limits))} are recorded but not "
                 f"enforced yet: {bench.name}'s nginx conf predates one server block per site, so "
-                "the whole bench follows its bench-wide upload_limit. Run 'fm migrate' to re-render "
+                "the whole bench follows its bench-wide upload_limit. Run 'fmx migrate' to re-render "
                 "the conf and apply it."
             )
 
@@ -2134,7 +2134,7 @@ class MigrationV100(MigrationBase):
         doc["schema"] = state
 
         toml_document.save(config_path, doc)
-        self.output.info("Renamed \\[migration_state] to \\[schema] in the global fm config")
+        self.output.info("Renamed \\[migration_state] to \\[schema] in the global fmx config")
 
     def _upgrade_global_db_engine(self):
         """Move global-db onto the engine tag frappe tests against.
@@ -2273,7 +2273,7 @@ class MigrationV100(MigrationBase):
         for backup in self.backup_manager.backups:
             if backup.src == CLI_FM_CONFIG_PATH:
                 self.backup_manager.restore(backup, force=True)
-                self.output.effect("Restored the global fm config")
+                self.output.effect("Restored the global fmx config")
                 break
 
         self.output.warning(
@@ -2698,7 +2698,7 @@ class MigrationV100(MigrationBase):
                     client.compose.up(services=[], detach=True, pull="never", stream=False)
         except DockerException as e:
             self.output.warning(
-                f"{bench.name} was renamed but did not come back up ({e}); start it with: fm start {bench.name}"
+                f"{bench.name} was renamed but did not come back up ({e}); start it with: fmx start {bench.name}"
             )
 
     def _undo_service_rename_services(self):
@@ -2734,7 +2734,7 @@ class MigrationV100(MigrationBase):
             self.services_manager.compose.up(services=[], detach=True, pull="missing", stream=False)
         except DockerException:
             self.output.warning(
-                "Could not start the restored global stack; run 'fm services start all' after checking docker."
+                "Could not start the restored global stack; run 'fmx services start all' after checking docker."
             )
         for bench_name in self._was_running:
             bench_path = CLI_BENCHES_DIRECTORY / bench_name

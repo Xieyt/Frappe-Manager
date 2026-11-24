@@ -57,7 +57,7 @@ def remove_certificate(
         output = get_output_handler(ctx)
         output.display_error(
             "'all' is not accepted here: deleting every certificate of every bench would take every "
-            "domain fm serves back to plain HTTP in one command. Name a bench, and use 'BENCH/all' "
+            "domain fmx serves back to plain HTTP in one command. Name a bench, and use 'BENCH/all' "
             "for every certificate of that one."
         )
         raise typer.Exit(2)
@@ -67,7 +67,7 @@ def remove_certificate(
             output = get_output_handler(ctx)
             output.display_error(
                 "An external domain belongs to no bench, so --standalone takes a bare domain: "
-                f"use 'fm ssl remove {domain} --standalone'."
+                f"use 'fmx ssl remove {domain} --standalone'."
             )
             raise typer.Exit(2)
 

@@ -5,7 +5,7 @@ PS4='+\[\033[0;33m\](\[\033[0;36m\]${BASH_SOURCE##*/}:${LINENO}\[\033[0;33m\])\[
 set -e  # Exit on error
 trap 'handle_error $?' ERR
 
-source "${PWD}/fm.sh"
+source "${PWD}/fmx.sh"
 source "${PWD}/helpers.sh"
 
 handle_error() {

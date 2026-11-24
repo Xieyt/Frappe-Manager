@@ -1,29 +1,29 @@
-# `fm tools`
+# `fmx tools`
 
 Manage a bench's admin tools.
 
 **Usage**:
 
 ```console
-$ fm tools COMMAND [ARGS]...
+$ fmx tools COMMAND [ARGS]...
 ```
 
 | Command | Description |
 |---|---|
-| [`fm tools enable`](#fm-tools-enable) | Start the admin tools (Adminer at /adminer, Mailpit at /mailpit), or route a site to them. |
-| [`fm tools disable`](#fm-tools-disable) | Stop the admin tools (Adminer at /adminer, Mailpit at /mailpit), or unroute a site from them. |
-| [`fm tools status`](#fm-tools-status) | Report whether admin tools are configured, whether they are enabled, and which sites route to them. |
+| [`fmx tools enable`](#fmx-tools-enable) | Start the admin tools (Adminer at /adminer, Mailpit at /mailpit), or route a site to them. |
+| [`fmx tools disable`](#fmx-tools-disable) | Stop the admin tools (Adminer at /adminer, Mailpit at /mailpit), or unroute a site from them. |
+| [`fmx tools status`](#fmx-tools-status) | Report whether admin tools are configured, whether they are enabled, and which sites route to them. |
 
-## `fm tools enable`
+## `fmx tools enable`
 
 Start the admin tools (Adminer at /adminer, Mailpit at /mailpit), or route a site to them.
 
-BENCH starts the one container pair the bench has, seeding its compose file on first use; this only routes, so protecting what it starts is a separate 'fm auth enable BENCH --tools' call. BENCH/SITE only adds the routes for that site's hostnames, leaving the containers as they were; BENCH/all restores the routes for every site the bench serves.
+BENCH starts the one container pair the bench has, seeding its compose file on first use; this only routes, so protecting what it starts is a separate 'fmx auth enable BENCH --tools' call. BENCH/SITE only adds the routes for that site's hostnames, leaving the containers as they were; BENCH/all restores the routes for every site the bench serves.
 
 **Usage**:
 
 ```console
-$ fm tools enable BENCH(/SITE|all) [OPTIONS]
+$ fmx tools enable BENCH(/SITE|all) [OPTIONS]
 ```
 
 **Arguments**:
@@ -41,13 +41,13 @@ $ fm tools enable BENCH(/SITE|all) [OPTIONS]
 Seeds the compose file on first use; routing only, it does not protect the tools.
 
 ```bash
-fm tools enable mybench
+fmx tools enable mybench
 ```
 
 #### Also make Mailpit the bench's default outgoing mail server
 
 ```bash
-fm tools enable mybench --mailpit-as-default-mail-server
+fmx tools enable mybench --mailpit-as-default-mail-server
 ```
 
 #### Route one site's hostnames to the already-running tools
@@ -55,7 +55,7 @@ fm tools enable mybench --mailpit-as-default-mail-server
 The bench's other sites and their existing routes are untouched.
 
 ```bash
-fm tools enable mybench/site1.localhost
+fmx tools enable mybench/site1.localhost
 ```
 
 #### Route one site's mail to Mailpit, leaving the rest on their real mail server
@@ -63,7 +63,7 @@ fm tools enable mybench/site1.localhost
 Writes the mail keys into that site's own site_config.json, which wins over the bench-wide config.
 
 ```bash
-fm tools enable mybench/site1.localhost --mailpit-as-default-mail-server
+fmx tools enable mybench/site1.localhost --mailpit-as-default-mail-server
 ```
 
 #### Restore every opted-out site's route at once
@@ -71,10 +71,10 @@ fm tools enable mybench/site1.localhost --mailpit-as-default-mail-server
 Fans the route out over every site the bench serves; the containers were already running.
 
 ```bash
-fm tools enable mybench/all
+fmx tools enable mybench/all
 ```
 
-## `fm tools disable`
+## `fmx tools disable`
 
 Stop the admin tools (Adminer at /adminer, Mailpit at /mailpit), or unroute a site from them.
 
@@ -83,7 +83,7 @@ BENCH stops the one container pair the bench has. BENCH/SITE only drops the rout
 **Usage**:
 
 ```console
-$ fm tools disable BENCH(/SITE|all)
+$ fmx tools disable BENCH(/SITE|all)
 ```
 
 **Arguments**:
@@ -95,31 +95,31 @@ $ fm tools disable BENCH(/SITE|all)
 #### Stop the admin tools containers for a bench
 
 ```bash
-fm tools disable mybench
+fmx tools disable mybench
 ```
 
 #### Unroute one site, leaving the containers running for the rest
 
 ```bash
-fm tools disable mybench/site1.localhost
+fmx tools disable mybench/site1.localhost
 ```
 
 #### Unroute every site the bench serves
 
-The Adminer and Mailpit containers keep running; stop them with a bare 'fm tools disable BENCH'.
+The Adminer and Mailpit containers keep running; stop them with a bare 'fmx tools disable BENCH'.
 
 ```bash
-fm tools disable mybench/all
+fmx tools disable mybench/all
 ```
 
-## `fm tools status`
+## `fmx tools status`
 
 Report whether admin tools are configured, whether they are enabled, and which sites route to them.
 
 **Usage**:
 
 ```console
-$ fm tools status BENCH [OPTIONS]
+$ fmx tools status BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -136,5 +136,5 @@ $ fm tools status BENCH [OPTIONS]
 #### Show admin tools state for a bench
 
 ```bash
-fm tools status mybench
+fmx tools status mybench
 ```

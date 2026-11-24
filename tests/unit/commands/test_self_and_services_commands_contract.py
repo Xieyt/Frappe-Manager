@@ -264,7 +264,7 @@ def test_a_published_version_older_than_the_installed_one_is_never_installed(out
 
     install.assert_not_called()
     assert "New update available" not in joined(out.print)
-    assert "fm is already up to date (v1.0.0.dev0)" in joined(out.print)
+    assert "fmx is already up to date (v1.0.0.dev0)" in joined(out.print)
 
 
 def test_an_identical_version_is_not_an_update(out):
@@ -366,7 +366,7 @@ def test_compose_named_bench_not_found_teaches_the_double_dash_form(tmp_path, ou
     ):
         _benchname_callback("ps")
 
-    assert "fm compose -- ps" in str(excinfo.value)
+    assert "fmx compose -- ps" in str(excinfo.value)
 
 
 # =========================================================================== #
@@ -435,8 +435,8 @@ def test_changing_the_trusted_set_rewrites_each_benchs_gunicorn_wrapper(tmp_path
     # `bench serve` from the image's own config and never reads this file.
     assert refreshed == ["alpha", "beta"]
     printed = joined(out.print)
-    assert "fm restart alpha" in printed
-    assert "beta" not in printed.split("fm restart")[-1].split("'")[0]
+    assert "fmx restart alpha" in printed
+    assert "beta" not in printed.split("fmx restart")[-1].split("'")[0]
 
 
 def test_a_bench_that_cannot_be_loaded_does_not_fail_the_command(tmp_path, out, monkeypatch):
@@ -1105,7 +1105,7 @@ def test_services_info_disk_row_points_at_prune_when_beyond_retention(tmp_path, 
     status = card.facts["status"]
     assert "2 backup session(s) beyond keep 3" in status
     assert "1 log(s) over 10.0 MB" in status
-    assert "[fm.info]fm services prune[/fm.info]" in status
+    assert "[fm.info]fmx services prune[/fm.info]" in status
     # A status row never mutates: everything is still there.
     assert len(list(sessions.iterdir())) == 5
     assert (logs / "access.log").stat().st_size == 11 * 1024 * 1024

@@ -67,8 +67,8 @@ jobs:
           cd ..
           python -m pip install --upgrade ./Frappe-Manager
 
-      - name: frappe version
-        run: fm --version
+      - name: fmx version
+        run: fmx --version
 
       - name: e2e run
         id: e2e_test

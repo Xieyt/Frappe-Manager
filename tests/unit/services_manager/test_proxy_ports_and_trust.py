@@ -172,7 +172,7 @@ class TestPortConflictRefusal:
         the install it unblocks -- not something an operator finds by retrying."""
         hint = _port_hint(Exception("Bind for 0.0.0.0:80 failed: port is already allocated"))
 
-        assert "fm services ports" in hint
+        assert "fmx services ports" in hint
 
     def test_an_unrelated_failure_gets_no_port_advice(self):
         assert _port_hint(Exception("Pool overlaps with other one on this address space")) == ""

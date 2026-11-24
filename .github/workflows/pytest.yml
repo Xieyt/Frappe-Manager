@@ -108,6 +108,12 @@ jobs:
           uv build --wheel -o dist
           uv venv /tmp/fmvenv
           uv pip install --python /tmp/fmvenv/bin/python dist/*.whl
+          cd /tmp && /tmp/fmvenv/bin/fmx --version
+
+      # Deliberate alias regression check: the old `fm` entry point must keep installing
+      # and running (with its deprecation warning) so it never silently disappears.
+      - name: fm alias still works
+        run: |
           cd /tmp && /tmp/fmvenv/bin/fm --version
 
       # The wheel's own dependencies, nothing else. `import click` sat in commands/gating.py while

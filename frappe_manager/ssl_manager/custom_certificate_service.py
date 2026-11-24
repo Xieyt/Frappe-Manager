@@ -160,7 +160,7 @@ class CustomCertificateService:
         if expiry - now <= timedelta(days=SSL_RENEW_BEFORE_DAYS):
             self.output.warning(
                 f"'{cert_path}' expires soon ({format_ssl_certificate_time_remaining(expiry)}); "
-                "fm cannot auto-renew a custom certificate, plan to re-import a fresh one."
+                "fmx cannot auto-renew a custom certificate, plan to re-import a fresh one."
             )
 
         if ca_bytes is not None:

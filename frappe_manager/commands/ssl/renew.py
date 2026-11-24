@@ -73,7 +73,7 @@ def renew(
             output = get_output_handler(ctx)
             output.display_error(
                 "An external domain belongs to no bench, so --standalone takes a bare domain: "
-                f"use 'fm ssl renew {domain} --standalone'."
+                f"use 'fmx ssl renew {domain} --standalone'."
             )
             raise typer.Exit(2)
         if address == RESERVED_BENCH_NAME:
@@ -123,7 +123,7 @@ def renew(
                     output.display_error(
                         f"No SSL certificate found for domain '{domain}'.\n"
                         f"Configured certificates: {', '.join(cert_domains) if cert_domains else 'None'}\n"
-                        f"To add a certificate, use: fm ssl add {address}/{domain}",
+                        f"To add a certificate, use: fmx ssl add {address}/{domain}",
                     )
                     raise typer.Exit(2)
                 domain = target

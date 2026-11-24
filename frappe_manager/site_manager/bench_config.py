@@ -875,8 +875,8 @@ class Deployment(BaseModel):
     app_image: str = Field(..., description="App image deployed (full reference, e.g. repo:tag).")
     nginx_image: str | None = Field(
         None,
-        description="Its nginx companion (full reference). Written by 'fm create --nginx-image', by "
-        "'fm switch'/rollback's own resolver, and by the 1.0.0 migration's backfill on every "
+        description="Its nginx companion (full reference). Written by 'fmx create --nginx-image', by "
+        "'fmx switch'/rollback's own resolver, and by the 1.0.0 migration's backfill on every "
         "pre-existing record (see notes/image-pairing-design.md, 'Where the nginx reference comes "
         "from'). None means no companion is recorded yet: the image predates the fm.nginx.image "
         "label, or was never resolved (e.g. an unmigrated legacy record).",
@@ -887,7 +887,7 @@ class Deployment(BaseModel):
         default_factory=dict,
         description="Pre-migrate DB dumps taken during this deploy, keyed by SITE: every site the bench "
         "serves gets its own dump, because every site has its own schema (consumed by "
-        "`fm switch --previous --restore-db`, which reads them straight off `current`).",
+        "`fmx switch --previous --restore-db`, which reads them straight off `current`).",
     )
 
 
@@ -954,7 +954,7 @@ class SwitchHookScripts(BaseModel):
         description="After the whole switch ends -- ALWAYS, on success and every failure. Branch on "
         "DEPLOY_OUTCOME (hook env: DEPLOY_OUTCOME=succeeded|rolled_back|halted|aborted; on a rollback "
         "also ROLLBACK_REASON=migrate_failed|health_check_failed, FAILED_IMAGE and ROLLBACK_TO_IMAGE). "
-        "For notifications, and external-DB restores fm cannot do itself (restore on rolled_back).",
+        "For notifications, and external-DB restores fmx cannot do itself (restore on rolled_back).",
     )
 
 
@@ -1114,7 +1114,7 @@ class SwitchConfig(BaseModel):
     install_apps: bool = Field(True, description="Install new apps to the site during finalize.")
     keep_releases: int = Field(
         7,
-        description="Releases `fm prune` keeps (history rows + dumps + local tags); "
+        description="Releases `fmx prune` keeps (history rows + dumps + local tags); "
         "current + previous are always safe.",
     )
     common_site_config: dict[str, Any] | None = Field(None, description="Keys to merge into common_site_config.json.")
@@ -1350,8 +1350,8 @@ class BuildConfig(BaseModel):
     push: bool = Field(
         False,
         description="Push the built image to the registry. Overridden either way by "
-        "`fm bake --push/--no-push`. A bake that does not push still loads the image "
-        "into the local daemon, so a same-host `fm switch` needs no registry at all.",
+        "`fmx bake --push/--no-push`. A bake that does not push still loads the image "
+        "into the local daemon, so a same-host `fmx switch` needs no registry at all.",
     )
     include: list[str] = Field(
         default_factory=list,
@@ -1435,7 +1435,7 @@ class DatabaseConfig(BaseModel):
     )
     host: str | None = Field(
         None,
-        description="Database server hostname or IP. Absent means fm's own container for this engine.",
+        description="Database server hostname or IP. Absent means fmx's own container for this engine.",
     )
     port: int | None = Field(
         None,
@@ -1443,8 +1443,8 @@ class DatabaseConfig(BaseModel):
     )
     name: str | None = Field(
         None,
-        description="Schema (database) name for this site. Absent on an fm-managed server, where "
-        "fm derives it.",
+        description="Schema (database) name for this site. Absent on an fmx-managed server, where "
+        "fmx derives it.",
     )
     user: str | None = Field(
         None,
@@ -1712,10 +1712,10 @@ class RedisConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     cache: str | None = Field(
-        None, description="Redis URL for the framework cache; absent leaves it on fm's container."
+        None, description="Redis URL for the framework cache; absent leaves it on fmx's container."
     )
     queue: str | None = Field(
-        None, description="Redis URL for the queue and realtime; absent leaves it on fm's container."
+        None, description="Redis URL for the queue and realtime; absent leaves it on fmx's container."
     )
 
     @model_validator(mode="after")
@@ -1726,7 +1726,7 @@ class RedisConfig(BaseModel):
         would read as "external redis" while addressing fm's own containers.
         """
         if not self.cache and not self.queue:
-            raise ValueError("[redis] must name at least one of cache or queue; drop the table to use both of fm's own")
+            raise ValueError("[redis] must name at least one of cache or queue; drop the table to use both of fmx's own")
         return self
 
     @model_validator(mode="after")
@@ -1812,10 +1812,10 @@ class BenchConfig(BaseModel):
         BenchRuntime.mount,
         description="Runtime: 'mount' (live-mounted code) or 'image' (immutable app image). Default 'mount'.",
     )
-    image: str | None = Field(None, description="App image repo (image runtime); fm manages the :tag.")
+    image: str | None = Field(None, description="App image repo (image runtime); fmx manages the :tag.")
     switch: SwitchConfig | None = Field(None, description="Switch/migrate pipeline configuration ([switch]).")
     prune: BenchPruneConfig | None = Field(
-        None, description="Per-bench disk-hygiene overrides for fm prune ([prune])."
+        None, description="Per-bench disk-hygiene overrides for fmx prune ([prune])."
     )
     workers: WorkersConfig | None = Field(
         None, description="Worker-care configuration for restart and switch ([workers])."
@@ -1824,7 +1824,7 @@ class BenchConfig(BaseModel):
     build: BuildConfig | None = Field(None, description="Image build configuration for bake ([build]).")
     base_image: str | None = Field(
         None,
-        description="Mount mode: override the base frappe image (repo:tag) for frappe/socketio/schedule/workers. None = default fm image.",
+        description="Mount mode: override the base frappe image (repo:tag) for frappe/socketio/schedule/workers. None = default fmx image.",
     )
     apps_from: str | None = Field(
         None,
@@ -1834,12 +1834,12 @@ class BenchConfig(BaseModel):
     sites: dict[str, SiteConfig] | None = Field(
         None,
         description='The Frappe sites this bench holds, keyed by site name ([sites."<site>"]). '
-        'Several are allowed; `fm create BENCH/SITE` adds one. Replaces the old [database."<site>"] '
+        'Several are allowed; `fmx create BENCH/SITE` adds one. Replaces the old [database."<site>"] '
         'table, whose contents now live at [sites."<site>".database].',
     )
     redis: RedisConfig | None = Field(
         None,
-        description="External redis for this bench ([redis]). Absent means fm starts and manages the "
+        description="External redis for this bench ([redis]). Absent means fmx starts and manages the "
         "per-bench redis containers.",
     )
 
@@ -2365,8 +2365,8 @@ class BenchConfig(BaseModel):
 
             raise BenchException(
                 str(data.get("name") or path.parent.name),
-                "this bench predates the \\[deployments] rename: it still has \\[deploy_state], which fm "
-                "no longer reads. Run 'fm migrate' to convert it -- until then its deploy history and "
+                "this bench predates the \\[deployments] rename: it still has \\[deploy_state], which fmx "
+                "no longer reads. Run 'fmx migrate' to convert it -- until then its deploy history and "
                 "rollback target are invisible.",
             )
 
@@ -2399,7 +2399,7 @@ class BenchConfig(BaseModel):
 
                 warn_or_log(
                     "bench_config",
-                    f"Bench '{config.name}': \\[redis] " + " ".join(scheme_problems) + " fm cannot use this "
+                    f"Bench '{config.name}': \\[redis] " + " ".join(scheme_problems) + " fmx cannot use this "
                     "until \\[redis] is corrected by hand -- every command against this bench risks the same "
                     "failure a `create` with this URL would hit deep inside `bench build`.",
                 )
@@ -2424,7 +2424,7 @@ class BenchConfig(BaseModel):
             warn_or_log(
                 "bench_config",
                 f"Bench '{config.name}': bench_config.toml has unrecognised key(s) "
-                f"{', '.join(unknown_keys)}; check for a typo, since fm will not use them.",
+                f"{', '.join(unknown_keys)}; check for a typo, since fmx will not use them.",
             )
 
         return config
@@ -2529,7 +2529,7 @@ class BenchConfig(BaseModel):
         # point a bench-scoped operation at another site's schema.
         raise ValueError(
             f"bench_config.toml for {self.name!r} records {len(self.sites or {})} sites "
-            f"({', '.join(sorted(self.sites or {}))}) and none is named after the bench, so fm cannot "
+            f"({', '.join(sorted(self.sites or {}))}) and none is named after the bench, so fmx cannot "
             f"tell which one a bench-scoped command means."
         )
 

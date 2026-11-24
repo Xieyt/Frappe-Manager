@@ -1,4 +1,4 @@
-# `fm switch`
+# `fmx switch`
 
 Switch a bench to an already-built image, or roll back.
 
@@ -7,7 +7,7 @@ A switch is not just an image change. By default it takes a database backup, rai
 **Usage**:
 
 ```console
-$ fm switch BENCH IMAGE [OPTIONS]
+$ fmx switch BENCH IMAGE [OPTIONS]
 ```
 
 **Arguments**:
@@ -17,22 +17,22 @@ $ fm switch BENCH IMAGE [OPTIONS]
 
 **Options**:
 
-* `--nginx-image TEXT`: The companion assets image for this deploy, as an image reference. Recorded beside the app image, never worked out from its name. Omitted, fm reads the 'fm.nginx.image' label the bake stamped on the app image.
+* `--nginx-image TEXT`: The companion assets image for this deploy, as an image reference. Recorded beside the app image, never worked out from its name. Omitted, fmx reads the 'fm.nginx.image' label the bake stamped on the app image.
 * `--previous`: Roll back to the previously deployed image, with migrate disabled.  [default: false]
 * `--migrate/--no-migrate`: Force or skip bench migrate for this run, overriding the bench config.
-* `--restore-db`: Also restore the DB dump taken during the deploy you are undoing. This REPLACES the current database: the dump drops and recreates every table, so everything written since that deploy is lost. fm asks you to confirm before importing.  [default: false]
+* `--restore-db`: Also restore the DB dump taken during the deploy you are undoing. This REPLACES the current database: the dump drops and recreates every table, so everything written since that deploy is lost. fmx asks you to confirm before importing.  [default: false]
 * `-y, --yes`: Accept the --restore-db overwrite without being asked. The only way to restore a dump unattended, and the only thing this flag skips.  [default: false]
-* `--keep INTEGER`: After a successful deploy, prune old releases keeping the newest N (minimum 1; see fm prune).
+* `--keep INTEGER`: After a successful deploy, prune old releases keeping the newest N (minimum 1; see fmx prune).
 * `--rolling/--no-rolling`: Force or disable the rolling web swap; the default is automatic whenever the overlap is safe. Forcing it is only safe when both versions run against the same database schema. A rolling swap drains the old replica before removing it and minimises the request-drop window, it does not close it (about one request per swap under continuous load) -- for zero loss, use --no-rolling with a maintenance window.
 
 ## Examples
 
 ### Switch to an image you baked
 
-fm bake prints the image; fm info lists the ones this bench has already run.
+fmx bake prints the image; fmx info lists the ones this bench has already run.
 
 ```bash
-fm switch mybench local/mybench:20260721-abc123
+fmx switch mybench local/mybench:20260721-abc123
 ```
 
 ### Switch to an image from a registry
@@ -40,13 +40,13 @@ fm switch mybench local/mybench:20260721-abc123
 Pulled with your ambient docker login when it is not already local.
 
 ```bash
-fm switch mybench ghcr.io/acme/mybench:v15.2.1
+fmx switch mybench ghcr.io/acme/mybench:v15.2.1
 ```
 
 ### Roll back the last deploy
 
 ```bash
-fm switch mybench --previous
+fmx switch mybench --previous
 ```
 
 ### Roll back code and database together
@@ -54,15 +54,15 @@ fm switch mybench --previous
 For when the migration is the problem: the dump taken before it goes back with the older code.
 
 ```bash
-fm switch mybench --previous --restore-db
+fmx switch mybench --previous --restore-db
 ```
 
 ### Roll back code and database unattended
 
-Without --yes fm asks you to type the schema name, and refuses when there is no terminal to ask on.
+Without --yes fmx asks you to type the schema name, and refuses when there is no terminal to ask on.
 
 ```bash
-fm switch mybench --previous --restore-db --yes
+fmx switch mybench --previous --restore-db --yes
 ```
 
 ### Roll back more than one release
@@ -70,7 +70,7 @@ fm switch mybench --previous --restore-db --yes
 --previous only knows the last image, so name an older one explicitly and keep migrate off.
 
 ```bash
-fm switch mybench local/mybench:20260718-9f21e0 --no-migrate
+fmx switch mybench local/mybench:20260718-9f21e0 --no-migrate
 ```
 
 ## See also

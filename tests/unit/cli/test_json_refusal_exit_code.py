@@ -83,7 +83,7 @@ class TestTheMigrationGateAnswersAMachine:
             commands_module.check_bench_migration_required("mybench.localhost")
 
         assert exc.value.exit_code == 1
-        assert exc.value.suggestions == ["Run 'fm migrate mybench.localhost'"]
+        assert exc.value.suggestions == ["Run 'fmx migrate mybench.localhost'"]
 
     def test_a_person_still_gets_the_guidance_and_a_typer_exit(self, monkeypatch, tmp_path):
         from frappe_manager import commands as commands_module
@@ -123,7 +123,7 @@ class TestTheMigrationGateAnswersAMachine:
 
         assert exc.value.exit_code == 1
         assert any("migration required" in line.lower() for line in said)
-        assert any("fm migrate mybench.localhost" in line for line in said)
+        assert any("fmx migrate mybench.localhost" in line for line in said)
 
 
 @pytest.mark.unit
@@ -131,7 +131,7 @@ def test_the_envelope_of_a_refusal_names_the_recovery():
     """What a script actually receives: ok false, and the command to run in `next`."""
     from frappe_manager.output_manager.envelope import json_error_envelope
 
-    error = MigrationRequiredError("Bench migration required: mybench", suggestions=["Run 'fm migrate mybench'"])
+    error = MigrationRequiredError("Bench migration required: mybench", suggestions=["Run 'fmx migrate mybench'"])
     envelope = json_error_envelope(
         error=str(error).split("\n")[0],
         subject=None,
@@ -140,4 +140,4 @@ def test_the_envelope_of_a_refusal_names_the_recovery():
     )
 
     assert json.loads(json.dumps(envelope))["ok"] is False
-    assert envelope["next"] == ["Run 'fm migrate mybench'"]
+    assert envelope["next"] == ["Run 'fmx migrate mybench'"]

@@ -1,6 +1,6 @@
 # Background jobs and workers
 
-Frappe uses RQ (Redis Queue) to process background jobs in dedicated worker containers. Each worker type pulls from specific queues to handle different job workloads.
+Slow work, sending bulk email, building a report, importing a CSV, runs in its own container instead of blocking a web request. Frappe enqueues it onto RQ (Redis Queue); dedicated worker containers pull from specific queues and run it.
 
 ## What runs where
 
@@ -20,17 +20,17 @@ A separate `schedule` container runs [Frappe's scheduler](#the-scheduler); it en
 !!! tip "Quick operations"
     **Restart workers (leave web running):**
     ```bash
-    fm restart mybench --workers --no-web
+    fmx restart mybench --workers --no-web
     ```
     
     **View worker logs** (every worker program writes to `logs/worker.log`, with tracebacks in `logs/worker.error.log`, both in the bench workspace):
     ```bash
-    fm shell mybench -c "tail -f logs/worker.log"
+    fmx shell mybench -c "tail -f logs/worker.log"
     ```
     
     **Check job status inside bench:**
     ```bash
-    fm shell mybench -c "fmx rq status"
+    fmx shell mybench -c "fmx rq status"
     ```
 
 ---
@@ -72,7 +72,7 @@ Handles jobs like:
 - Backup operations
 
 !!! warning "Interrupting long jobs"
-    A plain `fm restart` drains workers first and aborts rather than kill a long job that exceeds the drain budget. If you must restart immediately, `--no-drain` interrupts the job (see [draining workers safely](#draining-workers-safely)).
+    A plain `fmx restart` drains workers first and aborts rather than kill a long job that exceeds the drain budget. If you must restart immediately, `--no-drain` interrupts the job (see [draining workers safely](#draining-workers-safely)).
 
 ---
 
@@ -93,16 +93,16 @@ Define custom queues in `common_site_config.json` under the `workers` key:
 
 FM turns each entry into a supervisor program (`bench worker --queue myqueue`, where `--queue` is bench's own flag) plus a dedicated container, generated when the bench's workers are (re)configured. Container name format: `fm__<benchname>__myqueue-worker` (dots in the bench name become underscores).
 
-- `timeout` (default 300) does double duty: Frappe reads it as the job timeout for that queue, and fm renders it as the worker's supervisor stop grace (`stopwaitsecs`).
+- `timeout` (default 300) does double duty: Frappe reads it as the job timeout for that queue, and fmx renders it as the worker's supervisor stop grace (`stopwaitsecs`).
 - `background_workers` overrides the process count for this queue only. Omit it and the global `background_workers` applies.
 
-fm validates the `workers` key before it reaches the supervisor template, so a mistake fails the regeneration loudly instead of producing a container that only breaks once it is running:
+fmx validates the `workers` key before it reaches the supervisor template, so a mistake fails the regeneration loudly instead of producing a container that only breaks once it is running:
 
 - queue names take letters, digits, `-` and `_`, and must start with a letter or a digit;
 - `default`, `short`, `long` and `schedule` are reserved: they would collide with the built-in programs;
 - `timeout` and `background_workers` must be at least 1, and no other key is accepted inside an entry.
 
-Adding or removing a queue changes the set of containers, so it needs a regeneration pass: `fm start mybench --reconfigure-workers`. Removed queues have their container stopped and their supervisor conf deleted.
+Adding or removing a queue changes the set of containers, so it needs a regeneration pass: `fmx start mybench --reconfigure-workers`. Removed queues have their container stopped and their supervisor conf deleted.
 
 **See also:** [Frappe Framework: Background Jobs](https://frappeframework.com/docs/user/en/python-api/background-jobs)
 
@@ -118,31 +118,31 @@ At each tick it checks the `scheduler_events` declared in every installed app's 
 
 ## Draining workers safely
 
-`fm restart` treats in-flight jobs explicitly. Workers drain by default:
+`fmx restart` treats in-flight jobs explicitly. Workers drain by default:
 
 | Mode | What happens to a running job | Speed |
 |---|---|---|
-| `fm restart mybench` (default) | never killed: workers are suspended via a Redis flag, fm waits for every in-flight job to finish (stale workers skipped, bounded at 300 seconds), then restarts and resumes; if jobs are still running when the budget expires, fm resumes the workers and aborts the restart (exit 1, nothing restarted) | normal |
-| `fm restart mybench --no-drain` | interrupted, and fm says so: SIGUSR1 to each worker; a worker that has not exited after 15 seconds (tunable via `[workers].kill_timeout`) is escalated to a supervisor stop (SIGTERM, then SIGKILL when the stop grace expires); the job is marked failed or retried | fast, lossy |
-| `fm restart mybench --force` | killed immediately along with everything else (supervisor stop + start) | fastest, lossiest |
+| `fmx restart mybench` (default) | never killed: workers are suspended via a Redis flag, fmx waits for every in-flight job to finish (stale workers skipped, bounded at 300 seconds), then restarts and resumes; if jobs are still running when the budget expires, fmx resumes the workers and aborts the restart (exit 1, nothing restarted) | normal |
+| `fmx restart mybench --no-drain` | interrupted, and fmx says so: SIGUSR1 to each worker; a worker that has not exited after 15 seconds (tunable via `[workers].kill_timeout`) is escalated to a supervisor stop (SIGTERM, then SIGKILL when the stop grace expires); the job is marked failed or retried | fast, lossy |
+| `fmx restart mybench --force` | killed immediately along with everything else (supervisor stop + start) | fastest, lossiest |
 
-The gate is shared, not restart-specific: `fm stop`, `fm apps add`, `fm update` and the `fm switch` deploy pipeline all suspend workers and wait the same way before touching them, and each aborts its own operation rather than killing a job that overruns. `fm stop` is the one to know about, because a stop that waits is surprising: it drains by default, carries its own `--drain`/`--no-drain`, and on timeout leaves the bench *running* rather than half-stopped.
+The gate is shared, not restart-specific: `fmx stop`, `fmx apps add`, `fmx update` and the `fmx switch` deploy pipeline all suspend workers and wait the same way before touching them, and each aborts its own operation rather than killing a job that overruns. `fmx stop` is the one to know about, because a stop that waits is surprising: it drains by default, carries its own `--drain`/`--no-drain`, and on timeout leaves the bench *running* rather than half-stopped.
 
 Raising the budget is `[workers].drain_timeout` in the [configuration reference](../reference/configuration.md#workers); the alternative is `--no-drain`. Only genuinely busy workers count against the gate: a worker holding no job that stops responding is declared stale after 15 seconds (`[workers].stale_timeout`) and skipped, so a dead worker cannot block restarts.
 
-The supervisor stop grace (`stopwaitsecs`) is a separate safety net, and it only applies when a still-busy worker is sent a stop signal (`--no-drain`, `--force`, or the escalation above): supervisor SIGKILLs the worker at that ceiling. For the built-in workers fm sets it a minute past the queue's own job timeout, so an overrunning job hits RQ's timeout first: 360 seconds on `short-worker`, 1560 on `long-worker`. A custom worker gets its `timeout` verbatim, so set that above the longest job you enqueue on its queue.
+The supervisor stop grace (`stopwaitsecs`) is a separate safety net, and it only applies when a still-busy worker is sent a stop signal (`--no-drain`, `--force`, or the escalation above): supervisor SIGKILLs the worker at that ceiling. For the built-in workers fmx sets it a minute past the queue's own job timeout, so an overrunning job hits RQ's timeout first: 360 seconds on `short-worker`, 1560 on `long-worker`. A custom worker gets its `timeout` verbatim, so set that above the longest job you enqueue on its queue.
 
-**The suspend flag outlives the restart.** Draining suspends RQ through a persistent Redis key, so workers that come back mid-drain come back suspended, and fm resumes them at the end. That is also why an aborted drain resumes explicitly rather than relying on the restart.
+**The suspend flag outlives the restart.** Draining suspends RQ through a persistent Redis key, so workers that come back mid-drain come back suspended, and fmx resumes them at the end. That is also why an aborted drain resumes explicitly rather than relying on the restart.
 
-**An image without fmx cannot be drained.** The drain runs inside the frappe container, so an image predating fmx has nothing to run: fm warns and restarts undrained instead of reporting a phantom timeout. `fm self update-images` installs an image that can drain.
+**An image without fmx cannot be drained.** The drain runs inside the frappe container, so an image predating fmx has nothing to run: fmx warns and restarts undrained instead of reporting a phantom timeout. `fmx self update-images` installs an image that can drain.
 
-**Where docker fits.** These paths restart processes inside running containers. Only `fm restart mybench --recreate` restarts the containers themselves; there docker's stop timeout applies to everything inside (100 seconds, or 0 with `--force`) before SIGKILL.
+**Where docker fits.** These paths restart processes inside running containers. Only `fmx restart mybench --recreate` restarts the containers themselves; there docker's stop timeout applies to everything inside (100 seconds, or 0 with `--force`) before SIGKILL.
 
-**Interrupted jobs are visible.** A job killed by `--no-drain`/`--force` lands in RQ's failed-job registry; `fm shell mybench -c "fmx rq status"` reports the failed count per queue.
+**Interrupted jobs are visible.** A job killed by `--no-drain`/`--force` lands in RQ's failed-job registry; `fmx shell mybench -c "fmx rq status"` reports the failed count per queue.
 
 !!! tip "Combine with database migrations"
     ```bash
-    fm shell mybench -c "fmx restart --migrate"
+    fmx shell mybench -c "fmx restart --migrate"
     ```
 
     Drains workers (fmx drains by default, bounded at 300 seconds), migrates the database, then restarts all services.
@@ -157,12 +157,12 @@ To temporarily stop workers from picking up new jobs without restarting (useful 
 
 ```bash
 # Suspend all workers
-fm shell mybench -c "fmx rq suspend"
+fmx shell mybench -c "fmx rq suspend"
 
 # ... perform manual database work ...
 
 # Resume workers
-fm shell mybench -c "fmx rq resume"
+fmx shell mybench -c "fmx rq resume"
 ```
 
 !!! info "Existing jobs complete"
@@ -173,12 +173,12 @@ fm shell mybench -c "fmx rq resume"
 The `background_workers` setting in `common_site_config.json` (defaults to `1`) controls how many RQ worker processes run inside each worker container. It reaches the container as `numprocs` in the generated supervisor conf, which supervisord reads once, at startup, so changing it takes three steps:
 
 ```bash
-fm shell mybench -c "bench set-config -g background_workers 2"
-fm start mybench --reconfigure-workers               # regenerate the supervisor confs from the new value
-fm restart mybench --workers --no-web --recreate    # supervisord re-reads them on container start
+fmx shell mybench -c "bench set-config -g background_workers 2"
+fmx start mybench --reconfigure-workers               # regenerate the supervisor confs from the new value
+fmx restart mybench --workers --no-web --recreate    # supervisord re-reads them on container start
 ```
 
-A plain `fm restart` is not enough on its own: it restarts the supervisor programs inside the running containers, and supervisord keeps the process count it booted with.
+A plain `fmx restart` is not enough on its own: it restarts the supervisor programs inside the running containers, and supervisord keeps the process count it booted with.
 
 **Effect:**
 
@@ -190,5 +190,5 @@ A plain `fm restart` is not enough on its own: it restarts the supervisor progra
     Increase if you see job queues building up during peak hours. Monitor with:
     
     ```bash
-    fm shell mybench -c "fmx rq status"
+    fmx shell mybench -c "fmx rq status"
     ```

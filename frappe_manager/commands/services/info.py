@@ -101,7 +101,7 @@ def info(ctx: typer.Context, json_result: JsonResultOption = False, fields: Json
     """
     Show the global services' card: live container state, the root database credentials, the ports the proxy publishes on and which proxies in front of it are trusted.
 
-    The root database password is printed in cleartext. It belongs to the mariadb container every bench shares, which is why it is on this card and not on any bench's fm info.
+    The root database password is printed in cleartext. It belongs to the mariadb container every bench shares, which is why it is on this card and not on any bench's fmx info.
     """
     from frappe_manager.output_manager import railcard
 
@@ -152,7 +152,7 @@ def info(ctx: typer.Context, json_result: JsonResultOption = False, fields: Json
     card.fact("ports", f"{where}{proxy_cfg.http_port} [fm.muted]http[/fm.muted]   {proxy_cfg.https_port} [fm.muted]https[/fm.muted]")
     card.fact(
         "trusted proxies",
-        summary or "[fm.muted]none; every request is judged on the connection fm received[/fm.muted]",
+        summary or "[fm.muted]none; every request is judged on the connection fmx received[/fm.muted]",
     )
 
     card.section("services")
@@ -189,7 +189,7 @@ def info(ctx: typer.Context, json_result: JsonResultOption = False, fields: Json
     )
     card.section("disk")
     if actionable:
-        card.fact("status", f"{summary}  [fm.info]fm services prune[/fm.info]")
+        card.fact("status", f"{summary}  [fm.info]fmx services prune[/fm.info]")
     else:
         card.fact("status", f"[fm.muted]{summary}[/fm.muted]")
 

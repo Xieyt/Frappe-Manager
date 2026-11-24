@@ -1,52 +1,52 @@
 # External database
 
-By default every site fm creates lives on `mariadb`, the MariaDB container fm runs and owns. Point a site at your own server instead when you want a managed database, a replicated one, or one your DBA already administers.
+By default every site fmx creates lives on `mariadb`, the MariaDB container fmx runs and owns. Point a site at your own server instead when you want a managed database, a replicated one, or one your DBA already administers.
 
-Every site records its database per site, not per bench, as a [`[sites."<sitename>".database]`](../reference/configuration.md#sites-database) table in `bench_config.toml`. That table names two independent things: `type` is the engine, and `host` is whose server. A table with no `host` means the site is on fm's own container for that engine, so a site on fm's MariaDB is stated rather than implied.
+Every site records its database per site, not per bench, as a [`[sites."<sitename>".database]`](../reference/configuration.md#sites-database) table in `bench_config.toml`. That table names two independent things: `type` is the engine, and `host` is whose server. A table with no `host` means the site is on fmx's own container for that engine, so a site on fmx's MariaDB is stated rather than implied.
 
 ## Postgres
 
-A site can run on PostgreSQL instead of MariaDB, on fm's own server or on yours.
+A site can run on PostgreSQL instead of MariaDB, on fmx's own server or on yours.
 
 ```bash
-# fm's own postgres container
-fm create mybench --db-type postgres
+# fmx's own postgres container
+fmx create mybench --db-type postgres
 
 # a server you run
-fm create mybench \
+fmx create mybench \
   --db-type postgres \
   --db-host pg.example.com \
   --db-name shop_app \
   --db-admin-user postgres --db-admin-password -
 ```
 
-`--db-port` defaults to the engine's own, so 5432 here and 3306 for MariaDB. Everything else on this page applies unchanged: the same refusals on a server fm does not own, the same TLS flags, the same attach flow. fm's own Postgres runs only while some site uses it, exactly as its MariaDB does.
+`--db-port` defaults to the engine's own, so 5432 here and 3306 for MariaDB. Everything else on this page applies unchanged: the same refusals on a server fmx does not own, the same TLS flags, the same attach flow. fmx's own Postgres runs only while some site uses it, exactly as its MariaDB does.
 
 Four differences worth knowing before you use it:
 
-- **Attaching to an existing role changes its password.** Frappe's Postgres setup runs `ALTER USER ... WITH PASSWORD` when the role already exists, where the MariaDB path leaves an existing login alone. Point fm at a role something else uses and that something else stops being able to log in.
+- **Attaching to an existing role changes its password.** Frappe's Postgres setup runs `ALTER USER ... WITH PASSWORD` when the role already exists, where the MariaDB path leaves an existing login alone. Point fmx at a role something else uses and that something else stops being able to log in.
 - **The login needs `CREATEDB` and `CREATEROLE`,** or superuser. Frappe creates the database and the site's role itself. The preflight checks this before anything is written, because finding out later leaves a site directory on disk and no database.
-- **App support is newer than fm's confidence in it.** Frappe's framework supports Postgres; ERPNext's support was hardened recently. Verify your own apps rather than assuming parity with MariaDB.
-- **fm's own Postgres is pinned to a major version and stays there.** Postgres has no equivalent of MariaDB's automatic datadir upgrade: a datadir written by one major refuses to start under the next, so fm will never move you across one by changing an image tag. Moving majors is a dump and a restore.
+- **App support is newer than fmx's confidence in it.** Frappe's framework supports Postgres; ERPNext's support was hardened recently. Verify your own apps rather than assuming parity with MariaDB.
+- **fmx's own Postgres is pinned to a major version, and now by digest too.** Postgres has no equivalent of MariaDB's automatic datadir upgrade: a datadir written by one major refuses to start under the next, so fmx will never move you across one by changing an image tag. Pinned by digest, a `docker pull` doesn't move the server under a running site either: the exact build is decided by the fmx release you installed. Moving majors is a dump and a restore.
 
-## What fm refuses to do on a server it does not own
+## What fmx refuses to do on a server it does not own
 
-Read this first: it is the part you have to trust, and it is deliberate rather than accidental. fm holds the site's own database password (it is in `site_config.json`, where Frappe needs it), and the grant Frappe asks for includes `DROP` at schema scope. fm is therefore perfectly capable of destroying your schema and chooses not to.
+Read this first: it is the part you have to trust, and it is deliberate rather than accidental. fmx holds the site's own database password (it is in `site_config.json`, where Frappe needs it), and the grant Frappe asks for includes `DROP` at schema scope. fmx is therefore perfectly capable of destroying your schema and chooses not to.
 
-| Operation | On fm's own server | On your server |
+| Operation | On fmx's own server | On your server |
 |---|---|---|
-| `fm reset <bench>` | drops the schema and reinstalls every app | **refused**: `bench reinstall` would drop a schema that is not fm's |
-| `fm delete <bench>/<site> --delete-fm-managed-db` | drops that site's schema and the user | schema and user are **left in place**, flag or no flag |
-| `fm delete <bench> --delete-fm-managed-db` | drops the schema and the user of every site in the bench | any schema on your server is **left in place**, flag or no flag |
-| `fm switch <bench> --restore-db` | imports the dump | typed confirmation naming the host, the schema and its current table count; **refused** in non-interactive mode |
-| `fm create` into a schema that already has tables | n/a: fm creates the schema | **refused**, unless you pass `--attach-existing-site` |
-| `fm create` with a login that already exists and a password fm minted | n/a | **refused**: Frappe's `CREATE USER IF NOT EXISTS` would keep the old password and the site would be unconnectable |
+| `fmx reset <bench>` | drops the schema and reinstalls every app | **refused**: `bench reinstall` would drop a schema that is not fmx's |
+| `fmx delete <bench>/<site> --delete-fm-managed-db` | drops that site's schema and the user | schema and user are **left in place**, flag or no flag |
+| `fmx delete <bench> --delete-fm-managed-db` | drops the schema and the user of every site in the bench | any schema on your server is **left in place**, flag or no flag |
+| `fmx switch <bench> --restore-db` | imports the dump | typed confirmation naming the host, the schema and its current table count; **refused** in non-interactive mode |
+| `fmx create` into a schema that already has tables | n/a: fmx creates the schema | **refused**, unless you pass `--attach-existing-site` |
+| `fmx create` with a login that already exists and a password fmx minted | n/a | **refused**: Frappe's `CREATE USER IF NOT EXISTS` would keep the old password and the site would be unconnectable |
 
-The last two are worth spelling out. fm will not `ALTER USER` on a database it does not own, so it cannot repair a login for you: if the schema already exists, pass `--db-password` with the existing login's password and drop the admin credentials. And it never sends the `mariadb` root credential, which means nothing on your server, anywhere near it.
+The last two are worth spelling out. fmx will not `ALTER USER` on a database it does not own, so it cannot repair a login for you: if the schema already exists, pass `--db-password` with the existing login's password and drop the admin credentials. And it never sends the `mariadb` root credential, which means nothing on your server, anywhere near it.
 
 ## Server preconditions
 
-`fm create` probes the server from inside the bench container and reports every check it ran. The probe happens early on purpose: the bench directory and its compose file exist by then and are cleaned up if the probe refuses, but cloning apps, installing dependencies and building assets are all still ahead. The blocking checks:
+`fmx create` probes the server from inside the bench container and reports every check it ran. The probe happens early on purpose: the bench directory and its compose file exist by then and are cleaned up if the probe refuses, but cloning apps, installing dependencies and building assets are all still ahead. The blocking checks:
 
 - **MariaDB, any flavour, managed or self-hosted.** MySQL is not a supported Frappe `db_type` and normal operation emits MariaDB-only SQL. Azure retired Database for MariaDB, so an Azure managed instance today is almost certainly MySQL.
 - **Version 10.6 or newer.**
@@ -58,28 +58,28 @@ The last two are worth spelling out. fm will not `ALTER USER` on a database it d
 
 ## Creating a bench on it
 
-Two credential paths, and fm detects which one applies from the server rather than asking you for a mode.
+Two credential paths, and fmx detects which one applies from the server rather than asking you for a mode.
 
 === "The schema already exists"
 
-    You (or your provider's console) created the schema, the login and the grant. fm only needs the site login:
+    You (or your provider's console) created the schema, the login and the grant. fmx only needs the site login:
 
     ```bash
-    fm create mybench \
+    fmx create mybench \
       --db-host db.example.com \
       --db-name app_prod \
       --db-password - \
       --db-ca /etc/ssl/rds-bundle.pem
     ```
 
-    The schema must exist and hold no tables; fm then uses it as is and opens no administrative connection at all. One with tables is refused unless you are attaching (below), and so is an absent schema, because on this path fm has no credential to create one with.
+    The schema must exist and hold no tables; fmx then uses it as is and opens no administrative connection at all. One with tables is refused unless you are attaching (below), and so is an absent schema, because on this path fmx has no credential to create one with.
 
-=== "fm provisions it"
+=== "fmx provisions it"
 
-    Give fm an administrative login and Frappe creates the schema, the site user and the grant in one shot:
+    Give fmx an administrative login and Frappe creates the schema, the site user and the grant in one shot:
 
     ```bash
-    fm create mybench \
+    fmx create mybench \
       --db-host db.example.com \
       --db-name app_prod \
       --db-admin-user admin \
@@ -87,9 +87,9 @@ Two credential paths, and fm detects which one applies from the server rather th
       --db-ca /etc/ssl/rds-bundle.pem
     ```
 
-    That login needs `CREATE`, `CREATE USER`, `RELOAD` and `GRANT OPTION` at global scope; `RELOAD` because Frappe's setup ends in an unconditional `FLUSH PRIVILEGES`. It is used once, at create time, and is never written to disk. Add `--db-password` as well to choose the new user's password instead of letting fm generate one.
+    That login needs `CREATE`, `CREATE USER`, `RELOAD` and `GRANT OPTION` at global scope; `RELOAD` because Frappe's setup ends in an unconditional `FLUSH PRIVILEGES`. It is used once, at create time, and is never written to disk. Add `--db-password` as well to choose the new user's password instead of letting fmx generate one.
 
-    The schema must not exist yet. If it does, fm refuses the admin credentials rather than `ALTER USER` its login into something it knows; use the other path with `--db-password`.
+    The schema must not exist yet. If it does, fmx refuses the admin credentials rather than `ALTER USER` its login into something it knows; use the other path with `--db-password`.
 
 `-` on any of `--db-password`, `--db-admin-password` and `--encryption-key` reads that secret from stdin, keeping it out of your shell history. Passwords are never config, so a `--config` overlay cannot carry them even though it can carry the `[database]` endpoint.
 
@@ -102,7 +102,7 @@ Some rules the CLI enforces before it connects to anything:
 
 ## TLS
 
-`--db-ca` takes a host path to the CA bundle that signed the server certificate. fm copies it into the bench, points Frappe's Python driver at it, and writes a client option file so the `mariadb` CLI (which Frappe shells out to for dumps, restores and `bench mariadb`) uses it too. Hostname verification is on unless you pass `--db-no-verify-hostname`, which requires `--db-ca`: without a CA there is no TLS at all, so there is no certificate whose hostname could be checked.
+`--db-ca` takes a host path to the CA bundle that signed the server certificate. fmx copies it into the bench, points Frappe's Python driver at it, and writes a client option file so the `mariadb` CLI (which Frappe shells out to for dumps, restores and `bench mariadb`) uses it too. Hostname verification is on unless you pass `--db-no-verify-hostname`, which requires `--db-ca`: without a CA there is no TLS at all, so there is no certificate whose hostname could be checked.
 
 !!! note "The Adminer one-click login card does not apply this CA"
     `--db-ca` reaches Frappe's Python driver and the `mariadb` CLI, both running inside the bench container where the CA is mounted. Adminer runs in its own container, mounted only with the sites directory, and its one-click login cards ([Admin tools](admin-tools.md)) have no way to reach the CA or apply it. A site with a CA pinned still gets a card, subtitled `· TLS not applied by Adminer`, and clicking it connects without the CA: unencrypted and unverified where TLS is optional, refused outright where the server enforces it.
@@ -110,17 +110,17 @@ Some rules the CLI enforces before it connects to anything:
 Providers rotate CAs on a schedule. Refresh a rotated one with:
 
 ```bash
-fm update mybench --db-ca /etc/ssl/rds-bundle-2027.pem
+fmx update mybench --db-ca /etc/ssl/rds-bundle-2027.pem
 ```
 
-Do not hand-edit the copied PEM. `fm update` refreshes the per-site certificate, the bench-wide bundle that dump processes read, and the recorded path together; editing one of the three leaves the site working while backups stay broken.
+Do not hand-edit the copied PEM. `fmx update` refreshes the per-site certificate, the bench-wide bundle that dump processes read, and the recorded path together; editing one of the three leaves the site working while backups stay broken.
 
 ## Attaching to a site that already exists
 
 If the schema already holds a Frappe site, `--attach-existing-site` builds the bench around it and writes nothing at all to the database:
 
 ```bash
-fm create mybench \
+fmx create mybench \
   --db-host db.example.com \
   --db-name app_prod \
   --db-password - \
@@ -129,28 +129,28 @@ fm create mybench \
   --encryption-key -
 ```
 
-`new-site` is never called, and neither is `bench migrate` or `install-app`: the only statements fm sends are its read-only probe queries. fm verifies the schema really is a Frappe schema first, because attaching to someone else's data and reporting success is the failure mode that matters here.
+`new-site` is never called, and neither is `bench migrate` or `install-app`: the only statements fmx sends are its read-only probe queries. fmx verifies the schema really is a Frappe schema first, because attaching to someone else's data and reporting success is the failure mode that matters here.
 
-Pass the original site's `encryption_key`. Without it Frappe mints a new one and every existing encrypted secret stops being readable. Two `-` flags mean two secrets: on a terminal fm prompts for each in turn, and from a pipe it reads one line per flag, in the order the flags are listed above.
+Pass the original site's `encryption_key`. Without it Frappe mints a new one and every existing encrypted secret stops being readable. Two `-` flags mean two secrets: on a terminal fmx prompts for each in turn, and from a pipe it reads one line per flag, in the order the flags are listed above.
 
-## fm's own mariadb switches itself off
+## fmx's own mariadb switches itself off
 
-On a host where **every** site uses an external database, fm stops running the shared `mariadb` container. There is nothing to configure: the rule is read from the benches on disk, since a site is on fm's database exactly when it has no `[database]` table.
+On a host where **every** site uses an external database, fmx stops running the shared `mariadb` container. There is nothing to configure: the rule is read from the benches on disk, since a site is on fmx's database exactly when it has no `[database]` table.
 
 ```
-fm services info
+fmx services info
   services
     global    ● nginx-proxy
     off       mariadb
               every site here uses an external database; starts when one needs it
 ```
 
-It comes back by itself the moment a bench that needs it is created, before that bench's site is built. `fm services start mariadb` on a switched-off server says so rather than pretending to start it.
+It comes back by itself the moment a bench that needs it is created, before that bench's site is built. `fmx services start mariadb` on a switched-off server says so rather than pretending to start it.
 
 Three details worth knowing:
 
 - The decision is made from what is **recorded**, not from what is running. A stopped bench still owns its schema, so it keeps the server on.
-- Anything fm cannot read confidently counts as needing it: an unreadable `bench_config.toml`, or a bench that records no sites. Running a database nobody queries costs memory; stopping one a site depends on costs the site.
+- Anything fmx cannot read confidently counts as needing it: an unreadable `bench_config.toml`, or a bench that records no sites. Running a database nobody queries costs memory; stopping one a site depends on costs the site.
 - The data directory is untouched. Switching off stops the container, it does not remove `services/mariadb/data`.
 
 ## External redis
@@ -158,25 +158,25 @@ Three details worth knowing:
 The same flag family covers redis, per bench rather than per site:
 
 ```bash
-fm create mybench --redis-cache redis://r.example:6379/0 --redis-queue redis://r.example:6379/1
+fmx create mybench --redis-cache redis://r.example:6379/0 --redis-queue redis://r.example:6379/1
 ```
 
-The two sides are independent: naming only `--redis-queue` moves the queue out and leaves the cache on fm's own container, or the other way round. Only when both sides are external must they avoid the same logical index: a restore mass-deletes the cache index and would take the queue with it. fm suppresses only the container for whichever side you moved out. The keys land in [`[redis]`](../reference/configuration.md#redis).
+The two sides are independent: naming only `--redis-queue` moves the queue out and leaves the cache on fmx's own container, or the other way round. Only when both sides are external must they avoid the same logical index: a restore mass-deletes the cache index and would take the queue with it. fmx suppresses only the container for whichever side you moved out. The keys land in [`[redis]`](../reference/configuration.md#redis).
 
-`fm update` can move a bench's redis after create, per side: `--redis-cache URL` or `--redis-queue URL` moves that side out, and `--no-redis-cache` or `--no-redis-queue` brings it back to fm's own container. Moving the queue drains it first, pausing producers and letting in-flight jobs finish, rather than copying its backlog; `--abandon-queued` skips the drain and leaves those jobs behind, unrun. `fm update --dry-run` prints the plan, including the current queue depth. `[database]`, by contrast, stays create-time: only `--db-ca` is editable afterwards (see [Moving an existing bench](#moving-an-existing-bench)).
+`fmx update` can move a bench's redis after create, per side: `--redis-cache URL` or `--redis-queue URL` moves that side out, and `--no-redis-cache` or `--no-redis-queue` brings it back to fmx's own container. Moving the queue drains it first, pausing producers and letting in-flight jobs finish, rather than copying its backlog; `--abandon-queued` skips the drain and leaves those jobs behind, unrun. `fmx update --dry-run` prints the plan, including the current queue depth. `[database]`, by contrast, stays create-time: only `--db-ca` is editable afterwards (see [Moving an existing bench](#moving-an-existing-bench)).
 
 ## Snapshots around a deploy
 
-fm's own deploy safety net ([`[switch] backup_db` and `rollback_db`](../deploy/index.md)) is a **logical dump**: `mariadb-dump` over the wire into `deploy-<timestamp>/db-<schema>.sql`, imported back by `fm switch --previous --restore-db`. Against a managed server you may prefer the provider's native snapshot (RDS `create-db-snapshot`, Aurora cluster snapshots), which is faster and out of fm's hands.
+fmx's own deploy safety net ([`[switch] backup_db` and `rollback_db`](../deploy/index.md)) is a **logical dump**: `mariadb-dump` over the wire into `deploy-<timestamp>/db-<schema>.sql`, imported back by `fmx switch --previous --restore-db`. Against a managed server you may prefer the provider's native snapshot (RDS `create-db-snapshot`, Aurora cluster snapshots), which is faster and out of fmx's hands.
 
-fm cannot take or restore a provider snapshot for you: a snapshot restore spins up a *new* endpoint, which is outside anything fm models. But the [switch hooks](../deploy/index.md#switch-hooks) give you the two exact moments.
+fmx cannot take or restore a provider snapshot for you: a snapshot restore spins up a *new* endpoint, which is outside anything fmx models. But the [switch hooks](../deploy/index.md#switch-hooks) give you the two exact moments.
 
 - **Snapshot before the schema changes**, in `before_migrate`. It runs after the workers have drained and, when a maintenance page is up, after requests are already 503'd, so the database is quiesced. It is a **gate**: a non-zero exit aborts the deploy before `bench migrate`, so a failed snapshot means no schema change.
 - **Restore after a rollback**, in `after_switch` when `DEPLOY_OUTCOME=rolled_back`. That is the only outcome where the running code is now older than the schema: a health-gate rollback put old code back over a fully-migrated schema, and a `migrate_failed` left a partly-changed one. `succeeded` and `halted` both leave code and schema matched, so do **not** restore there.
 
 ```toml
 [switch]
-backup_db = false          # skip fm's logical dump; the provider snapshot is the backup
+backup_db = false          # skip fmx's logical dump; the provider snapshot is the backup
 rollback_db = false        # required when backup_db = false
 
 [switch.hooks.host]
@@ -192,11 +192,13 @@ exit 0
 """
 ```
 
-Host hooks run on the machine that owns the bench, as the user running `fm`, so the provider CLI and its credentials (or instance role) must be reachable there. Restoring to a new endpoint means repointing the site afterwards, and because `[database]` is create-time only (see [Moving an existing bench](#moving-an-existing-bench)) that repoint is your script's job, not something fm does.
+Host hooks run on the machine that owns the bench, as the user running `fmx`, so the provider CLI and its credentials (or instance role) must be reachable there. Restoring to a new endpoint means repointing the site afterwards, and because `[database]` is create-time only (see [Moving an existing bench](#moving-an-existing-bench)) that repoint is your script's job, not something fmx does.
 
 ## Moving an existing bench
 
-There is no fm command that repoints a bench's site at a different server; `[database]` is written at create time and only its `ca` is editable afterwards. Hand-editing `site_config.json` is not a substitute: fm writes that file's database keys from `bench_config.toml` at create time and never reads them back, so an edited endpoint leaves fm and the site disagreeing. The guards above key on `[database]`, the CA and its client option file are installed per configured site, and none of that follows an edit fm cannot see. Back up the site, create a new bench with the flags above, and restore into it. Both halves are `bench` operations, and `bench restore` needs a login that can drop and recreate the schema on the target server, which fm does not hold for you. See [Backup and restore](backup-restore.md).
+There is no fmx command that repoints a bench's site at a different server; `[database]` is written at create time and only its `ca` is editable afterwards. Hand-editing `site_config.json` is not a substitute: fmx writes that file's database keys from `bench_config.toml` at create time and never reads them back, so an edited endpoint leaves fmx and the site disagreeing. The guards above key on `[database]`, the CA and its client option file are installed per configured site, and none of that follows an edit fmx cannot see.
+
+Back up the site, create a new bench with the flags above, and restore into it. Both halves are `bench` operations, and `bench restore` needs a login that can drop and recreate the schema on the target server, which fmx does not hold for you. See [Backup and restore](backup-restore.md).
 
 !!! warning
     Rehearse on a throwaway schema first. A restore drops every table it is about to write.
@@ -204,6 +206,6 @@ There is no fm command that repoints a bench's site at a different server; `[dat
 ---
 
 !!! info "See also"
-    - [fm create command](../commands/create.md): every external database and redis flag
+    - [fmx create command](../commands/create.md): every external database and redis flag
     - [Architecture](../reference/architecture.md): how a bench reaches its database
     - [Configuration](../reference/configuration.md#sites-database): the `[sites."<site>".database]` and [`[redis]`](../reference/configuration.md#redis) keys, key by key

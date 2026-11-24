@@ -882,7 +882,7 @@ ls -la env/ || echo "ERROR: env directory not found!"
             ):
                 self.logger.error(f"[_setup_python_with_uv] Docker network error: {e}")
                 raise Exception(
-                    "Docker network not found. Global services may not be running. Try: fm services start",
+                    "Docker network not found. Global services may not be running. Try: fmx services start",
                 ) from e
             raise
 
@@ -1219,7 +1219,7 @@ bench build""",
 
         except Exception as e:
             self.output.warning(f"Service restart (force-recreate) failed: {e}")
-            self.output.warning(f"Please restart services manually: fm restart {bench.name}")
+            self.output.warning(f"Please restart services manually: fmx restart {bench.name}")
 
     def _auto_detect_runtime_versions(self, bench: MigrationBench) -> tuple[str | None, str | None]:
         """

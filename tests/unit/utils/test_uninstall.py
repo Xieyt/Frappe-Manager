@@ -377,7 +377,8 @@ class TestPrivilegedPathRemoval:
 
     def test_a_removal_blocked_by_permissions_retries_with_sudo_and_reports_nothing(self, tmp_path):
         """Leaving the husk behind is not cosmetic: a services dir with no compose file made the
-        next `fm create` refuse with 'global services has taken a down'."""
+        next `fmx create` refuse with 'global services has taken a down'. `-n` keeps a password
+        prompt from blocking on a tty whose stderr this call captures."""
         target = tmp_path / "services"
         target.mkdir()
         failures: list[str] = []
@@ -388,7 +389,7 @@ class TestPrivilegedPathRemoval:
             run.side_effect = lambda *_a, **_k: (target.rmdir(), MagicMock(returncode=0, stderr=""))[1]
             _remove_path(target, failures)
 
-        assert run.call_args[0][0] == ["sudo", "rm", "-rf", str(target)]
+        assert run.call_args[0][0] == ["sudo", "-n", "rm", "-rf", str(target)]
         assert failures == []
 
     def test_a_failing_sudo_still_names_the_command_the_operator_must_run(self, tmp_path):

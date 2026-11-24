@@ -112,9 +112,9 @@ class MigrationExecutor:
         lock_path = process_lock.migration_lock_path()
         host_lock = process_lock.acquire(lock_path, exclusive=True, holder="migration")
         if host_lock is None:
-            culprit = process_lock.read_holder(lock_path) or "another fm command"
+            culprit = process_lock.read_holder(lock_path) or "another fmx command"
             self.output.display_error(
-                f"fm is busy: {culprit} is running on this host. Let it finish, then re-run."
+                f"fmx is busy: {culprit} is running on this host. Let it finish, then re-run."
             )
             return False
         try:
@@ -201,7 +201,7 @@ class MigrationExecutor:
 
             card.section("scope")
             if global_services_need_migration:
-                card.fact("services", "fm configuration, shared services (mariadb, nginx-proxy)")
+                card.fact("services", "fmx configuration, shared services (mariadb, nginx-proxy)")
 
             if benches_need_migration and self.target_benches:
                 benches_manager = MigrationBenches(CLI_BENCHES_DIRECTORY)
@@ -224,7 +224,7 @@ class MigrationExecutor:
             if running:
                 card.section("warning")
                 card.fact("restart", f"{', '.join(running)} [fm.muted]· containers recreated[/fm.muted]")
-                card.fact("", f"[fm.muted]to avoid it: fm stop {running[0]}, then migrate[/fm.muted]")
+                card.fact("", f"[fm.muted]to avoid it: fmx stop {running[0]}, then migrate[/fm.muted]")
 
             card.section("docs")
             card.fact("manual", MIGRATION_DOCS_URL)
@@ -248,7 +248,7 @@ class MigrationExecutor:
                         prompt="Do you want to proceed?",
                         choices=[
                             {"name": "yes - Start migration", "value": "yes"},
-                            {"name": "no - Abort and revert to previous fm version (default)", "value": "no"},
+                            {"name": "no - Abort and revert to previous fmx version (default)", "value": "no"},
                         ],
                         default="no",
                         required_flag="--yes",
@@ -314,11 +314,11 @@ class MigrationExecutor:
         keep = self.fm_config_manager.prune.keep_backup_sessions
         hints: list[tuple[str, list[Path]]] = []
         if self.global_services_need_migration:
-            hints.append(("fm services prune", stale_sessions(CLI_MIGARATIONS_DIR / "migrations", keep)))
+            hints.append(("fmx services prune", stale_sessions(CLI_MIGARATIONS_DIR / "migrations", keep)))
         for bench_name, bench_data in self.migrate_benches.items():
             if bench_data["exception"] is None:
                 root = CLI_BENCHES_DIRECTORY / bench_name / "backups" / "migrations"
-                hints.append((f"fm prune {bench_name}", stale_sessions(root, keep)))
+                hints.append((f"fmx prune {bench_name}", stale_sessions(root, keep)))
 
         for command, stale in hints:
             if not stale:

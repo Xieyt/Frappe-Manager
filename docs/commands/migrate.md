@@ -1,18 +1,18 @@
-# `fm migrate`
+# `fmx migrate`
 
-Bring benches up to the current version. Benches only: fm's own global services & configuration are migrated by fm services migrate, never implicitly by this command, and this command refuses to run while they are behind.
+Bring benches up to the current version. Benches only: fmx's own global services & configuration are migrated by fmx services migrate, never implicitly by this command, and this command refuses to run while they are behind.
 
 Most bench commands refuse to run against a bench that is behind, so migrate first: the exceptions are stop and delete, which must keep working on a bench you cannot migrate, and the image commands bake, switch and prune.
 
 **Usage**:
 
 ```console
-$ fm migrate BENCH|all [OPTIONS]
+$ fmx migrate BENCH|all [OPTIONS]
 ```
 
 **Arguments**:
 
-* `BENCH|all`: Bench to act on, or 'all' for every bench fm manages. Omit to pick from the benches you have.
+* `BENCH|all`: Bench to act on, or 'all' for every bench fmx manages. Omit to pick from the benches you have.
 
 **Options**:
 
@@ -30,15 +30,15 @@ $ fm migrate BENCH|all [OPTIONS]
 ### Migrate one bench
 
 ```bash
-fm migrate mybench
+fmx migrate mybench
 ```
 
 ### Migrate every bench
 
-'all' goes where a bench name goes: it is an address meaning every bench fm manages, not a flag.
+'all' goes where a bench name goes: it is an address meaning every bench fmx manages, not a flag.
 
 ```bash
-fm migrate all
+fmx migrate all
 ```
 
 ### Migrate every bench unattended
@@ -46,19 +46,19 @@ fm migrate all
 The combination for CI and large fleets: no prompts, and one bad bench does not undo the others.
 
 ```bash
-fm migrate all --yes --on-failure=archive
+fmx migrate all --yes --on-failure=archive
 ```
 
 ### See the plan without migrating
 
 ```bash
-fm migrate all --dry-run
+fmx migrate all --dry-run
 ```
 
 ### Leave some benches behind
 
 ```bash
-fm migrate all --exclude-bench mybench1,mybench2
+fmx migrate all --exclude-bench mybench1,mybench2
 ```
 
 ## See also

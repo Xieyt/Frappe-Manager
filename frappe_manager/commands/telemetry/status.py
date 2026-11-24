@@ -67,6 +67,6 @@ def status(
         "present (yours; --force-config overwrites)" if agent_config.is_file() else "not seeded",
     )
     if enabled and not has_key:
-        card.fact("note", "enabled without a key sends nothing; pass --license-key to fm telemetry enable.")
+        card.fact("note", "enabled without a key sends nothing; pass --license-key to fmx telemetry enable.")
 
     output.print_data(card)

@@ -83,9 +83,9 @@ class SSLCertificateManualRenewalRequired(FrappeManagerException):
     def __init__(self, domain: str, message: str | None = None):
         self.domain = domain
         self.message = message or (
-            f"'{domain}' has a custom certificate; fm does not store the original --cert/--key/--ca "
+            f"'{domain}' has a custom certificate; fmx does not store the original --cert/--key/--ca "
             f"files, only their bytes, so it cannot renew this automatically. Get a fresh "
-            f"certificate and run 'fm ssl add <bench>/{domain} --custom --cert PATH --key PATH' "
+            f"certificate and run 'fmx ssl add <bench>/{domain} --custom --cert PATH --key PATH' "
             f"again to rotate it."
         )
         super().__init__(self.message)

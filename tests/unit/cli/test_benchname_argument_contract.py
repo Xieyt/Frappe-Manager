@@ -200,7 +200,7 @@ EXCEPTIONS: dict[str, BenchnameSpec] = {
     # address, which names no directory. It used to have neither completion nor validation, because
     # acting on every bench lived in a `--all-benches` flag and the body did its own existence check.
     "fm migrate": BenchnameSpec(
-        help="Bench to act on, or 'all' for every bench fm manages. Omit to pick from the benches you have.",
+        help="Bench to act on, or 'all' for every bench fmx manages. Omit to pick from the benches you have.",
         metavar="BENCH|all",
         default=None,
         required=False,
@@ -247,7 +247,7 @@ EXCEPTIONS: dict[str, BenchnameSpec] = {
     # NAMED bench (plus a not-found hint teaching the `--` form), skipped entirely for the
     # `--` form, where the bound value is a docker compose argument rather than a bench.
     "fm compose": BenchnameSpec(
-        help="Bench to act on. Omit to pick from the benches you have; 'fm compose -- ARGS' also picks, passing ARGS to docker compose.",
+        help="Bench to act on. Omit to pick from the benches you have; 'fmx compose -- ARGS' also picks, passing ARGS to docker compose.",
         metavar="BENCH",
         default=None,
         required=False,
@@ -791,7 +791,7 @@ class TestSitenameCallbackWithNoValue:
             sitename_callback(None)
         assert isinstance(excinfo.value, FrappeManagerException)
         assert "Bench name is required in non-interactive mode" in str(excinfo.value)
-        assert any("fm list" in s for s in excinfo.value.suggestions)
+        assert any("fmx list" in s for s in excinfo.value.suggestions)
         assert isinstance(excinfo.value.__cause__, EOFError)
         display_error.assert_not_called()
 

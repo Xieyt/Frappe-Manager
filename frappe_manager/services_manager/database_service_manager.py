@@ -115,7 +115,7 @@ class DatabaseServerServiceInfo(BaseModel):
                 site_name,
                 f"{site_config_file} does not exist, so {site_name} has no database to act on. The "
                 f"site is recorded in bench_config.toml but absent on disk, which is what an "
-                f"interrupted removal leaves behind; finish it with 'fm delete <bench>/{site_name}'.",
+                f"interrupted removal leaves behind; finish it with 'fmx delete <bench>/{site_name}'.",
             )
 
         if "user" not in info:

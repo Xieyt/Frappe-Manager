@@ -1,24 +1,24 @@
-# `fm ssl`
+# `fmx ssl`
 
 Issue, import, renew, list and remove certificates, and manage DNS credentials and the dev CA.
 
 **Usage**:
 
 ```console
-$ fm ssl COMMAND [ARGS]...
+$ fmx ssl COMMAND [ARGS]...
 ```
 
 | Command | Description |
 |---|---|
-| [`fm ssl renew`](#fm-ssl-renew) | Renew SSL certificates before they expire. |
-| [`fm ssl list`](#fm-ssl-list) | List SSL certificates with their expiry and renewal status. |
-| [`fm ssl add`](#fm-ssl-add) | Issue or import an SSL certificate for a domain and point nginx at it. |
-| [`fm ssl remove`](#fm-ssl-remove) | Delete an SSL certificate and go back to serving the domain over plain HTTP. |
-| [`fm ssl acme-sh`](#fm-ssl-acme-sh) | Run the bundled acme.sh directly, against fm's certificate home. |
-| [`fm ssl dns-config`](#fm-ssl-dns-config) | Store DNS provider credentials for DNS-01 challenges. |
-| [`fm ssl ca`](#fm-ssl-ca) | Inspect, install or remove fm's dev CA in this host's trust stores. |
+| [`fmx ssl renew`](#fmx-ssl-renew) | Renew SSL certificates before they expire. |
+| [`fmx ssl list`](#fmx-ssl-list) | List SSL certificates with their expiry and renewal status. |
+| [`fmx ssl add`](#fmx-ssl-add) | Issue or import an SSL certificate for a domain and point nginx at it. |
+| [`fmx ssl remove`](#fmx-ssl-remove) | Delete an SSL certificate and go back to serving the domain over plain HTTP. |
+| [`fmx ssl acme-sh`](#fmx-ssl-acme-sh) | Run the bundled acme.sh directly, against fmx's certificate home. |
+| [`fmx ssl dns-config`](#fmx-ssl-dns-config) | Store DNS provider credentials for DNS-01 challenges. |
+| [`fmx ssl ca`](#fmx-ssl-ca) | Inspect, install or remove fmx's dev CA in this host's trust stores. |
 
-## `fm ssl renew`
+## `fmx ssl renew`
 
 Renew SSL certificates before they expire.
 
@@ -31,7 +31,7 @@ A failing bench does not stop the run: the failure is reported, the remaining be
 **Usage**:
 
 ```console
-$ fm ssl renew BENCH(/DOMAIN)|all [OPTIONS]
+$ fmx ssl renew BENCH(/DOMAIN)|all [OPTIONS]
 ```
 
 **Arguments**:
@@ -49,19 +49,19 @@ $ fm ssl renew BENCH(/DOMAIN)|all [OPTIONS]
 #### Renew every certificate on a bench
 
 ```bash
-fm ssl renew mybench
+fmx ssl renew mybench
 ```
 
 #### Renew one domain
 
 ```bash
-fm ssl renew mybench/example.com
+fmx ssl renew mybench/example.com
 ```
 
 #### Renew every certificate on one bench, named explicitly
 
 ```bash
-fm ssl renew mybench/all
+fmx ssl renew mybench/all
 ```
 
 #### Renew every bench
@@ -69,7 +69,7 @@ fm ssl renew mybench/all
 'all' goes where a bench name goes. One bench failing is reported and the rest still renew.
 
 ```bash
-fm ssl renew all
+fmx ssl renew all
 ```
 
 #### Renew an external domain
@@ -77,16 +77,16 @@ fm ssl renew all
 An external domain belongs to no bench, so it is named bare rather than as an address.
 
 ```bash
-fm ssl renew example.com --standalone
+fmx ssl renew example.com --standalone
 ```
 
 #### Renew one that is not due yet
 
 ```bash
-fm ssl renew mybench/example.com --force
+fmx ssl renew mybench/example.com --force
 ```
 
-## `fm ssl list`
+## `fmx ssl list`
 
 List SSL certificates with their expiry and renewal status.
 
@@ -97,7 +97,7 @@ A DNS-01 certificate's card carries a "dns provider" fact naming the \[ssl.dns_p
 **Usage**:
 
 ```console
-$ fm ssl list BENCH|all [OPTIONS]
+$ fmx ssl list BENCH|all [OPTIONS]
 ```
 
 **Arguments**:
@@ -115,33 +115,33 @@ $ fm ssl list BENCH|all [OPTIONS]
 #### List a bench's certificates
 
 ```bash
-fm ssl list mybench
+fmx ssl list mybench
 ```
 
 #### List the external domains
 
 ```bash
-fm ssl list --standalone
+fmx ssl list --standalone
 ```
 
-#### List every certificate fm manages
+#### List every certificate fmx manages
 
-Every bench and the external domains together. A bench fm cannot read is reported in place, not fatal.
+Every bench and the external domains together. A bench fmx cannot read is reported in place, not fatal.
 
 ```bash
-fm ssl list all
+fmx ssl list all
 ```
 
-## `fm ssl add`
+## `fmx ssl add`
 
 Issue or import an SSL certificate for a domain and point nginx at it.
 
-Bench mode takes a bench name and one of its configured domains (add new ones with fm domain add BENCH DOMAIN). Naming just the bench offers its domains to pick from. --standalone issues for an external Docker project instead.
+Bench mode takes a bench name and one of its configured domains (add new ones with fmx domain add BENCH DOMAIN). Naming just the bench offers its domains to pick from. --standalone issues for an external Docker project instead.
 
 **Usage**:
 
 ```console
-$ fm ssl add BENCH(/DOMAIN) [OPTIONS]
+$ fmx ssl add BENCH(/DOMAIN) [OPTIONS]
 ```
 
 **Arguments**:
@@ -152,16 +152,16 @@ $ fm ssl add BENCH(/DOMAIN) [OPTIONS]
 
 * `-c, --challenge [dns01|http01]`: ACME validation method.  [default: http01]
 * `--cname TEXT`: Delegated zone for _acme-challenge. dns01 only.
-* `--dns-provider TEXT`: Label of the \[ssl.dns_providers] credential set that authenticates this domain, from fm ssl dns-config cloudflare --name. Omit for the default account. dns01 only.
+* `--dns-provider TEXT`: Label of the \[ssl.dns_providers] credential set that authenticates this domain, from fmx ssl dns-config cloudflare --name. Omit for the default account. dns01 only.
 * `--test-ca`: Rehearse against Let's Encrypt staging. Nothing is kept: no certificate, no nginx change.  [default: false]
 * `--standalone`: For an external Docker project on the fm-frontend-network network.  [default: false]
-* `--dev`: Issue from fm's local CA, so no internet or public DNS is needed. Bench mode only.  [default: false]
+* `--dev`: Issue from fmx's local CA, so no internet or public DNS is needed. Bench mode only.  [default: false]
 * `--skip-dns-check`: Skip the DNS pre-check. Standalone mode only.  [default: false]
 * `--wait-for-dns`: Wait up to 5 min for the CNAME. Standalone only.  [default: false]
 * `--custom`: Import an operator-supplied certificate instead of issuing one. Needs --cert and --key. Bench mode only.  [default: false]
 * `--cert PATH`: Certificate file (PEM). --custom only.
 * `--key PATH`: Private key file (PEM), unencrypted. --custom only.
-* `--ca PATH`: CA bundle file (PEM). Optional; when given, bench containers trust it for outbound self-calls once you run 'fm start BENCH' to apply the updated compose. --custom only.
+* `--ca PATH`: CA bundle file (PEM). Optional; when given, bench containers trust it for outbound self-calls once you run 'fmx start BENCH' to apply the updated compose. --custom only.
 * `-y, --yes`: Replace an existing custom certificate without asking for confirmation.  [default: false]
 
 ### Examples
@@ -171,21 +171,21 @@ $ fm ssl add BENCH(/DOMAIN) [OPTIONS]
 Naming just the bench with no domain offers its configured domains to pick from interactively.
 
 ```bash
-fm ssl add mybench/example.com
+fmx ssl add mybench/example.com
 ```
 
 #### Issue one when the domain has no public A record
 
-DNS-01 needs provider credentials, see fm ssl dns-config.
+DNS-01 needs provider credentials, see fmx ssl dns-config.
 
 ```bash
-fm ssl add mybench/example.com --challenge dns01
+fmx ssl add mybench/example.com --challenge dns01
 ```
 
 #### Rehearse against the staging server first
 
 ```bash
-fm ssl add mybench/example.com --test-ca
+fmx ssl add mybench/example.com --test-ca
 ```
 
 #### Issue for every domain the bench serves
@@ -193,21 +193,21 @@ fm ssl add mybench/example.com --test-ca
 One certificate per hostname, each site's own name and its aliases. Bare 'all' is refused here: issuing across every bench at once can cross Let's Encrypt's rate limit.
 
 ```bash
-fm ssl add mybench/all
+fmx ssl add mybench/all
 ```
 
 #### Issue for an external Docker project
 
 ```bash
-fm ssl add example.com --standalone
+fmx ssl add example.com --standalone
 ```
 
 #### Import an operator-issued certificate
 
-No issuance: fm copies the files in, links them into the global proxy, and restarts it. Add --ca to also trust a private CA for outbound self-calls once you run 'fm start BENCH' to apply the updated compose.
+No issuance: fmx copies the files in, links them into the global proxy, and restarts it. Add --ca to also trust a private CA for outbound self-calls once you run 'fmx start BENCH' to apply the updated compose.
 
 ```bash
-fm ssl add mybench/example.com --custom --cert ./example.com.crt --key ./example.com.key
+fmx ssl add mybench/example.com --custom --cert ./example.com.crt --key ./example.com.key
 ```
 
 #### Validate through a delegated zone
@@ -215,18 +215,18 @@ fm ssl add mybench/example.com --custom --cert ./example.com.crt --key ./example
 acme.sh looks for _acme-challenge.acme.example.net instead of the bench's own zone.
 
 ```bash
-fm ssl add mybench/example.com --challenge dns01 --cname acme.example.net
+fmx ssl add mybench/example.com --challenge dns01 --cname acme.example.net
 ```
 
 #### Authenticate DNS-01 against a second Cloudflare account
 
-acct-b is a label stored by fm ssl dns-config cloudflare --name acct-b, at either global or bench scope.
+acct-b is a label stored by fmx ssl dns-config cloudflare --name acct-b, at either global or bench scope.
 
 ```bash
-fm ssl add mybench/example.com --challenge dns01 --dns-provider acct-b
+fmx ssl add mybench/example.com --challenge dns01 --dns-provider acct-b
 ```
 
-## `fm ssl remove`
+## `fmx ssl remove`
 
 Delete an SSL certificate and go back to serving the domain over plain HTTP.
 
@@ -235,7 +235,7 @@ Naming just the bench offers the domains it serves to pick from. Asks for confir
 **Usage**:
 
 ```console
-$ fm ssl remove BENCH(/DOMAIN) [OPTIONS]
+$ fmx ssl remove BENCH(/DOMAIN) [OPTIONS]
 ```
 
 **Arguments**:
@@ -254,13 +254,13 @@ $ fm ssl remove BENCH(/DOMAIN) [OPTIONS]
 Naming just the bench with no domain offers its domains to pick from interactively.
 
 ```bash
-fm ssl remove mybench/example.com
+fmx ssl remove mybench/example.com
 ```
 
 #### Delete without the confirmation prompt
 
 ```bash
-fm ssl remove mybench/example.com --yes
+fmx ssl remove mybench/example.com --yes
 ```
 
 #### Delete every certificate the bench holds
@@ -268,27 +268,27 @@ fm ssl remove mybench/example.com --yes
 Back to plain HTTP on every domain of that bench. Bare 'all' is refused here.
 
 ```bash
-fm ssl remove mybench/all
+fmx ssl remove mybench/all
 ```
 
 #### Delete an external domain's certificate
 
 ```bash
-fm ssl remove example.com --standalone
+fmx ssl remove example.com --standalone
 ```
 
-## `fm ssl acme-sh`
+## `fmx ssl acme-sh`
 
-Run the bundled acme.sh directly, against fm's certificate home.
+Run the bundled acme.sh directly, against fmx's certificate home.
 
-An escape hatch for inspection and recovery. fm does not see what you change this way, so use fm ssl add, renew and remove for normal work.
+An escape hatch for inspection and recovery. fmx does not see what you change this way, so use fmx ssl add, renew and remove for normal work.
 
-acme.sh is installed the first time fm ssl add issues a Let's Encrypt certificate, and this command refuses to run until then. An fm ssl add --dev certificate comes from fm's own CA and does not install it.
+acme.sh is installed the first time fmx ssl add issues a Let's Encrypt certificate, and this command refuses to run until then. An fmx ssl add --dev certificate comes from fmx's own CA and does not install it.
 
 **Usage**:
 
 ```console
-$ fm ssl acme-sh
+$ fmx ssl acme-sh
 ```
 
 ### Examples
@@ -296,55 +296,55 @@ $ fm ssl acme-sh
 #### Show acme.sh's own help
 
 ```bash
-fm ssl acme-sh
+fmx ssl acme-sh
 ```
 
 #### List the certificates acme.sh holds
 
 ```bash
-fm ssl acme-sh --list
+fmx ssl acme-sh --list
 ```
 
 #### Inspect one certificate
 
 ```bash
-fm ssl acme-sh --info -d example.com
+fmx ssl acme-sh --info -d example.com
 ```
 
 #### Force a renewal acme.sh's own way
 
-Bypasses fm's not-due check and its bookkeeping. fm ssl renew --force is the supported route.
+Bypasses fmx's not-due check and its bookkeeping. fmx ssl renew --force is the supported route.
 
 ```bash
-fm ssl acme-sh --renew -d example.com --force
+fmx ssl acme-sh --renew -d example.com --force
 ```
 
-## `fm ssl dns-config`
+## `fmx ssl dns-config`
 
 Store DNS provider credentials for DNS-01 challenges.
 
 **Usage**:
 
 ```console
-$ fm ssl dns-config COMMAND [ARGS]...
+$ fmx ssl dns-config COMMAND [ARGS]...
 ```
 
 | Command | Description |
 |---|---|
-| [`fm ssl dns-config cloudflare`](#fm-ssl-dns-config-cloudflare) | Store Cloudflare API credentials for DNS-01 certificate issuance. |
+| [`fmx ssl dns-config cloudflare`](#fmx-ssl-dns-config-cloudflare) | Store Cloudflare API credentials for DNS-01 certificate issuance. |
 
-### `fm ssl dns-config cloudflare`
+### `fmx ssl dns-config cloudflare`
 
 Store Cloudflare API credentials for DNS-01 certificate issuance.
 
 Credentials are global; pass a bench name to override them for that bench alone. An API token needs Zone > DNS > Edit, created at https://dash.cloudflare.com/profile/api-tokens
 
-A --name stores the credentials as a labelled set, so one host or bench can hold several Cloudflare accounts (or several least-privilege tokens) at once. A certificate picks one with fm ssl add --dns-provider LABEL; certificates that name no label keep using the unlabelled default.
+A --name stores the credentials as a labelled set, so one host or bench can hold several Cloudflare accounts (or several least-privilege tokens) at once. A certificate picks one with fmx ssl add --dns-provider LABEL; certificates that name no label keep using the unlabelled default.
 
 **Usage**:
 
 ```console
-$ fm ssl dns-config cloudflare BENCH [OPTIONS]
+$ fmx ssl dns-config cloudflare BENCH [OPTIONS]
 ```
 
 **Arguments**:
@@ -365,33 +365,33 @@ $ fm ssl dns-config cloudflare BENCH [OPTIONS]
 ##### Store a global API token
 
 ```bash
-fm ssl dns-config cloudflare --api-token cf_AbCdEf1234567890
+fmx ssl dns-config cloudflare --api-token cf_AbCdEf1234567890
 ```
 
 ##### Store a second account under a label
 
-Labelled sets go to [ssl.dns_providers.acct-b]; bind one with fm ssl add BENCH/DOMAIN --challenge dns01 --dns-provider acct-b.
+Labelled sets go to [ssl.dns_providers.acct-b]; bind one with fmx ssl add BENCH/DOMAIN --challenge dns01 --dns-provider acct-b.
 
 ```bash
-fm ssl dns-config cloudflare --api-token cf_ZyXwVu0987654321 --name acct-b
+fmx ssl dns-config cloudflare --api-token cf_ZyXwVu0987654321 --name acct-b
 ```
 
 ##### Override the token for one bench
 
 ```bash
-fm ssl dns-config cloudflare mybench --api-token cf_ZyXwVu0987654321
+fmx ssl dns-config cloudflare mybench --api-token cf_ZyXwVu0987654321
 ```
 
 ##### Store a labelled set for one bench only
 
 ```bash
-fm ssl dns-config cloudflare mybench --api-token cf_QqRrSs1122334455 --name acct-b
+fmx ssl dns-config cloudflare mybench --api-token cf_QqRrSs1122334455 --name acct-b
 ```
 
 ##### Use a legacy Global API Key instead
 
 ```bash
-fm ssl dns-config cloudflare --api-key 1234567890abcdef1234 --email admin@example.com
+fmx ssl dns-config cloudflare --api-key 1234567890abcdef1234 --email admin@example.com
 ```
 
 ##### Show what is stored
@@ -399,7 +399,7 @@ fm ssl dns-config cloudflare --api-key 1234567890abcdef1234 --email admin@exampl
 Lists every labelled set at both scopes, secrets masked. With a bench name, prints that bench's sets as well as the global ones, and --name narrows to one label.
 
 ```bash
-fm ssl dns-config cloudflare --show
+fmx ssl dns-config cloudflare --show
 ```
 
 ##### Drop one labelled set
@@ -407,35 +407,35 @@ fm ssl dns-config cloudflare --show
 Without --name, a scope holding more than one set is refused rather than guessed at.
 
 ```bash
-fm ssl dns-config cloudflare --remove --name acct-b
+fmx ssl dns-config cloudflare --remove --name acct-b
 ```
 
-## `fm ssl ca`
+## `fmx ssl ca`
 
-Inspect, install or remove fm's dev CA in this host's trust stores.
+Inspect, install or remove fmx's dev CA in this host's trust stores.
 
 **Usage**:
 
 ```console
-$ fm ssl ca COMMAND [ARGS]...
+$ fmx ssl ca COMMAND [ARGS]...
 ```
 
 | Command | Description |
 |---|---|
-| [`fm ssl ca status`](#fm-ssl-ca-status) | Show fm's dev CA and every trust store on this host that currently trusts it. |
-| [`fm ssl ca install`](#fm-ssl-ca-install) | Install fm's dev CA into this host's OS and browser trust stores. |
-| [`fm ssl ca remove`](#fm-ssl-ca-remove) | Remove fm's dev CA from every trust store on this host that has it. |
+| [`fmx ssl ca status`](#fmx-ssl-ca-status) | Show fmx's dev CA and every trust store on this host that currently trusts it. |
+| [`fmx ssl ca install`](#fmx-ssl-ca-install) | Install fmx's dev CA into this host's OS and browser trust stores. |
+| [`fmx ssl ca remove`](#fmx-ssl-ca-remove) | Remove fmx's dev CA from every trust store on this host that has it. |
 
-### `fm ssl ca status`
+### `fmx ssl ca status`
 
-Show fm's dev CA and every trust store on this host that currently trusts it.
+Show fmx's dev CA and every trust store on this host that currently trusts it.
 
-Each store is asked directly (the keychain, the system CA directories, each browser's NSS database), never the .installed marker fm writes next to the CA: that marker records only that one install once succeeded, not where, and not whether it is still there. A CA fm believes it installed but no store actually holds is the case this command exists to surface, and `fm ssl ca install` is the fix.
+Each store is asked directly (the keychain, the system CA directories, each browser's NSS database), never the .installed marker fmx writes next to the CA: that marker records only that one install once succeeded, not where, and not whether it is still there. A CA fmx believes it installed but no store actually holds is the case this command exists to surface, and `fmx ssl ca install` is the fix.
 
 **Usage**:
 
 ```console
-$ fm ssl ca status [OPTIONS]
+$ fmx ssl ca status [OPTIONS]
 ```
 
 **Options**:
@@ -445,24 +445,24 @@ $ fm ssl ca status [OPTIONS]
 
 #### Examples
 
-##### Is fm's dev CA trusted on this host?
+##### Is fmx's dev CA trusted on this host?
 
 ```bash
-fm ssl ca status
+fmx ssl ca status
 ```
 
-### `fm ssl ca install`
+### `fmx ssl ca install`
 
-Install fm's dev CA into this host's OS and browser trust stores.
+Install fmx's dev CA into this host's OS and browser trust stores.
 
-fm installs the CA by itself the first time it issues a dev certificate, and only once. This command is the way back when that one attempt did not stick or no longer covers everything: a sudo prompt that was declined, a browser profile created afterwards, a restored machine. It is safe to run repeatedly.
+fmx installs the CA by itself the first time it issues a dev certificate, and only once. This command is the way back when that one attempt did not stick or no longer covers everything: a sudo prompt that was declined, a browser profile created afterwards, a restored machine. It is safe to run repeatedly.
 
 A CA that does not exist yet is not created here: it is minted the first time a bench asks for a dev certificate.
 
 **Usage**:
 
 ```console
-$ fm ssl ca install
+$ fmx ssl ca install
 ```
 
 #### Examples
@@ -470,21 +470,21 @@ $ fm ssl ca install
 ##### Trust the dev CA on this host
 
 ```bash
-fm ssl ca install
+fmx ssl ca install
 ```
 
-### `fm ssl ca remove`
+### `fmx ssl ca remove`
 
-Remove fm's dev CA from every trust store on this host that has it.
+Remove fmx's dev CA from every trust store on this host that has it.
 
 Certificates signed by this CA stop being trusted the moment it is removed, so every dev bench served over https will warn until the CA is installed again. Nothing else is affected: the certificates themselves, the benches and their data are untouched.
 
-The CA key and certificate stay on disk unless --delete-ca is passed, which is what lets `fm ssl ca install` put the same CA back. Deleting them means the next dev certificate is signed by a NEW CA that every client must be told to trust again.
+The CA key and certificate stay on disk unless --delete-ca is passed, which is what lets `fmx ssl ca install` put the same CA back. Deleting them means the next dev certificate is signed by a NEW CA that every client must be told to trust again.
 
 **Usage**:
 
 ```console
-$ fm ssl ca remove [OPTIONS]
+$ fmx ssl ca remove [OPTIONS]
 ```
 
 **Options**:
@@ -498,13 +498,13 @@ $ fm ssl ca remove [OPTIONS]
 ##### Stop trusting the dev CA
 
 ```bash
-fm ssl ca remove
+fmx ssl ca remove
 ```
 
 ##### See which stores would be touched, change nothing
 
 ```bash
-fm ssl ca remove --dry-run
+fmx ssl ca remove --dry-run
 ```
 
 ## See also

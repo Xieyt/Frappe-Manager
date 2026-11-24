@@ -1,17 +1,17 @@
-# `fm update`
+# `fmx update`
 
 Change a bench's settings.
 
-Not bench update: app code ships with fm bake then fm switch. Apps are managed with fm apps add, alias domains with fm domain, admin tools with fm tools, APM with fm telemetry.
+Not bench update: app code ships with fmx bake then fmx switch. Apps are managed with fmx apps add, alias domains with fmx domain, admin tools with fmx tools, APM with fmx telemetry.
 
-Most options change the whole bench. --db-ca is the one Site Option below, and a plain fm update BENCH applies it to the bench's primary site; name the site with fm update BENCH/SITE when the bench serves more than one. --upload-limit follows the same address: fm update BENCH sets the bench-wide default, which a site that has set its own survives, and fm update BENCH/SITE sets only that site's limit, naming the sites a bench-wide change left alone.
+Most options change the whole bench. --db-ca is the one Site Option below, and a plain fmx update BENCH applies it to the bench's primary site; name the site with fmx update BENCH/SITE when the bench serves more than one. --upload-limit follows the same address: fmx update BENCH sets the bench-wide default, which a site that has set its own survives, and fmx update BENCH/SITE sets only that site's limit, naming the sites a bench-wide change left alone.
 
 The whole update is decided before any of it is applied, so an invalid flag changes nothing and a value that already matches is reported instead of reapplied. The plan is printed and confirmed before anything is touched; --yes skips the question and --dry-run prints the plan and exits without touching the bench. An update with nothing to do never asks.
 
 **Usage**:
 
 ```console
-$ fm update BENCH(/SITE) [OPTIONS]
+$ fmx update BENCH(/SITE) [OPTIONS]
 ```
 
 **Arguments**:
@@ -20,7 +20,7 @@ $ fm update BENCH(/SITE) [OPTIONS]
 
 **Options**:
 
-* `-e, --environment [prod|dev]`: Switch the bench between dev and prod serving (FRAPPE_ENV), recreating the frappe container. Admin tools and developer mode are left as they are; use 'fm tools enable'/'fm tools disable' or --developer-mode to change those.
+* `-e, --environment [prod|dev]`: Switch the bench between dev and prod serving (FRAPPE_ENV), recreating the frappe container. Admin tools and developer mode are left as they are; use 'fmx tools enable'/'fmx tools disable' or --developer-mode to change those.
 * `--developer-mode [enable|disable]`: Toggle frappe developer mode, so DocType edits write to app files.
 * `--restart-policy [no|always|on-failure|unless-stopped]`: Update Docker restart policy for all bench services.
 * `--python TEXT`: Update the Python version (e.g. '3.11', '>=3.11,<3.14'); recreates the venv and reinstalls apps.
@@ -28,12 +28,12 @@ $ fm update BENCH(/SITE) [OPTIONS]
 * `--skip-version-check`: Accept a Python/Node version that does not satisfy frappe's requirement.  [default: false]
 * `--recreate-python-env/--no-recreate-python-env`: Rebuild the venv. Alongside --python it is the default (the new interpreter needs a fresh venv); --no-recreate-python-env installs the new Python and leaves the existing venv in place. On its own, with no version change, it rebuilds the venv at the recorded Python/Node and reinstalls the apps.
 * `--drain/--no-drain`: Suspend RQ workers and wait for in-flight jobs before restarting or recreating them, and abort the update if they outlast \[workers].drain_timeout; --no-drain interrupts them instead.  [default: true]
-* `--redis-cache TEXT`: Point the bench's framework cache at an external redis, e.g. redis://r.example:6379/0. Independent of the queue: the cache can stay on fm's own container while the queue moves out, or the other way round.
+* `--redis-cache TEXT`: Point the bench's framework cache at an external redis, e.g. redis://r.example:6379/0. Independent of the queue: the cache can stay on fmx's own container while the queue moves out, or the other way round.
 * `--redis-queue TEXT`: Point the bench's queue and realtime at an external redis, e.g. redis://r.example:6379/1. Independent of the cache.
-* `--no-redis-cache`: Bring the framework cache back to fm's own per-bench redis container, leaving the queue as it is.  [default: false]
-* `--no-redis-queue`: Bring the queue and realtime back to fm's own per-bench redis container, leaving the cache as it is.  [default: false]
+* `--no-redis-cache`: Bring the framework cache back to fmx's own per-bench redis container, leaving the queue as it is.  [default: false]
+* `--no-redis-queue`: Bring the queue and realtime back to fmx's own per-bench redis container, leaving the cache as it is.  [default: false]
 * `--abandon-queued`: Switch the redis queue even though jobs are still pending, leaving them on the old server instead of pausing producers and waiting for the backlog to drain. Those jobs are never run.  [default: false]
-* `--no-redis`: Bring BOTH sides back to fm's own per-bench redis containers.  [default: false]
+* `--no-redis`: Bring BOTH sides back to fmx's own per-bench redis containers.  [default: false]
 * `--upload-limit TEXT`: Set the maximum file upload size, e.g. 100M or 1G. BENCH/SITE sets that site's own limit; BENCH alone sets the bench default that sites without one inherit.
 * `--db-ca PATH`: Reinstall the external database CA after a rotation: the site PEM, the bench ca-bundle.pem the dumps use, and the recorded path are refreshed together.
 * `--default-site`: Make the addressed site this bench's default, the one bench commands use when none is named.  [default: false]
@@ -45,19 +45,19 @@ $ fm update BENCH(/SITE) [OPTIONS]
 ### Switch to the production environment
 
 ```bash
-fm update mybench -e prod
+fmx update mybench -e prod
 ```
 
 ### Turn on developer mode
 
 ```bash
-fm update mybench --developer-mode enable
+fmx update mybench --developer-mode enable
 ```
 
 ### Bump the Python version
 
 ```bash
-fm update mybench --python 3.11
+fmx update mybench --python 3.11
 ```
 
 ### Raise the upload size limit
@@ -65,7 +65,7 @@ fm update mybench --python 3.11
 Sets the bench-wide default. A site that has set its own limit keeps it; the command names any it left alone.
 
 ```bash
-fm update mybench --upload-limit 500M
+fmx update mybench --upload-limit 500M
 ```
 
 ### Raise the upload size limit for one site
@@ -73,7 +73,7 @@ fm update mybench --upload-limit 500M
 Only that site's limit changes; the bench default and its other sites are untouched.
 
 ```bash
-fm update mybench/shop.example.com --upload-limit 500M
+fmx update mybench/shop.example.com --upload-limit 500M
 ```
 
 ### Rebuild a broken venv at the recorded versions
@@ -81,7 +81,7 @@ fm update mybench/shop.example.com --upload-limit 500M
 No version change: recreates the venv on the bench's recorded Python/Node and reinstalls all apps. The repair verb for a corrupted or half-installed env/.
 
 ```bash
-fm update mybench --recreate-python-env
+fmx update mybench --recreate-python-env
 ```
 
 ## See also

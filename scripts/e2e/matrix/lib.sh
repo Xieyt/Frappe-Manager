@@ -4,7 +4,7 @@
 # A case is a bash function `case_<ID>`. It never calls `exit`: a failed assertion marks the
 # case and returns, so a run of 70 cases reports 70 results instead of stopping at the first.
 
-FM_BIN="${FM_BIN:-$HOME/fm-src/.venv/bin/fm}"
+FM_BIN="${FM_BIN:-$HOME/fm-src/.venv/bin/fmx}"
 E2E_RUN_DIR="${E2E_RUN_DIR:-$HOME/fm-e2e}"
 E2E_REPORT="${E2E_REPORT:-$E2E_RUN_DIR/report.tsv}"
 
@@ -35,7 +35,7 @@ fail() {
 
 pass() { log "  $(c_green ok) $*"; }
 
-# Everything fm does in a case goes through here. The streams are kept APART: a `--json`
+# Everything fmx does in a case goes through here. The streams are kept APART: a `--json`
 # answer must be alone on stdout, while the spinner and every status line go to stderr, so a
 # merged capture would fail the JSON contract on output that honours it.
 #   FM_OUT    both, in the order a human saw them  -> expect_out
@@ -46,7 +46,7 @@ FM_STDOUT=""
 FM_STDERR=""
 FM_RC=0
 
-_fm_capture() {
+_fmx_capture() {
     local out err
     out="$(mktemp)"
     err="$(mktemp)"
@@ -60,34 +60,34 @@ _fm_capture() {
     printf '%s\n' "$FM_OUT" >>"$CURRENT_LOG"
 }
 
-fm() {
-    log "  $(c_dim "\$ fm $*")"
-    _fm_capture "$FM_BIN" --non-interactive "$@"
+fmx() {
+    log "  $(c_dim "\$ fmx $*")"
+    _fmx_capture "$FM_BIN" --non-interactive "$@"
     return 0
 }
 
 # Same, with a timeout, for commands that can block on a prompt that should not exist.
-fm_t() {
+fmx_t() {
     local secs="$1"
     shift
-    log "  $(c_dim "\$ timeout ${secs}s fm $*")"
-    _fm_capture timeout "$secs" "$FM_BIN" --non-interactive "$@"
-    [[ $FM_RC -eq 124 ]] && fail "fm $* blocked for ${secs}s (a prompt that should not exist?)"
+    log "  $(c_dim "\$ timeout ${secs}s fmx $*")"
+    _fmx_capture timeout "$secs" "$FM_BIN" --non-interactive "$@"
+    [[ $FM_RC -eq 124 ]] && fail "fmx $* blocked for ${secs}s (a prompt that should not exist?)"
     return 0
 }
 
-# fm_answer <reply> <args...> -- run fm INTERACTIVELY and type <reply> at its prompt.
-# A pty is required, not a pipe: fm treats a non-tty (and CI) as non-interactive and refuses
+# fmx_answer <reply> <args...> -- run fmx INTERACTIVELY and type <reply> at its prompt.
+# A pty is required, not a pipe: fmx treats a non-tty (and CI) as non-interactive and refuses
 # a prompt instead of asking, so piping an answer would measure the refusal, not the answer.
 # `--non-interactive` is deliberately NOT passed here.
-fm_answer() {
+fmx_answer() {
     local reply="$1"
     shift
-    log "  $(c_dim "\$ fm $* <<< '$reply'")"
-    _fm_capture python3 -c '
+    log "  $(c_dim "\$ fmx $* <<< '$reply'")"
+    _fmx_capture python3 -c '
 import os, pty, re, select, sys, time
 
-# fm asks in three shapes and none is a plain "[y/N]?": a confirm, a typed-name confirmation
+# fmx asks in three shapes and none is a plain "[y/N]?": a confirm, a typed-name confirmation
 # ("Type the bench name to confirm deletion"), and a questionary SELECT already sitting on "no".
 PROMPT = re.compile(rb"\[y/N\]|\[Y/n\]|Type the bench name|\xe2\x9d\xaf|Do you want to", re.I)
 
@@ -107,7 +107,7 @@ seen, last, start = False, 0.0, time.monotonic()
 while True:
     if time.monotonic() - start > DEADLINE:
         os.kill(pid, 9)
-        sys.stderr.write("fm_answer: timed out, prompt never accepted the answer\n")
+        sys.stderr.write("fmx_answer: timed out, prompt never accepted the answer\n")
         sys.exit(97)
     r, _, _ = select.select([fd], [], [], 0.2)
     if r:
@@ -129,11 +129,11 @@ while True:
 
 rc = os.waitpid(pid, 0)[1]
 if not seen:
-    sys.stderr.write("fm_answer: no prompt appeared, nothing was typed\n")
+    sys.stderr.write("fmx_answer: no prompt appeared, nothing was typed\n")
     sys.exit(97)
 sys.exit(os.waitstatus_to_exitcode(rc) or 0)
 ' "$reply" "$FM_BIN" "$@"
-    [[ $FM_RC -eq 97 ]] && fail "fm $* never accepted an answer at its prompt"
+    [[ $FM_RC -eq 97 ]] && fail "fmx $* never accepted an answer at its prompt"
     return 0
 }
 
@@ -154,7 +154,7 @@ expect_not_out() {
 }
 
 # jq is not installable on every host this must run on (the throwaway box has no passwordless
-# sudo); python3 is already there, because fm runs on it.
+# sudo); python3 is already there, because fmx runs on it.
 # json_get <dotted.path>  -- reads the document on stdin; `.` descends dicts, an integer
 # indexes a list. Prints `<missing>` for a path that is not there, never an error.
 json_get() {
@@ -232,7 +232,7 @@ _http_code() {
 
 # expect_http_until <host> <code> [path] [deadline-seconds]
 # nginx reload is asynchronous and docker-gen's re-render is debounced, so a single request
-# fired the instant fm says "reloaded" can still be answered by the old workers.
+# fired the instant fmx says "reloaded" can still be answered by the old workers.
 expect_http_until() {
     local host="$1" want="$2" path="${3:-/}" deadline="${4:-30}" code="" waited=0
     while ((waited < deadline)); do
@@ -282,7 +282,7 @@ _run_cleanup() {
         # there is nothing to remove -- not a leak, and reporting one trains the reader to
         # ignore the word.
         [[ -d "$root/$b" ]] || continue
-        log "  $(c_dim "cleanup: fm delete $b")"
+        log "  $(c_dim "cleanup: fmx delete $b")"
         # Without --all-sites a bench serving more than one site refuses, and survives the
         # case that made it: on a 3.7 GB host that is what breaks every later case.
         if ! "$FM_BIN" --non-interactive delete "$b" --yes --all-sites --delete-fm-managed-db \
@@ -299,7 +299,7 @@ _run_cleanup() {
 }
 
 # A full disk does not fail one case, it fails every case after it, and the report then reads
-# like fm regressed. Measured twice: a batch filled 75 GB and every verdict after that point
+# like fmx regressed. Measured twice: a batch filled 75 GB and every verdict after that point
 # was junk. The floor is 25 GB because ONE image case can consume 20 GB on its own -- a 10 GB
 # floor passed its check and then filled the disk inside the very case it had just cleared.
 E2E_MIN_FREE_GB="${E2E_MIN_FREE_GB:-25}"

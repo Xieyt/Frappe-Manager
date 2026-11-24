@@ -295,7 +295,7 @@ def test_add_refuses_a_domain_absent_from_the_bench_config(h):
     message = h.errors()[0]
     assert "stranger.example.com" in message
     assert f"Allowed domains: {DOMAIN}, {ALIAS}" in message
-    assert f"fm domain add {BENCH} stranger.example.com" in message
+    assert f"fmx domain add {BENCH} stranger.example.com" in message
     h.cert_manager.add_certificate.assert_not_called()
 
 
@@ -476,7 +476,7 @@ def test_host_name_carries_no_published_port(h, monkeypatch):
     assert h.effects() == [f"SSL certificate added for {DOMAIN}"]
     assert h.effect_emojis() == [":white_check_mark:"]
     assert h.prints() == [
-        f"Run 'fm start {BENCH}' to apply it (recreates only the services whose definition "
+        f"Run 'fmx start {BENCH}' to apply it (recreates only the services whose definition "
         "changed; running jobs are undisturbed until then).",
     ]
     assert h.print_emojis() == [":information:"]
@@ -488,7 +488,7 @@ def test_a_proxied_domain_with_no_trusted_proxies_gets_a_hint_to_configure_them(
 
     _add(h)
 
-    assert any("fm services trusted-proxies set --cdn cloudflare" in p for p in h.prints())
+    assert any("fmx services trusted-proxies set --cdn cloudflare" in p for p in h.prints())
     assert not any("may not be necessary" in p for p in h.prints())
 
 
@@ -555,7 +555,7 @@ def test_the_hint_runs_even_on_a_test_ca(h):
 
     _add(h, test_ca=True)
 
-    assert any("fm services trusted-proxies set --cdn cloudflare" in p for p in h.prints())
+    assert any("fmx services trusted-proxies set --cdn cloudflare" in p for p in h.prints())
 
 
 @pytest.mark.timeout(15)
@@ -585,7 +585,7 @@ def test_add_test_ca_never_regenerates_compose(h):
 
     h.bench.generate_compose.assert_not_called()
     h.bench.workers.generate_compose.assert_not_called()
-    assert not any("fm start" in p for p in h.prints())
+    assert not any("fmx start" in p for p in h.prints())
 
 
 @pytest.mark.timeout(15)
@@ -595,7 +595,7 @@ def test_add_regen_failure_warns_and_skips_the_converge_instruction_but_does_not
     _add(h, test_ca=False)  # must not raise
 
     assert any("Could not update" in w and "disk full" in w for w in h.warnings())
-    assert not any("fm start" in p for p in h.prints())
+    assert not any("fmx start" in p for p in h.prints())
     # The certificate itself is unaffected by a compose-regen failure.
     assert f"SSL certificate added for {DOMAIN}" in h.effects()
 
@@ -625,7 +625,7 @@ def test_remove_regen_failure_warns_but_does_not_abort(h):
     _remove(h)  # must not raise
 
     assert any("Could not update" in w and "disk full" in w for w in h.warnings())
-    assert not any("fm start" in p for p in h.prints())
+    assert not any("fmx start" in p for p in h.prints())
     assert f"SSL certificate removed for {DOMAIN}" in h.effects()
 
 
@@ -716,7 +716,7 @@ def test_remove_reverts_host_name_to_http_and_confirms(h):
     assert h.site_config_writes() == [(DOMAIN, {"host_name": f"http://{DOMAIN}"})]
     assert h.effects() == [f"SSL certificate removed for {DOMAIN}"]
     assert h.prints() == [
-        f"Run 'fm start {BENCH}' to apply it (recreates only the services whose definition "
+        f"Run 'fmx start {BENCH}' to apply it (recreates only the services whose definition "
         "changed; running jobs are undisturbed until then).",
     ]
     assert h.spinner_texts() == [f"Removing SSL certificate for {DOMAIN}"]
@@ -893,7 +893,7 @@ def test_list_prints_one_line_when_no_domain_in_the_bench_has_a_certificate(h):
     _list_bench_certificates(h.ctx, BENCH)
 
     h.output.print_data.assert_not_called()
-    assert f"fm ssl add {BENCH}/<domain>" in h.prints()[0]
+    assert f"fmx ssl add {BENCH}/<domain>" in h.prints()[0]
 
 
 @pytest.mark.timeout(15)

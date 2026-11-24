@@ -233,7 +233,7 @@ class TestEnableToolsAuthWarning:
         assert len(world.warnings) == 1
         warning = world.warnings[0]
         assert BENCH in warning
-        assert "fm auth enable" in warning
+        assert "fmx auth enable" in warning
         assert "--tools" in warning
 
     def test_warns_when_auth_exists_but_does_not_claim_tools(self, world):
@@ -244,7 +244,7 @@ class TestEnableToolsAuthWarning:
         assert len(world.warnings) == 1
         warning = world.warnings[0]
         assert BENCH in warning
-        assert "fm auth enable" in warning
+        assert "fmx auth enable" in warning
         assert "--tools" in warning
 
     def test_silent_when_auth_already_claims_tools(self, world):

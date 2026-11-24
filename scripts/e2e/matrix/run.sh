@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the fm end-to-end matrix. See notes/e2e-matrix.md for what each case defends.
+# Run the fmx end-to-end matrix. See notes/e2e-matrix.md for what each case defends.
 #
 #   ./run.sh                 every case, in declaration order
 #   ./run.sh B               every case in group B
@@ -69,7 +69,7 @@ if [[ ! -x "$FM_BIN" ]]; then
 fi
 
 # A missing tool must stop the run here. Discovered the hard way: with no JSON reader the
-# first case reported 41 failed assertions, all of them the harness rather than fm.
+# first case reported 41 failed assertions, all of them the harness rather than fmx.
 missing=()
 for tool in python3 curl timeout docker; do
     command -v "$tool" >/dev/null || missing+=("$tool")
@@ -83,7 +83,7 @@ mkdir -p "$E2E_RUN_DIR/logs"
 : >"$E2E_REPORT"
 started=$(date +%s)
 
-printf '%s %s cases, fm at %s\n\n' "$(c_yellow '●')" "${#selected[@]}" "$("$FM_BIN" --version 2>&1 | head -1)" >&2
+printf '%s %s cases, fmx at %s\n\n' "$(c_yellow '●')" "${#selected[@]}" "$("$FM_BIN" --version 2>&1 | head -1)" >&2
 for id in "${selected[@]}"; do run_case "$id"; done
 
 total=$(($(date +%s) - started))

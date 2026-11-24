@@ -157,7 +157,7 @@ class TestWhatAnswersAHeadlessPrompt:
                 prompt="How would you like to proceed?",
                 choices=["update", "skip"],
                 default="update",
-                required_flag="'fm migrate BENCH'",
+                required_flag="'fmx migrate BENCH'",
             )
 
-        assert "'fm migrate BENCH'" in refusal.value.suggestions[0]
+        assert "'fmx migrate BENCH'" in refusal.value.suggestions[0]
